@@ -7,9 +7,9 @@ close all force; clc;
 %     x*y...
 %     ];
 
-addpath(genpath('func_Vova') ); % подключаем папку с функциями от Вовы
-addpath(genpath('My_func_aux') ); % подключаем папку с Моими функциями
-addpath(genpath('My_func_general') ); % подключаем папку с Моими функциями
+% addpath(genpath('func_Vova') ); % подключаем папку с функциями от Вовы
+% addpath(genpath('My_func_aux') ); % подключаем папку с Моими функциями
+% addpath(genpath('My_func_general') ); % подключаем папку с Моими функциями
 addpath(genpath('OrbitalMotion')); % include folder with orbital motion functions
 addpath(genpath('InertialMeasurementUnit')); % include folder with inertial measurement functions
 addpath(genpath('InertialNavigationSystem')); % include folder with inertial navigation system functions
@@ -105,7 +105,7 @@ for j = 1:length(filterTypeArray)
         ins = initInertialNavigationSystem('init', insInitArgs);
         sns = initSatelliteNavigationSystem('init', snsInitArgs);
 
-        gssmInsSnsInitArgs.initialParams                 = [accBiasMu; accBiasSigma; gyroBiasMu; gyroBiasSigma; initialAcceleration; initialAngularVelocity; initialQuaternion, sampleTime, time(1)];
+        gssmInsSnsInitArgs.initialParams                 = [accBiasMu; accBiasSigma; gyroBiasMu; gyroBiasSigma; initialAcceleration; initialAngularVelocity; initialQuaternion; sampleTime; time(1)];
         gssmInsSnsInitArgs.processNoiseMean              = [accBiasMu; gyroBiasMu];
         gssmInsSnsInitArgs.processNoiseCovariance        = [diag(accBiasSigma.*accBiasSigma) zeros(3,3); zeros(3,3) diag(gyroBiasSigma.*gyroBiasSigma)];
         gssmInsSnsInitArgs.observationNoiseMean          = zeros(6, 1); 
@@ -164,12 +164,12 @@ for j = 1:length(filterTypeArray)
             modelParams.params(7:9)    = inferenceDataSet.model.params(7:9);   % gyroBiasMu
             modelParams.params(10:12)  = inferenceDataSet.model.params(10:12); % gyroBiasSigma
             modelParams.params(13:15)  = ins.GetAcceleration(i); 
-            modelParams.params(16:18)  = ins.GetAngularValocity(i);
+            modelParams.params(16:18)  = ins.GetAngularVelocity(i);
             modelParams.params(19:22)  = insMeasurement(7:10);                 % quaternion
             modelParams.params(23)     = inferenceDataSet.model.params(23);    % sampleTime
             modelParams.params(24)     = time(i);
             
-            inferenceDataSet.model.setParams(modelParams);
+            inferenceDataSet.model.setParams(inferenceDataSet.model, modelParams);
             
             [state, covState, processNoise, observationNoise, ~] = ukf(state, covState, processNoise, observationNoise, observation, inferenceDataSet);
             iterations(k).AddPhaseState(state, i);
