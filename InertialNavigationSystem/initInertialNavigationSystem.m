@@ -18,16 +18,18 @@ function ins = init(initArgs)
         [0 0 0], ... angularAccelerationinBodyFrame
         1.0003*eye(3), ... accelerometerScale
         initArgs.accBiasMu, ... biasMu
-        diag(initArgs.accBiasSigma), ... biasSigma
-        1e-13*[1;1;1] ... noiseVar
+        initArgs.accBiasSigma, ... biasSigma
+        initArgs.accNoiseVar, ... noiseVar
+        initArgs.sampleTime ... sampleTime
     );
 
     gyroParam = GyroParam(initArgs.simulationNumber, ... simulationNumber
         1e-10*eye(3), ... gyroGSensitiveBias
         1.0003*eye(3), ... gyroScaleFactor
         initArgs.gyroBiasMu, ... gyroBiasMu
-        diag(initArgs.gyroBiasSigma), ... gyroBiasSigma
-        1e-5*[1;1;1] ... gyroNoiseVar
+        initArgs.gyroBiasSigma, ... gyroBiasSigma
+        initArgs.gyroNoiseVar, ... gyroNoiseVar
+        initArgs.sampleTime ... sampleTime
     );
 
     inertialMeasurementUnit = InertialMeasurementUnit(accelerometerParam, ...

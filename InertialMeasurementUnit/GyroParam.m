@@ -8,6 +8,7 @@ classdef GyroParam < handle
         gyroBiasSigma;
         gyroNoiseVar;
         bias;
+        sampleTime;
     end
     %%
     properties (Dependent)
@@ -24,13 +25,15 @@ classdef GyroParam < handle
                                  gyroScaleFactor, ... 
                                  gyroBiasMu, ...
                                  gyroBiasSigma, ...
-                                 gyroNoiseVar)            
+                                 gyroNoiseVar, ... 
+                                 sampleTime)            
             this.simulationNumber = simulationNumber;
             this.gyroGSensitiveBias = gyroGSensitiveBias;
             this.gyroScaleFactor = gyroScaleFactor;
             this.gyroBiasMu = gyroBiasMu;
             this.gyroBiasSigma = gyroBiasSigma;
             this.gyroNoiseVar = gyroNoiseVar;
+            this.sampleTime = sampleTime;
         end
         %%
         function val = get.GyroGSensitiveBias(this)
@@ -43,9 +46,11 @@ classdef GyroParam < handle
         %%
         function val = get.GyroBias(this)
             if (isempty(this.bias))
-                bmModel = bm(this.gyroBiasMu, this.gyroBiasSigma);
-                bmModel.StartState = 0;
-                this.bias = simulate(bmModel, this.simulationNumber);
+                % bmModel = bm(this.gyroBiasMu, this.gyroBiasMu);
+                % bmModel.StartState = 0;
+                % this.bias = simulate(bmModel, this.simulationNumber);
+                dw = WienerProcess(this.gyroBiasMu, this.gyroBiasMu);
+                this.bias = dw.simulate(this.sampleTime, this.simulationNumber);
             end
             val = this.bias;
         end

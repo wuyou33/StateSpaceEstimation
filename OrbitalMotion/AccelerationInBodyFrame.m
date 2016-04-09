@@ -4,6 +4,7 @@ classdef AccelerationInBodyFrame < handle
         acceleration;
         model;
         simulationNumber;
+        dt
     end
     %%
     properties (Dependent)
@@ -12,12 +13,17 @@ classdef AccelerationInBodyFrame < handle
     
     methods
         %%
-        function obj = AccelerationInBodyFrame(mu, sigma, simulationNumber)
-            bmModel = bm(mu, sigma);
-            bmModel.StartState = 0;
-            obj.acceleration = simulate(bmModel, simulationNumber);     
-            obj.model = bmModel;
+        function obj = AccelerationInBodyFrame(mu, sigma, simulationNumber, dt)
+%             bmModel = bm(mu, sigma);
+%             bmModel.StartState = 0;
+%             obj.acceleration = simulate(bmModel, simulationNumber);     
+%             obj.model = bmModel;
             obj.simulationNumber = simulationNumber;
+            obj.dt = dt;
+            
+            dw = WienerProcess(mu, sigma);
+            obj.model = dw;
+            obj.acceleration = dw.simulate(dt, simulationNumber);
         end
         %%
         function val = get.Acceleration(obj)

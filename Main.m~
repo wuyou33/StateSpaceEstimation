@@ -30,28 +30,24 @@ simulationNumber        = round(simulationTime / sampleTime);
 time                    = (1: simulationNumber) * sampleTime;
 timeMinutes             = time / 60;
 iterationNumber         = 1;
-
 accBiasMu               = 1e-8*[1;1;1];
 accBiasSigma            = 5e-7*[1;1;1];
-accNoiseVar             = 1e-8*[1;1;1];
-
+accNoiseVar             = 1e-7*[1;1;1]
 gyroBiasMu              = 1e-8*[1;1;1];
-gyroBiasSigma           = 5e-6*[1;1;1];
-gyroNoiseVar            = 1e-5*[1;1;1];
-
+gyroBiasSigma           = 5e-6*[1;1;1]; 
 initialAcceleration     = zeros(3,1);
 initialAngularVelocity  = zeros(3,1);
 initialQuaternion       = [1;0;0;0];
 
 %%  
 accelerationInBodyFrame = AccelerationInBodyFrame([0; 0; 0], ... mu
-    1.75*1e-5*[1;1;1], ... sigma    
+    1.2*1e-5*randn(3,1), ... sigma    
     simulationNumber, ... simulationNumber
     sampleTime ... sampleTime
 );
 
-angularVelocityInBodyFrame = AngularVelocityInBodyFrame([0; 0; 0], ... mu
-    1.2*1e-3*[1;1;1], ... sigma    
+angularVelocityInBodyFrame = AngularVelocityInBodyFrame(1e-5*randn(3, 1), ... mu
+    1.2*1e-3*randn(3,1), ... sigma    
     simulationNumber, ... simulationNumber
     sampleTime ... sampleTime
 );
@@ -90,8 +86,6 @@ insInitArgs.visualize                    = 1;
 insInitArgs.T_till_current_epoch         = T_till_current_epoch;
 insInitArgs.sampleTime                   = sampleTime;
 insInitArgs.accNoiseVar                  = accNoiseVar;
-insInitArgs.gyroNoiseVar                 = gyroNoiseVar;
-
 snsInitArgs.Trajectory = satellitePhaseStateTrue.Trajectory';
 snsInitArgs.Velocity   = satellitePhaseStateTrue.Velocity';
 

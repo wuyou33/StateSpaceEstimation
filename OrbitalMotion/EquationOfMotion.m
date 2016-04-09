@@ -1,8 +1,7 @@
-%задаём систему ДУ для вычисления координат на момент времени Ti
 function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoch, sampleTime)
-
+%%
 EarthRadius = 6378.136; %[km] - Earth's equatorial radius
-MuE = 398600.4418; %[км^3/с^2] - Earth gravity const
+MuE = 398600.4418; %[km^3/s^2] - Earth gravity const
 J2 = .00108262575;
 J3 = -.000002533;
 J4 = -0.000001616;
@@ -30,7 +29,7 @@ sunInfluence = SunInfluence(tEpoch, state(1:3));
 moonInfluence = MoonInfluence(tEpoch, state(1:3));
 
 quaternion = state(7:10)';
-rotatedAccelearation = quatrotate(quaternion, accelerationCurrent);
+rotatedAccelearation = quaternionRotation(quaternion, accelerationCurrent);
 
 dy(1:3) = state(4:6);
 dy(4) = -(MuE*state(1)/r^3)*(...
@@ -60,4 +59,4 @@ dy(6) = -(MuE*state(3)/r^3)*(...
     + rotatedAccelearation(3) ...
     + sunInfluence(3) ...
     + moonInfluence(3);
-dy(7:10) = .5 * quatmultiply(quaternion, [0, angularVelocityCurrent]);
+dy(7:10) = .5 * quaternionMultiply(quaternion, [0, angularVelocityCurrent]);

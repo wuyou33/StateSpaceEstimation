@@ -4,6 +4,7 @@ classdef AngularVelocityInBodyFrame < handle
         angularVelocity;
         model;
         simulationNumber;
+        dt
     end
     %%
     properties (Dependent)
@@ -11,13 +12,18 @@ classdef AngularVelocityInBodyFrame < handle
     end
     %%
     methods
-        function this = AngularVelocityInBodyFrame(mu, sigma, simulationNumber)
-            bmModel = bm(mu, sigma);
-            bmModel.StartState = 0;
+        function obj = AngularVelocityInBodyFrame(mu, sigma, simulationNumber, dt)
+%             bmModel = bm(mu, sigma);
+%             bmModel.StartState = 0;
+%             
+%             this.angularVelocity = simulate(bmModel, simulationNumber);
+%             this.model = bmModel;
+            obj.simulationNumber = simulationNumber;
+            obj.dt = dt;
             
-            this.angularVelocity = simulate(bmModel, simulationNumber);
-            this.model = bmModel;
-            this.simulationNumber = simulationNumber;
+            dw = WienerProcess(mu, sigma);
+            obj.model = dw;
+            obj.angularVelocity = dw.simulate(dt, simulationNumber);
         end
         
         function val = get.Velocity(this)
