@@ -42,7 +42,7 @@ function inferenceDataStructure = inferenceDataGenerator( args )
             inferenceDataStructure.stateObservationFun        = @stateObservationFun;
             inferenceDataStructure.stateTransitionPriorFun    = @stateTransitionPriorFun;
             inferenceDataStructure.likelihoodStateFun         = @likelihoodStateFun;
-            inferenceDataStructure.innovationState            = @innovationState;
+            inferenceDataStructure.innovationModelFunc        = @innovationModelFunc;
 
             % Index vectors indicating the presence of angular components in the state and observation vectors
             if isfield(args.model,'stateAngleCompIdxVec'),
@@ -96,7 +96,7 @@ function llh = likelihoodStateFun(inferenceDS, observation, state, control, obse
     llh = inferenceDS.model.observationLikelihoodFun( inferenceDS.model, observation, state, control, observationNoiseDS);
 end
 
-function innov = innovationState(inferenceDS, observation, predictedObservation)
+function innov = innovationModelFunc(inferenceDS, observation, predictedObservation)
     %  INNOVATION_STATE  Calculates the innovation signal (difference) between the
     %   output of HFUN, i.e. predictedObservation (the predicted system observation) and an actual
     %   'real world' observation observation. This function might be as simple as

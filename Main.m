@@ -7,9 +7,6 @@ close all force; clc;
 %     x*y...
 %     ];
 
-% addpath(genpath('func_Vova') ); % подключаем папку с функциями от Вовы
-% addpath(genpath('My_func_aux') ); % подключаем папку с Моими функциями
-% addpath(genpath('My_func_general') ); % подключаем папку с Моими функциями
 addpath(genpath('OrbitalMotion')); % include folder with orbital motion functions
 addpath(genpath('InertialMeasurementUnit')); % include folder with inertial measurement functions
 addpath(genpath('InertialNavigationSystem')); % include folder with inertial navigation system functions
@@ -20,14 +17,11 @@ addpath(genpath('TOAMeasurementUnit')); % include folder with Pulsar & Quasar na
 addpath(genpath('StateSpaceEstimation')); % include folder with State Space Estimation algorithms
 addpath(genpath('Utils'));
 
-% w = WienerProcess([0.1; 0.09; 0.35], [0.1; 0.1; 0.3]);
-% sim = w.simulate(dt, N);
-
-filterTypeArray         = {'ukf'}; %{'ukf', 'ckf', 'srckf', 'cdkf','srukf','srcdkf'};
+filterTypeArray         = {'ukf'}; %{'cdkf', 'ckf', 'srckf', 'srukf','srcdkf', 'pf'};
 sampleTime              = 1; % seconds
-simulationTime          = 1*60*60; % y hours * 60 min * 60 sec
+simulationTime          = 1*1*60; % y hours * 60 min * 60 sec
 simulationNumber        = round(simulationTime / sampleTime);
-time                    = (1: simulationNumber) * sampleTime;
+time                    = (1:simulationNumber) * sampleTime;
 timeMinutes             = time / 60;
 iterationNumber         = 1;
 
@@ -57,8 +51,8 @@ angularVelocityInBodyFrame = AngularVelocityInBodyFrame([0; 0; 0], ... mu
 );
 
 T_till_current_epoch = 0.1465;
-% initial = [-21223.9926714100; -42868.3395565589; 0; 2.58697266398439; % -1.28080278894642; 0; 1; 0; 0; 0]; % GEO sat
-initial = [-6158.34755458333; -4063.45976435815; 0; 3.98653859590107; -6.04177022463943; 1.27633791914791; 1; 0; 0; 0]; % LO sat
+initial = [-21223.9926714100; -42868.3395565589; 0; 2.58697266398439; -1.28080278894642; 0; 1; 0; 0; 0]; % GEO sat
+% initial = [-6158.34755458333; -4063.45976435815; 0; 3.98653859590107; -6.04177022463943; 1.27633791914791; 1; 0; 0; 0]; % LO sat
 
 tic;
 simulator = TrajectoryPhaseSpaceSatelliteSimulator(initial, ...
@@ -75,7 +69,7 @@ toc;
 SatelliteOrbitVisualization(satellitePhaseStateTrue);
 
 %% simulate INS
-satellitePhaseState = SatellitePhaseSpace(initial, simulationNumber + 1);
+satellitePhaseState = SatellitePhaseSpace(initial, simulationNumber);
 iterations = repmat(satellitePhaseState, iterationNumber, 1);
 
 insInitArgs.accBiasMu                    = accBiasMu;
@@ -86,7 +80,7 @@ insInitArgs.accelerationInBodyFrame      = accelerationInBodyFrame;
 insInitArgs.angularVelocityInBodyFrame   = angularVelocityInBodyFrame;
 insInitArgs.simulationNumber             = simulationNumber;
 insInitArgs.timeMinutes                  = timeMinutes;
-insInitArgs.visualize                    = 1;
+insInitArgs.visualize                    = 0; % 1
 insInitArgs.T_till_current_epoch         = T_till_current_epoch;
 insInitArgs.sampleTime                   = sampleTime;
 insInitArgs.accNoiseVar                  = accNoiseVar;
@@ -97,15 +91,15 @@ snsInitArgs.Velocity   = satellitePhaseStateTrue.Velocity';
 
 initialCov = [1e2*eye(3) zeros(3, 19); ... distance error
     zeros(3, 3) 1e-2*eye(3) zeros(3, 16); ... velocity error
-    zeros(4, 6) 1e-4*eye(4) zeros(4, 12); ... quaterni error
+    zeros(4, 6) 1e-10*eye(4) zeros(4, 12); ... quaterni error
     zeros(3, 10) diag((accBiasSigma.*accBiasSigma)) zeros(3, 9); ... acceler bias
     zeros(3, 13) diag((gyroBiasSigma.*gyroBiasSigma)) zeros(3, 6); ... gyro bias
-    zeros(3, 16) 1e-6*eye(3) zeros(3, 3); ... acceler scale factor
-    zeros(3, 19) 1e-6*eye(3) ... acceler scale factor
+    zeros(3, 16) 1e-12*eye(3) zeros(3, 3); ... acceler scale factor
+    zeros(3, 19) 1e-12*eye(3) ... acceler scale factor
 ];
 
-initialState = sqrt(initialCov)*randn(22, 1);
-
+initialState = initialCondition() + sqrt(initialCov)*randn(22, 1);
+initialState(7:10) = quaternionNormalize(initialState(7:10));
 tic;
 
 % parfor k = 1:iterationNumber
@@ -122,7 +116,7 @@ for j = 1:length(filterTypeArray)
         gssmInsSnsInitArgs.processNoiseMean              = [accBiasMu; gyroBiasMu];
         gssmInsSnsInitArgs.processNoiseCovariance        = [diag(accBiasSigma.*accBiasSigma) zeros(3,3); zeros(3,3) diag(gyroBiasSigma.*gyroBiasSigma)];
         gssmInsSnsInitArgs.observationNoiseMean          = zeros(6, 1); 
-        gssmInsSnsInitArgs.observationNoiseCovariance    = [10*10*eye(3) zeros(3,3); zeros(3,3) .01*.01*eye(3)];
+        gssmInsSnsInitArgs.observationNoiseCovariance    = [5*5*eye(3) zeros(3,3); zeros(3,3) 0.01*0.01*eye(3)];
 
         insErrorDynamicStateSpaceModel = gssmInsSns('init', gssmInsSnsInitArgs);
         args.type  = 'state';
@@ -134,9 +128,9 @@ for j = 1:length(filterTypeArray)
         
         switch estimatorType{1}
             case 'ukf'
-                alpha = 1; % scale factor (UKF parameter)
+                alpha = 1e-3; % scale factor (UKF parameter) TODO: 5 was before
                 beta  = 2; % optimal setting for Gaussian priors (UKF parameter)
-                kappa = 0; % optimal for state dimension=2 (UKF parameter)
+                kappa = 0.75; % optimal for state dimension=2 (UKF parameter)
                 
                 inferenceDataSet.spkfParams = [alpha beta kappa];
                 
@@ -165,40 +159,76 @@ for j = 1:length(filterTypeArray)
     %     tic;
         state = initialState;
         covState = initialCov;
-        insMeasurement = initial;
+        insMeasurement = initial + [1500*randn(3,1); 2.75*randn(3,1); 0.0001*randn(4,1)];
+        insMeasurement(7:10) = quaternionNormalize(insMeasurement(7:10));
+        iterations(k).AddPhaseState(insMeasurement, 1);
         
-        for i = 2:1:simulationNumber + 1          
+        tmp = zeros(22, simulationNumber);
+        for i = 2:1:simulationNumber
             insMeasurement = ins.Simulate(insMeasurement, i, sampleTime, copyTime(i));
             snsMeasurement = sns.Simulate(i);
-            observation = insMeasurement(1:6) - snsMeasurement;
+            observation    = insMeasurement(1:6) - snsMeasurement;
             
-            modelParams.params(1:3)    = inferenceDataSet.model.params(1:3);   % accelerationBiasMu
-            modelParams.params(4:6)    = inferenceDataSet.model.params(4:6);   % accelerationBiasSigma
-            modelParams.params(7:9)    = inferenceDataSet.model.params(7:9);   % gyroBiasMu
-            modelParams.params(10:12)  = inferenceDataSet.model.params(10:12); % gyroBiasSigma
-            modelParams.params(13:15)  = ins.GetAcceleration(i); 
-            modelParams.params(16:18)  = ins.GetAngularVelocity(i);
-            modelParams.params(19:22)  = insMeasurement(7:10);                 % quaternion
-            modelParams.params(23)     = inferenceDataSet.model.params(23);    % sampleTime
-            modelParams.params(24)     = time(i);
+            modelParams(1:3)    = inferenceDataSet.model.params(1:3);   % accelerationBiasMu
+            modelParams(4:6)    = inferenceDataSet.model.params(4:6);   % accelerationBiasSigma
+            modelParams(7:9)    = inferenceDataSet.model.params(7:9);   % gyroBiasMu
+            modelParams(10:12)  = inferenceDataSet.model.params(10:12); % gyroBiasSigma
+            modelParams(13:15)  = ins.GetAcceleration(i); 
+            modelParams(16:18)  = ins.GetAngularVelocity(i);
+            modelParams(19:22)  = insMeasurement(7:10);                 % quaternion
+            modelParams(23)     = inferenceDataSet.model.params(23);    % sampleTime
+            modelParams(24)     = time(i);
             
             inferenceDataSet.model.setParams(inferenceDataSet.model, modelParams);
             
-            [state, covState, processNoise, observationNoise, ~] = ukf(state, covState, processNoise, observationNoise, observation, inferenceDataSet);
-            iterations(k).AddPhaseState(state, i);
-            % TODO: check it
-            insMeasurement = insCorrection(insMeasurement, state(1:10));
+            [state, covState, processNoise, observationNoise, ~] = ukf(state, covState, processNoise, observationNoise, observation, inferenceDataSet);                        
+            insCorrected = insCorrection(insMeasurement, state(1:10))';
+            iterations(k).AddPhaseState(insCorrected, i);
+            tmp(:,i) = state;
         end
 
-        SatelliteOrbitVisualization(iterations(k));
+%         SatelliteOrbitVisualization(iterations(k));
+        
+%         figure(); 
+%             plot(timeMinutes', tmp(1:3,:)); 
+%             title('distance');             
+%             legend('x axis', 'y axis', 'z axis');
+%             grid on;
+%         
+%         figure(); 
+%             plot(timeMinutes', tmp(4:6,:)); 
+%             title('velocity');             
+%             legend('x axis', 'y axis', 'z axis');
+%             grid on;
+        
+        figure(); 
+            plot(timeMinutes', iterations(k).Trajectory - satellitePhaseStateTrue.Trajectory); 
+            title('distance error');             
+            legend('x axis', 'y axis', 'z axis');
+            grid on;
+        
+        figure(); 
+            plot(timeMinutes', iterations(k).Velocity - satellitePhaseStateTrue.Velocity); 
+            title('velocity error');             
+            legend('x axis', 'y axis', 'z axis');
+            grid on;
+            
+%         figure(); 
+%             plot(timeMinutes', tmp(7:10,:)); 
+%             title('quaternion');             
+%             legend('x axis', 'y axis', 'z axis');
+%             grid on;
+            
         fprintf ('thread of %d: ', k );    
+        
     %     toc;
     end
 
     fprintf('Simulation: ');
     toc;
-
-    tic;
+    return
+    
+    tic;    
     errorReducer = ErrorReducer(iterations, satellitePhaseStateTrue, 10, simulationNumber);
     rmsd = errorReducer.RMSD();
     display('RMSD calculation: ');

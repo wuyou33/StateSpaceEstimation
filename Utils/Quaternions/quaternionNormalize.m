@@ -7,4 +7,4 @@ function [ qout ] = quaternionNormalize( q )
 %   scalar number as the first column.
 %%
 qMod = norm(q, 2);
-qout = q ./ (qMod * ones(1,4));
+qout = q / qMod;

@@ -19,8 +19,6 @@ function [ corrected ] = insCorrection( insMeasurement, correctionParams)
 %%
     corrected(1:3)  = insMeasurement(1:3) - correctionParams(1:3);
     corrected(4:6)  = insMeasurement(4:6) - correctionParams(4:6);
-    % todo: check it. (check sign and quatnormalize)
-    corrected(7:10) = quatnormalize(insMeasurement(7:10) - correctionParams(7:10));
-    
+    corrected(7:10) = quaternionNormalize(quaternionMultiply(insMeasurement(7:10), correctionParams(7:10)));    
 end
 
