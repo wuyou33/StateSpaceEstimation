@@ -17,9 +17,9 @@ addpath(genpath('TOAMeasurementUnit')); % include folder with Pulsar & Quasar na
 addpath(genpath('StateSpaceEstimation')); % include folder with State Space Estimation algorithms
 addpath(genpath('Utils'));
 
-filterTypeArray         = {'ukf'}; %{'cdkf', 'ckf', 'srckf', 'srukf','srcdkf', 'pf'};
+filterTypeArray         = {'sckf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf'};
 sampleTime              = 1; % seconds
-simulationTime          = 1*1*60; % y hours * 60 min * 60 sec
+simulationTime          = 1*5*60; % y hours * 60 min * 60 sec
 simulationNumber        = round(simulationTime / sampleTime);
 time                    = (1:simulationNumber) * sampleTime;
 timeMinutes             = time / 60;
@@ -53,7 +53,7 @@ angularVelocityInBodyFrame = AngularVelocityInBodyFrame([0; 0; 0], ... mu
 T_till_current_epoch = 0.1465;
 initial = [-21223.9926714100; -42868.3395565589; 0; 2.58697266398439; -1.28080278894642; 0; 1; 0; 0; 0]; % GEO sat
 % initial = [-6158.34755458333; -4063.45976435815; 0; 3.98653859590107; -6.04177022463943; 1.27633791914791; 1; 0; 0; 0]; % LO sat
-
+% todo: add geo stationarity orbit and several deep space trajectory
 tic;
 simulator = TrajectoryPhaseSpaceSatelliteSimulator(initial, ...
     accelerationInBodyFrame, ... accelerationInBodyFrame
@@ -122,37 +122,30 @@ for j = 1:length(filterTypeArray)
         args.type  = 'state';
         args.tag   = 'State estimation for loosely coupled Ins & Sns integrated system';
         args.model = insErrorDynamicStateSpaceModel;
-
-        % todo: debug inference noise generator
+        
         [processNoise, observationNoise, inferenceDataSet] = inferenceNoiseGenerator(inferenceDataGenerator(args), estimatorType);
         
         switch estimatorType{1}
             case 'ukf'
-                alpha = 1e-3; % scale factor (UKF parameter) TODO: 5 was before
-                beta  = 2; % optimal setting for Gaussian priors (UKF parameter)
-                kappa = 0.75; % optimal for state dimension=2 (UKF parameter)
+                alpha = 1e-3; % scale factor (UKF parameter)
+                beta  = 2;    % 2 is a optimal setting for Gaussian priors (UKF parameter)
+                kappa = 0.75; % 0 is optimal for state dimension = 2 (UKF parameter)                
                 
-                inferenceDataSet.spkfParams = [alpha beta kappa];
-                
+                inferenceDataSet.spkfParams = [alpha beta kappa];                
             case 'srukf'
-                alpha = 1; % scale factor (UKF parameter)
-                beta  = 2; % optimal setting for Gaussian priors (UKF parameter)
-                kappa = 0; % optimal for state dimension=2 (UKF parameter)
+                alpha = 1e-3; % scale factor (UKF parameter)
+                beta  = 2;    % 2 is a optimal setting for Gaussian priors (SRUKF parameter)
+                kappa = 0.75; % 0 is optimal for state dimension = 2 (SRUKF parameter)
                 
                 inferenceDataSet.spkfParams = [alpha beta kappa];
-                Sx = chol(Px)';
-                
+                decompCovState = chol(initialCov)';                
             case 'cdkf'
-                inferenceDataSet.spkfParams = sqrt(3); % scale factor (CDKF parameter h)
-                
+                inferenceDataSet.spkfParams = sqrt(70); % scale factor (CDKF parameter h) default sqrt(3)                
             case 'srcdkf'
-                alpha = 1;         % scale factor (UKF parameter)
-                beta  = 2;         % optimal setting for Gaussian priors (UKF parameter)
-                kappa = 0;         % optimal for state dimension=2 (UKF parameter)
-                
-                Sx = chol(Px)';
-                
-                inferenceDataSet.spkfParams = [alpha beta kappa];
+                inferenceDataSet.spkfParams = sqrt(25); % scale factor (CDKF parameter h) default sqrt(3)                
+                decompCovState = chol(initialCov)';
+            case 'sckf'
+                decompCovState = svdDecomposition(initialCov);
             otherwise
                 % do nothing by default
         end
@@ -163,7 +156,8 @@ for j = 1:length(filterTypeArray)
         insMeasurement(7:10) = quaternionNormalize(insMeasurement(7:10));
         iterations(k).AddPhaseState(insMeasurement, 1);
         
-        tmp = zeros(22, simulationNumber);
+        tmp  = zeros(22, simulationNumber);
+        inov = zeros(6, simulationNumber);
         for i = 2:1:simulationNumber
             insMeasurement = ins.Simulate(insMeasurement, i, sampleTime, copyTime(i));
             snsMeasurement = sns.Simulate(i);
@@ -173,7 +167,7 @@ for j = 1:length(filterTypeArray)
             modelParams(4:6)    = inferenceDataSet.model.params(4:6);   % accelerationBiasSigma
             modelParams(7:9)    = inferenceDataSet.model.params(7:9);   % gyroBiasMu
             modelParams(10:12)  = inferenceDataSet.model.params(10:12); % gyroBiasSigma
-            modelParams(13:15)  = ins.GetAcceleration(i); 
+            modelParams(13:15)  = ins.GetAcceleration(i);
             modelParams(16:18)  = ins.GetAngularVelocity(i);
             modelParams(19:22)  = insMeasurement(7:10);                 % quaternion
             modelParams(23)     = inferenceDataSet.model.params(23);    % sampleTime
@@ -181,45 +175,63 @@ for j = 1:length(filterTypeArray)
             
             inferenceDataSet.model.setParams(inferenceDataSet.model, modelParams);
             
-            [state, covState, processNoise, observationNoise, ~] = ukf(state, covState, processNoise, observationNoise, observation, inferenceDataSet);                        
+            switch estimatorType{1}
+                case 'ukf'
+                    [state, covState, processNoise, observationNoise, internalParams] = ukf(state, covState, processNoise, observationNoise, observation, inferenceDataSet);
+                case 'srukf'
+                    [state, decompCovState, processNoise, observationNoise, internalParams] = srukf(state, decompCovState, processNoise, observationNoise, observation, inferenceDataSet);
+                case 'cdkf'
+                    [state, covState, processNoise, observationNoise, internalParams] = cdkf(state, covState, processNoise, observationNoise, observation, inferenceDataSet);
+                case 'srcdkf'
+                    [state, decompCovState, processNoise, observationNoise, internalParams] = srcdkf(state, decompCovState, processNoise, observationNoise, observation, inferenceDataSet);
+                case 'ckf'
+                    [state, covState, processNoise, observationNoise, internalParams] = ckf(state, covState, processNoise, observationNoise, observation, inferenceDataSet);
+                case 'sckf'
+                    [state, decompCovState, processNoise, observationNoise, internalParams] = sckf(state, decompCovState, processNoise, observationNoise, observation, inferenceDataSet);
+                otherwise
+                    error('not supported filter type' + stimatorType{1});
+            end
+            
             insCorrected = insCorrection(insMeasurement, state(1:10))';
             iterations(k).AddPhaseState(insCorrected, i);
             tmp(:,i) = state;
+            inov(:, i) = internalParams.inov(1:6);
         end
 
 %         SatelliteOrbitVisualization(iterations(k));
-        
-%         figure(); 
-%             plot(timeMinutes', tmp(1:3,:)); 
-%             title('distance');             
-%             legend('x axis', 'y axis', 'z axis');
-%             grid on;
-%         
-%         figure(); 
-%             plot(timeMinutes', tmp(4:6,:)); 
-%             title('velocity');             
-%             legend('x axis', 'y axis', 'z axis');
-%             grid on;
-        
-        figure(); 
-            plot(timeMinutes', iterations(k).Trajectory - satellitePhaseStateTrue.Trajectory); 
-            title('distance error');             
-            legend('x axis', 'y axis', 'z axis');
-            grid on;
-        
-        figure(); 
-            plot(timeMinutes', iterations(k).Velocity - satellitePhaseStateTrue.Velocity); 
-            title('velocity error');             
-            legend('x axis', 'y axis', 'z axis');
-            grid on;
-            
-%         figure(); 
-%             plot(timeMinutes', tmp(7:10,:)); 
-%             title('quaternion');             
-%             legend('x axis', 'y axis', 'z axis');
-%             grid on;
-            
-        fprintf ('thread of %d: ', k );    
+    figure();
+        plot(timeMinutes', inov(1:3,:));
+        title('innovation');
+        legend('inov_x', 'inov_y', 'inov_z');
+        grid on;
+        hold on;
+
+    figure();
+        plot(timeMinutes', inov(4:6,:));
+        title('innovation');
+        legend('inov_v_x', 'inov_v_y', 'inov_v_z');
+        grid on;
+        hold on;
+
+    figure();
+        plot(timeMinutes', iterations(k).Trajectory - satellitePhaseStateTrue.Trajectory);
+        title('distance error');
+        legend('x axis', 'y axis', 'z axis');
+        grid on;
+
+    figure();
+        plot(timeMinutes', iterations(k).Velocity - satellitePhaseStateTrue.Velocity);
+        title('velocity error');
+        legend('x axis', 'y axis', 'z axis');
+        grid on;
+
+    figure();
+        plot(timeMinutes', iterations(k).Rotation - satellitePhaseStateTrue.Rotation);
+        title('quaternion');
+        legend('q_0', 'q_x', 'q_y', 'q_z');
+        grid on;
+
+    fprintf ('thread of %d: ', k );
         
     %     toc;
     end
@@ -227,28 +239,28 @@ for j = 1:length(filterTypeArray)
     fprintf('Simulation: ');
     toc;
     return
-    
-    tic;    
-    errorReducer = ErrorReducer(iterations, satellitePhaseStateTrue, 10, simulationNumber);
-    rmsd = errorReducer.RMSD();
-    display('RMSD calculation: ');
-    toc;
-
-    figure(); 
-        plot(timeMinutes(2:end)', [sqrt(rmsd(:, 1))'; sqrt(rmsd(:, 2))'; sqrt(rmsd(:, 3))']); 
-        title('Root-mean-square deviation displacement'); 
-        ylabel('RMSD displacement, m');
-        xlabel('time, min');
-        legend('x axis', 'y axis', 'z axis');
-        grid on;
-
-    figure(); 
-        plot(timeMinutes(2:end)', [sqrt(rmsd(:, 4))'; sqrt(rmsd(:, 5))'; sqrt(rmsd(:, 6))']); 
-        title('Root-mean-square deviation velocity'); 
-        ylabel('RMSD velocity, m/s');
-        xlabel('time, min');
-        legend('x axis', 'y axis', 'z axis');
-        grid on;   
+%     
+%     tic;    
+%     errorReducer = ErrorReducer(iterations, satellitePhaseStateTrue, 10, simulationNumber);
+%     rmsd = errorReducer.RMSD();
+%     display('RMSD calculation: ');
+%     toc;
+% 
+%     figure(); 
+%         plot(timeMinutes(2:end)', [sqrt(rmsd(:, 1))'; sqrt(rmsd(:, 2))'; sqrt(rmsd(:, 3))']); 
+%         title('Root-mean-square deviation displacement'); 
+%         ylabel('RMSD displacement, m');
+%         xlabel('time, min');
+%         legend('x axis', 'y axis', 'z axis');
+%         grid on;
+% 
+%     figure(); 
+%         plot(timeMinutes(2:end)', [sqrt(rmsd(:, 4))'; sqrt(rmsd(:, 5))'; sqrt(rmsd(:, 6))']); 
+%         title('Root-mean-square deviation velocity'); 
+%         ylabel('RMSD velocity, m/s');
+%         xlabel('time, min');
+%         legend('x axis', 'y axis', 'z axis');
+%         grid on;   
 end
 %%
 

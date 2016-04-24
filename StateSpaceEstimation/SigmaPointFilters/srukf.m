@@ -1,7 +1,7 @@
-function [newState, newCovState, processNoise, observationNoise, internalVariables] = ukf(state, covState, processNoise, observationNoise, observation, gssModel, controlProcess, controlObservation)
-    % UKF  Unscented Kalman Filter
+function [newState, newCholCovState, processNoise, observationNoise, internalVariables] = srukf(state, cholCovState, processNoise, observationNoise, observation, gssModel, controlProcess, controlObservation)
+    % SRUKF  Square Root Unscented Kalman Filter (variant of Sigma-Point Filter)
     %
-    %   [newState, newCovState, processNoise, observationNoise, internalVariables] = ukf(state, covState, processNoise, observationNoise, observation, controlProcess, controlObservation, inferenceDataSet)
+    %   [newState, newCholCovState, processNoise, observationNoise, internalVariables] = srukf(state, cholCovState, processNoise, observationNoise, observation, gssModel, controlProcess, controlObservation)
     %
     %   This filter assumes the following standard state-space model:
     %
@@ -19,7 +19,7 @@ function [newState, newCovState, processNoise, observationNoise, internalVariabl
     %
     %   INPUT
     %         state                  state mean at time k-1          ( xh(k-1) )
-    %         covState               state covariance at time k-1    ( Px(k-1) )
+    %         cholCovState           upper triangle metrix from Cholesky decomposition of state covariance at time k-1    ( chol(Px(k-1)) )
     %         processNoise           process noise data structure     (must be of type 'gaussian' or 'combo-gaussian')
     %         observationNoise       observation noise data structure (must be of type 'gaussian' or 'combo-gaussian')
     %         observation            noisy observations starting at time k ( y(k),y(k+1),...,y(k+N-1) )
@@ -29,38 +29,37 @@ function [newState, newCovState, processNoise, observationNoise, internalVariabl
     %
     %   OUTPUT
     %         newState               estimates of state starting at time k ( E[x(t)|y(1),y(2),...,y(t)] for t=k,k+1,...,k+N-1 )
-    %         newState               state covariance
+    %         newCholCovState        estimate of Cholesky factor of state covariance matrix at time k
     %         processNoise           process noise data structure     (possibly updated)
     %         observationNoise       observation noise data structure (possibly updated)
     %
     %         internalVariables             <<optional>> internal variables data structure
     %           .meanPredictedState         	predicted state mean ( E[x(t)|y(1),y(2),..y(t-1)] for t=k,k+1,...,k+N-1 )
-    %           .predictedStateCov              predicted state covariance
+    %           .sqrtCovState                   predicted of Cholesky factor of state covariance matrix at time k
     %           .predictedObservMean            predicted observation ( E[y(k)|Y(k-1)] )
     %           .inov                           inovation signal
-    %           .predictedObservCov             inovation covariance
+    %           .sqrtObservCov                  predicted of Cholesky factor of observation covariance
     %           .filterGain                     Kalman gain
     %
     %   Required gssModel fields:
     %         .spkfParams            SPKF parameters = [alpha beta kappa] with
-    %                                   alpha  :  UKF scale factor
-    %                                   beta   :  UKF covariance correction factor
-    %                                   kappa  :  UKF secondary scaling parameter
+    %                                   alpha  :  SRUKF scale factor
+    %                                   beta   :  SRUKF covariance correction factor
+    %                                   kappa  :  SRUKF secondary scaling parameter
     %%
 
     stateDim         = gssModel.stateDimension;
     procNoiseDim     = gssModel.processNoiseDimension;
     obserNoiseDim    = gssModel.observationNoiseDimension;
     observDim        = gssModel.observationDimension;
-    
     %% ERROR CHECKING
-    if (nargin ~= 8 && nargin ~= 6); error(' [ ukf ] Not enough input arguments (should be 6 or 8).'); end
+    if (nargin ~= 8 && nargin ~= 6); error(' [ srukf ] Not enough input arguments (should be 6 or 8).'); end
 
-    if (gssModel.stateDimension ~= size(state, 1)); error('[ ukf ] Prior state dimension differs from inferenceDataSet.stateDimension'); end
+    if (gssModel.stateDimension ~= size(state, 1)); error('[ srukf ] Prior state dimension differs from inferenceDataSet.stateDimension'); end
 
-    if (gssModel.stateDimension ~= size(covState, 1)); error('[ ukf ] Prior state covariance dimension differs from inferenceDataSet.stateDimension'); end
+    if (gssModel.stateDimension ~= size(cholCovState, 1)); error('[ srukf ] Prior state covariance dimension differs from inferenceDataSet.stateDimension'); end
 
-    if (gssModel.observationDimension ~= size(observation, 1)); error('[ ukf ] Observation dimension differs from inferenceDataSet.observationDimension'); end
+    if (gssModel.observationDimension ~= size(observation, 1)); error('[ srukf ] Observation dimension differs from inferenceDataSet.observationDimension'); end
 
     %% Get UKF scaling parameters
     alpha = gssModel.spkfParams(1);
@@ -75,14 +74,17 @@ function [newState, newCovState, processNoise, observationNoise, internalVariabl
 
     if (gssModel.control2InputDimension == 0); controlObservation = zeros(0, numSigmaPoints); end
 
-    weights    = [kappa 0.5 0] / (augmentStateDim + kappa);
-    weights(3) = weights(1) + (1 - alpha^2) + beta;
-
+    weights      = [kappa 0.5 0] / (augmentStateDim + kappa);
+    weights(3)   = weights(1) + (1 - alpha^2) + beta;
+           
+    sqrtWeights  = weights;
+    sqrtWeights(1:2) = sqrt(weights(1:2));
+    sqrtWeights(3) = sqrt(abs(weights(3)));
+        
     %% generate sigma point set
     sigmaPoints  = cvecrep([state; processNoise.mean; observationNoise.mean], numSigmaPoints);
-    covStateExt  = [chol(covState)' zeros(stateDim, procNoiseDim); zeros(procNoiseDim, stateDim) chol(processNoise.covariance)'];
-    offset       = sqrt(augmentStateDim + kappa) * ([covStateExt zeros(stateDim+procNoiseDim, obserNoiseDim); zeros(obserNoiseDim, stateDim + procNoiseDim) chol(observationNoise.covariance)']);
-    
+    covExtProcNoise = [cholCovState zeros(stateDim, procNoiseDim); zeros(procNoiseDim, stateDim) processNoise.covariance];
+    offset = sqrt(augmentStateDim + kappa) * [covExtProcNoise zeros(stateDim + procNoiseDim, obserNoiseDim); zeros(obserNoiseDim, stateDim + procNoiseDim) observationNoise.covariance];
     sigmaPoints(:, 2:numSigmaPoints) = sigmaPoints(:, 2:numSigmaPoints) + [offset -offset];
 
     %% propagate sigma-points through process model
@@ -93,38 +95,65 @@ function [newState, newCovState, processNoise, observationNoise, internalVariabl
     
     meanPredictedState = weights(1) * predictedState(:, 1) + weights(2)*sum(predictedState(:, 2:numSigmaPoints), 2);
     centredPredictedState = predictedState - cvecrep(meanPredictedState, numSigmaPoints);
-    predictedStateCov = weights(3)*centredPredictedState(:, 1)*centredPredictedState(:, 1)' + weights(2)*centredPredictedState(:, 2:numSigmaPoints)*centredPredictedState(:, 2:numSigmaPoints)';
-
+    
+    % QR update of state Cholesky factor (sx_ is the UPPER Cholesky factor )
+    % predictedStateCov
+    [~, sqrtCovState] = qr((sqrtWeights(2) * centredPredictedState(:, 2:numSigmaPoints))', 0);
+    
+    % deal with possible negative zero'th covariance weight
+    if (weights(3) > 0)
+        sqrtCovState = cholupdate(sqrtCovState, sqrtWeights(3)*centredPredictedState(:, 1),'+');
+    else
+        sqrtCovState = cholupdate(sqrtCovState, sqrtWeights(3)*centredPredictedState(:, 1),'-');
+    end
+    
     %% propagate through observation model
     predictedObserv = zeros(observDim, numSigmaPoints);
     for i = 1:numSigmaPoints
-        predictedObserv(:, i) = gssModel.stateObservationFun(gssModel, predictedState(:, i), sigmaPoints(stateDim+procNoiseDim+1 : stateDim+procNoiseDim+obserNoiseDim, i), controlObservation(:, i));
+        predictedObserv(:, i) = gssModel.stateObservationFun(gssModel, predictedState(:, i), sigmaPoints(stateDim + procNoiseDim + 1 : stateDim+procNoiseDim+obserNoiseDim, i), controlObservation(:, i));
     end
     
     predictedObservMean = weights(1)*predictedObserv(:, 1) + weights(2)*sum(predictedObserv(:, 2:numSigmaPoints), 2);
     centredPredicatedObserv = predictedObserv - cvecrep(predictedObservMean, numSigmaPoints);
-    predictedObservCov  = weights(3)*centredPredicatedObserv(:, 1)*centredPredicatedObserv(:, 1)' + ...
-        weights(2)*centredPredicatedObserv(:, 2:numSigmaPoints)*centredPredicatedObserv(:, 2:numSigmaPoints)' + ...
-        observationNoise.covariance;
+    
+    % QR update of observation error Cholesky factor (sy is the UPPER Cholesky factor)
+    [~, sy] = qr([(sqrtWeights(2) * centredPredicatedObserv(:, 2:numSigmaPoints))'; observationNoise.covariance], 0);
+    
+    if (weights(3) > 0)
+        sy = cholupdate(sy, sqrtWeights(3)*centredPredicatedObserv(:,1),'+');
+    else
+        sy = cholupdate(sy, sqrtWeights(3)*centredPredicatedObserv(:,1),'-');
+    end
+    
+    sqrtObservCov = sy'; % coz matrix should be lower triangle    
 
-    %% measurement update
+    %% measurement update    
     crossCov = weights(3)*centredPredictedState(:,1)*centredPredicatedObserv(:,1)' + weights(2)*centredPredictedState(:,2:numSigmaPoints)*centredPredicatedObserv(:,2:numSigmaPoints)';
-    filterGain = crossCov/predictedObservCov;
+    
+    filterGain = (crossCov/sqrtObservCov')/sqrtObservCov;
 
     if isempty(gssModel.innovationModelFunc)
         inov = observation - predictedObservMean;
     else
         inov = gssModel.innovationModelFunc(gssModel, observation, predictedObservMean);
     end
-
+    
     newState = meanPredictedState + filterGain*inov;
-    newCovState = predictedStateCov - filterGain*predictedObservCov*filterGain';
-
+    
+    % Correct covariance. This is equivalent to :  Px = Px_ - KG*Py*KG';
+    covUpdateVectors = filterGain*sqrtObservCov;
+    
+    for j = 1:observDim
+        sqrtCovState = cholupdate(sqrtCovState, covUpdateVectors(:,j), '-');
+    end
+    
+    newCholCovState = sqrtCovState';
+    
     %% additional ouptut param (required for debug)
     internalVariables.meanPredictedState    = meanPredictedState;
-    internalVariables.predictedStateCov     = predictedStateCov;
+    internalVariables.sqrtCovState          = sqrtCovState;
     internalVariables.predictedObservMean   = predictedObservMean;
     internalVariables.inov                  = inov;
-    internalVariables.predictedObservCov    = predictedObservCov;
+    internalVariables.sqrtObservCov         = sqrtObservCov;
     internalVariables.filterGain            = filterGain;
 end
