@@ -36,6 +36,8 @@ function [ dState ] = SinsDynamicEquation( ~, ... time
         quaternionRotation(quaternion, state(14:16)) + ...
         quaternionRotation(quaternion, (state(20:22)'.*angularVelocity)'))';
     
+    dState(7:10) = quaternionNormalize(dState(7:10));
+    
     dState(11:13) = accelerometerBiasDriftRate'.*state(11:13);
     dState(14:16) = gyroBiasDriftRate'.*state(14:16);
     dState(17:19) = zeros(1,3);

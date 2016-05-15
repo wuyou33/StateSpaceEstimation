@@ -7,7 +7,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
 %% Generate process and observation noise data structures for a given InferenceDS data structure
 % and algorithm type. All ReBEL estimation algorithms take an inference data structure (InferenceDS),
 % as well as two system noise data structures (process noise and observation noise) as arguments.
-% Input
+% INPUT
 %          InferenceDS         (InferenceDS) Inference data structure generated from a GSSM file by 'geninfds'
 %          estimatorType       (string) type of estimator to be used (i.e. 'kf', 'ukf', 'ekf', 'pf', etc.)
 %          pNoiseAdaptMethod  <<optional>> (string) Process noise covariance adaptation method :

@@ -26,7 +26,7 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
             obj.timeTillCurrentEpoch = timeTillCurrentEpoch;
         end
         
-        function res = Simulate(obj, time, sampleTime)
+        function signal = Simulate(obj, time, sampleTime)
             [~, tmp] = ode113( @(t,y) EquationOfMotion(t, ...
                     y, ...
                     obj.accelerationInBodyFrame.Acceleration, ...
@@ -36,9 +36,8 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
                 time, ...
                 obj.initialState ...
             );
-            res = SatellitePhaseSpace(tmp', length(tmp));
+            signal = SatellitePhaseSpace(tmp', length(tmp));
         end
     end
     
 end
-

@@ -1,14 +1,11 @@
-function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoch, sampleTime)
-%% EquationOfMotion - solve for spaceship
+function [ dy ] = equationOfMotionFreeFly( time, state, tEpoch)
+%% EquationOfMotion - solve state dynamic equation for spaceship
 %   INPUT
 %        time               - time in [sec];
 %        state              - state space vector of spaceship (distance in [km], velocity in [km/s], quaternion);
-%        acceleration       - acceleration of spaceship in [km/s^2];
-%        angularVelocity    - angular velocity of spaceship in [rad/sec];
 %        tEpoch             - time Epoch;
-%        sampleTime         - sample time [sec];
 %   OUTPUT
-%        dy - increment (diff) of state space vector of spaceship (distance in [km], velocity in [km/s], quaternion);
+%        dy - increment (diff) of state space vector of spaceship (distance in [km], velocity in [km/s]);
 %%
     EarthRadius = 6378.136; % [km] - Earth's equatorial radius
     MuE = 398600.4418;      % [km^3/s^2] - Earth gravity const
@@ -16,20 +13,6 @@ function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoc
     J3 = -.000002533;
     J4 = -0.000001616;
         
-    iterationNumber = fix(time / sampleTime);
-
-    if (isvector(acceleration))
-        accelerationCurrent = acceleration;
-    else
-        accelerationCurrent = acceleration(iterationNumber, :);
-    end
-
-    if (isvector(angularVelocity)) 
-        angularVelocityCurrent = angularVelocity;
-    else
-        angularVelocityCurrent = angularVelocity(iterationNumber, :);
-    end
-
     r = sqrt( state(1)^2 + state(2)^2 + state(3)^2 ); % distance from Earth center to spaceship center mass
     po = EarthRadius / r;
 
@@ -38,17 +21,13 @@ function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoc
     sunInfluence = SunInfluence(tEpoch, state(1:3));
     moonInfluence = MoonInfluence(tEpoch, state(1:3));
 
-    quaternion = state(7:10)';
-    rotatedAccelearation = quaternionRotation(quaternion, accelerationCurrent);
-
     dy(1:3) = state(4:6);
     dy(4) = -(MuE*state(1)/r^3)*(...
             1 ...
             + J2*3/2*po^2*(1-5*(state(3)/r)^2) ...
             + J3*po^3*5/2*(3-7*(state(3)/r)^2)*state(3)/r ...
             - J4*po^4*5/8*(3-42*(state(3)/r)^2+63*(state(3)/r)^4) ...
-        ) ...
-        + rotatedAccelearation(1) ...
+        ) ...        
         + sunInfluence(1) ...
         + moonInfluence(1);
     dy(5) = -(MuE*state(2)/r^3)*(...
@@ -57,7 +36,6 @@ function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoc
             + J3*po^3*5/2*(3-7*(state(3)/r)^2)*state(3)/r ...
             - J4*po^4*5/8*(3-42*(state(3)/r)^2+63*(state(3)/r)^4) ...
         ) ...
-        + rotatedAccelearation(2) ...
         + sunInfluence(2) ...
         + moonInfluence(2);
     dy(6) = -(MuE*state(3)/r^3)*(...
@@ -66,8 +44,6 @@ function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoc
             + J3*po^3*5/2*(3-7*po^2)*state(3)/r ...
             - J4*po^4*5/8*(3-42*(state(3)/r)^2+63*(state(3)/r)^4)...
         ) ... 
-        + rotatedAccelearation(3) ...
         + sunInfluence(3) ...
         + moonInfluence(3);
-    dy(7:10) = .5 * quaternionMultiply(quaternion, [0, angularVelocityCurrent]);
 end

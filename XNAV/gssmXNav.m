@@ -3,7 +3,7 @@
 
 %%
 
-function [varargout] = gssmInsSns(func, varargin)
+function [varargout] = gssmXNav(func, varargin)
 
     switch func  
 
@@ -20,7 +20,7 @@ end
 function model = init(initArgs)
 
     model.type                       = 'gssm';                         % object type 
-    model.tag                        = 'Loosely Coupled INS & SNS';    % ID tag
+    model.tag                        = 'X-Ray Navigation System';      % ID tag
 
     model.setParams                  = @setparams;                     % function handle to SETPARAMS
     model.stateTransitionFun         = @ffun;                          % function handle to state transition function
@@ -36,30 +36,30 @@ function model = init(initArgs)
                                                                        % of the observation function (hfun) and the actual 'real-world' measurement/observation of that signal, 
                                                                        % is a requirement for particle filter
 
-    model.stateDimension             = 22;
-    model.observationDimension       = 6;
-    model.paramDimension             = 22;                             % param count = 7, but each param is 3D vector or quaternion
+    model.stateDimension             = 6;
+    model.observationDimension       = 7;
+    model.paramDimension             = 0;                             % param count = 7, but each param is 3D vector or quaternion
     model.controlInputDimension      = 0;                              % exogenous control input 1 dimension
     model.control2InputDimension     = 0;                              % exogenous control input 2 dimension
-    model.processNoiseDimension      = 6;                              % process noise dimension
-    model.observationNoiseDimension  = 6;                              % observation noise dimension
-    model.params                     = initArgs.initialParams;         %  setup parameter vector buffer
+    model.processNoiseDimension      = 0;                              % process noise dimension
+    model.observationNoiseDimension  = 7;                              % observation noise dimension
+    model.params                     = initArgs.initialParams;         % setup parameter vector buffer
     model                            = setparams(model, ...
-                                            initArgs.initialParams);
+                                            initArgs.initialParams, ...
+                                            initArgs.xRaySources, ...
+                                            initArgs.earthEphemeris, ...
+                                            initArgs.sunEphemeris);
 
     % Setup process noise source
-
-    processNoiseArg.type           = 'gaussian';    
+    processNoiseArg.type           = 'gaussian';
     processNoiseArg.covarianceType = 'full';
-    processNoiseArg.tag            = 'GSSM process noise source';
+    processNoiseArg.tag            = 'GSSM observation noise observation';
     processNoiseArg.dimension      = model.processNoiseDimension;
-    processNoiseArg.mean           = initArgs.processNoiseMean;
-    processNoiseArg.covariance     = initArgs.processNoiseCovariance;
-
+    processNoiseArg.mean           = 0;
+    processNoiseArg.covariance     = 0;
     model.processNoise = generateNoiseDataSet(processNoiseArg);
 
     % Setup observation noise source
-
     observationNoiseArg.type           = 'gaussian';
     observationNoiseArg.covarianceType = 'full';
     observationNoiseArg.tag            = 'GSSM observation noise observation';
@@ -70,51 +70,48 @@ function model = init(initArgs)
     model.observationNoise = generateNoiseDataSet(observationNoiseArg);
 end
 %%
-function model = setparams(model, params, idxVector)
-
+function updatedModel = setparams(model, params, xRaySources, earthEphemeris, sunEphemeris)
     % Function to unpack a column vector containing system parameters into specific forms
     % needed by FFUN, HFUN and possibly defined sub-functional objects. Both the vectorized (packed)
     % form of the parameters as well as the unpacked forms are stored within the model data structure.
-    % idxVector is an optional argument which indicates which parameters should be updated. This can
-    % be used to only modify a subset of the total system parameters.
-
-    switch nargin
-
-        case 2 % update all
-            model.params = params;
-        case 3 % update subset of params
-            model.params(idxVector) = params;
-        otherwise
-            error('[ setparams ] Incorrect number of input arguments.');
-    end
-
-    model.accelerationBiasMu     = model.params(1:3);
-    model.accelerationBiasSigma  = model.params(4:6);
-    model.gyroBiasMu             = model.params(7:9);
-    model.gyroBiasSigma          = model.params(10:12);
-    model.acceleration           = model.params(13:15);
-    model.angularVelocity        = model.params(16:18);
-    model.quaternion             = model.params(19:22);
-    model.sampleTime             = model.params(23);
-    model.time                   = model.params(24);
+    updatedModel = deepClone(model);
+    updatedModel.params = params;
+    
+    updatedModel.timeTillCurrentEpoch   = params(1);
+    updatedModel.sampleTime             = params(2);
+    updatedModel.time                   = params(3);
+    updatedModel.xRaySources            = xRaySources;
+    updatedModel.earthEphemerisX        = earthEphemeris(1);
+    updatedModel.earthEphemerisY        = earthEphemeris(2);
+    updatedModel.earthEphemerisZ        = earthEphemeris(3);
+    updatedModel.sunEphemerisX          = sunEphemeris(1);
+    updatedModel.sunEphemerisY          = sunEphemeris(2);
+    updatedModel.sunEphemerisZ          = sunEphemeris(3);
 end
 
 function newState = ffun(model, state, noise, stateControl)
     % State transition function (system dynamics).    
+%     [~, tmp] = ode113( @(t,y) EquationOfMotion(t, ...
+%             y, ...
+%             model.acceleration, ...
+%             model.angularVelocity, ...
+%             model.timeTillCurrentEpoch, ...
+%             model.sampleTime ), ...
+%         [model.time - model.sampleTime, model.time], ...
+%         state ...
+%     );
+%     newState = tmp(end, :);
     newState = rungeKuttaFourOrderWithFixedStep(...
-        @(t, y) SinsDynamicEquation(t, ...
+        @(t,y) equationOfMotionFreeFly(t, ...
             y, ...
-            model.accelerationBiasMu', ...
-            model.gyroBiasMu', ...
-            model.acceleration', ...
-            model.angularVelocity', ...
-            model.quaternion ), ...
-        state', ...
+            model.timeTillCurrentEpoch), ...
+        state, ...
         model.time, ...
-        model.sampleTime);
-
+        model.sampleTime...
+    );
+    
     if ~isempty(noise)
-        newState(17:22) = newState(17:22) + noise';
+        newState = newState + noise';
     end
     
     if ~isempty(stateControl)
@@ -122,10 +119,19 @@ function newState = ffun(model, state, noise, stateControl)
     end
 end
 
-function observ = hfun(~, state, noise, observationControl) % first argument is a model.
+function observ = hfun(gssModel, state, noise, observationControl) % first argument is a model.
     % State observation function.
-    observ = state(1:6);
-
+    earthEphemeris.x = gssModel.earthEphemerisX;
+    earthEphemeris.y = gssModel.earthEphemerisY;
+    earthEphemeris.z = gssModel.earthEphemerisZ;
+    
+    sunEphemeris.x = gssModel.sunEphemerisX;
+    sunEphemeris.y = gssModel.sunEphemerisY;
+    sunEphemeris.z = gssModel.sunEphemerisZ;
+    
+    diffToa = calculateDiffToa(gssModel.xRaySources, earthEphemeris, sunEphemeris, state(1:3)');
+    observ = diffToa2phase(gssModel.xRaySources, diffToa);
+    
     if ~isempty(noise)
         observ = observ + noise(1,:);
     end
@@ -151,6 +157,6 @@ end
 
 function innov = innovation(~, observation, predictedObservation) % first argument is a model.
 %   Calculates the innovation signal (difference) between the
-%   output of HFUN, i.e. OBSERV (the predicted system observation) and an actual 'real world' observation OBS.
+%   output of hfun, i.e. observ (the predicted system observation) and an actual 'real world' observation OBS.
     innov = observation - predictedObservation;
 end

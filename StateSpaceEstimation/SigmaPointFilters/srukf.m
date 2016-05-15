@@ -82,10 +82,16 @@ function [newState, newCholCovState, processNoise, observationNoise, internalVar
     sqrtWeights(3) = sqrt(abs(weights(3)));
         
     %% generate sigma point set
-    sigmaPoints  = cvecrep([state; processNoise.mean; observationNoise.mean], numSigmaPoints);
-    covExtProcNoise = [cholCovState zeros(stateDim, procNoiseDim); zeros(procNoiseDim, stateDim) processNoise.covariance];
-    offset = sqrt(augmentStateDim + kappa) * [covExtProcNoise zeros(stateDim + procNoiseDim, obserNoiseDim); zeros(obserNoiseDim, stateDim + procNoiseDim) observationNoise.covariance];
-    sigmaPoints(:, 2:numSigmaPoints) = sigmaPoints(:, 2:numSigmaPoints) + [offset -offset];
+    if (procNoiseDim ~= 0)
+        sigmaPoints  = cvecrep([state; processNoise.mean; observationNoise.mean], numSigmaPoints);
+        covExtProcNoise = [cholCovState zeros(stateDim, procNoiseDim); zeros(procNoiseDim, stateDim) processNoise.covariance];
+        offset = [covExtProcNoise zeros(stateDim + procNoiseDim, obserNoiseDim); zeros(obserNoiseDim, stateDim + procNoiseDim) observationNoise.covariance];
+    else
+        sigmaPoints  = cvecrep([state; observationNoise.mean], numSigmaPoints);        
+        offset = [cholCovState zeros(stateDim, obserNoiseDim); zeros(obserNoiseDim, stateDim) observationNoise.covariance];
+    end
+    
+    sigmaPoints(:, 2:numSigmaPoints) = sigmaPoints(:, 2:numSigmaPoints) + sqrt(augmentStateDim + kappa)*[offset -offset];
 
     %% propagate sigma-points through process model
     predictedState = zeros(stateDim, numSigmaPoints);

@@ -61,11 +61,13 @@ switch targetCovarianceType
         switch noiseDataStructure.covarianceType
             case {'full','diag'}
                 if stringmatch(noiseDataStructure.noiseSourceType,'gmm')
-                    for k=1:noiseDataStructure.M,
+                    for k=1:noiseDataStructure.M
                         noiseDataStructure.covariance(:,:,k) = chol(noiseDataStructure.covariance(:,:,k))';
                     end
                 else
-                    noiseDataStructure.covariance = chol(noiseDataStructure.covariance)';
+                    if (~isscalar(noiseDataStructure.covariance))
+                        noiseDataStructure.covariance = chol(noiseDataStructure.covariance)';
+                    end
                 end
         end
         noiseDataStructure.covarianceType = targetCovarianceType;
@@ -79,7 +81,9 @@ switch targetCovarianceType
                         noiseDataStructure.covariance(:, :, k) = svdDecomposition(noiseDataStructure.covariance(:,:,k))';
                     end
                 else
-                    noiseDataStructure.covariance = svdDecomposition(noiseDataStructure.covariance)';
+                    if (~isscalar(noiseDataStructure.covariance))
+                        noiseDataStructure.covariance = svdDecomposition(noiseDataStructure.covariance)';
+                    end
                 end
         end
         noiseDataStructure.covarianceType = targetCovarianceType;        

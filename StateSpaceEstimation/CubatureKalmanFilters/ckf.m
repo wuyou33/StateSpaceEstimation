@@ -60,11 +60,15 @@ function [newState, newCovState, processNoise, observationNoise, internalVariabl
     numCubPointSet1 = 2*augmentDim;
 
     if (gssModel.controlInputDimension == 0); controlProcess = zeros(0, numCubPointSet1); end
-    if (gssModel.control2InputDimension == 0); controlObservation = zeros(0, numCubPointSet1); end
-
+    
     %% Calculate cubature points
-    offsetPrediction = [svdDecomposition(covState) zeros(stateDim, procNoiseDim); zeros(procNoiseDim, stateDim) svdDecomposition(processNoise.covariance)];
-    cubatureSet  = cvecrep([state; processNoise.mean], numCubPointSet1) + offsetPrediction*(sqrt(numCubPointSet1/2)*[eye(augmentDim) -eye(augmentDim)]);
+    if (procNoiseDim ~= 0)
+        offsetPrediction = [svdDecomposition(covState) zeros(stateDim, procNoiseDim); zeros(procNoiseDim, stateDim) svdDecomposition(processNoise.covariance)];
+        cubatureSet  = cvecrep([state; processNoise.mean], numCubPointSet1) + offsetPrediction*(sqrt(numCubPointSet1/2)*[eye(augmentDim) -eye(augmentDim)]);
+    else
+        offsetPrediction = svdDecomposition(covState);
+        cubatureSet  = cvecrep(state, numCubPointSet1) + offsetPrediction*(sqrt(numCubPointSet1/2)*[eye(augmentDim) -eye(augmentDim)]);
+    end   
 
     %% Propagate sigma-points through process model
     predictedState = zeros(stateDim, numCubPointSet1);
@@ -83,6 +87,7 @@ function [newState, newCovState, processNoise, observationNoise, internalVariabl
     cubatureSet2 = cvecrep([predictedStateMean; observationNoise.mean], numCubPointSet2) + offsetObs*(sqrt(numCubPointSet2/2)*[eye(augmentDim) -eye(augmentDim)]);
 
     %% Propagate through observation model
+    if (gssModel.control2InputDimension == 0); controlObservation = zeros(0, numCubPointSet2); end
     predictedObs = zeros(observDim, numCubPointSet2);
     for i = 1:numCubPointSet2
         predictedObs(:, i) = gssModel.stateObservationFun(gssModel, cubatureSet2(1:stateDim, i), cubatureSet2(stateDim+1:stateDim+obsNoiseDim, i), controlObservation(:, i));
