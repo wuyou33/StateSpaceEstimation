@@ -57,7 +57,7 @@ function [ sources ] = loadXRaySources(count)
     );
 
     p5 = XRaySource('B0540-69', ... name
-        50.4,... period
+        50.4e-3,... period
         5.15e-3,... intensity
         550,... raError
         500,... decError
@@ -69,7 +69,7 @@ function [ sources ] = loadXRaySources(count)
     );
 
     p6 = XRaySource('J1814-338', ... name
-        3.18,... period
+        3.18e-3,... period
         9.97e-2,... intensity
         1,... raError -- really unknown
         1,... decError -- really unknown
@@ -81,7 +81,7 @@ function [ sources ] = loadXRaySources(count)
     );
 
     p7 = XRaySource('J1808-369', ... name
-        2.49,... period
+        2.49e-3,... period
         3.29e-1,... intensity
         1,... raError -- really unknown
         1,... decError -- really unknown
