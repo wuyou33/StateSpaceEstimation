@@ -74,13 +74,23 @@ function [ newState, newCovState, processNoise, observationNoise, internalVariab
     if (gssModel.controlInputDimension  == 0); controlProcess = zeros(0, numSigmaPointSet1); end
     if (gssModel.control2InputDimension == 0); controlObservation = zeros(0, numSigmaPointSet2); end
     
-    squareRootProcNoiseCov = chol(processNoise.covariance)';
+    if processNoise.covariance == 0
+        squareRootProcNoiseCov = 0;
+    else
+        squareRootProcNoiseCov = chol(processNoise.covariance)';
+    end
     squareRootObsNoiseCov  = chol(observationNoise.covariance)';
     squareRootProcCov      = chol(covState)';
     
     %% time update
-    sigmaPointSet1 = cvecrep([state; processNoise.mean], numSigmaPointSet1);
-    covStateExt    = [squareRootProcCov zeros(stateDim, stateNoiseDim); zeros(stateNoiseDim, stateDim) squareRootProcNoiseCov];
+    if processNoise.covariance == 0
+        sigmaPointSet1 = cvecrep(state, numSigmaPointSet1);
+        covStateExt    = squareRootProcCov;
+    else
+        sigmaPointSet1 = cvecrep([state; processNoise.mean], numSigmaPointSet1);
+        covStateExt    = [squareRootProcCov zeros(stateDim, stateNoiseDim); zeros(stateNoiseDim, stateDim) squareRootProcNoiseCov];
+    end    
+    
     sigmaPointSet1(:,2:numSigmaPointSet1) = sigmaPointSet1(:,2:numSigmaPointSet1) + [h*covStateExt -h*covStateExt];
     
     %% propagate sigma-points through process model

@@ -9,7 +9,7 @@ addpath(genpath('Ephemeris'));
 addpath(genpath('XNAV'));
 
 sampleTime              = 0.0001; % seconds
-simulationNumber        = 1e3;
+simulationNumber        = 1*0.1/sampleTime; % x minutes * y seconds / sampleTime
 simulationTime          = sampleTime*simulationNumber;
 time                    = (1:simulationNumber) * sampleTime;
 timeMinutes             = time / 60;
@@ -46,7 +46,7 @@ estimatorType = filterTypeArray(1);
 
 xRayNavSystem = XRayNavSystem(earthEphemeris, sunEphemeris, xRaySources, xRayDetector);
 tic;
-stateVector = xRayNavSystem.Simulate(initialState, initialCov, time, estimatorType, T_till_current_epoch, sampleTime);
+stateVector = xRayNavSystem.Simulate(initialState, initialCov, time, estimatorType, T_till_current_epoch, sampleTime, 1);
 fprintf('xRayNavSystem.Simulate take: ')
 toc;
 

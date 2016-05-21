@@ -74,8 +74,13 @@ function [ newState, newCholCovState, processNoise, observationNoise, internalVa
     if (gssModel.control2InputDimension == 0); controlObservation = zeros(0, numSigmaPointSet2); end
     
     %% time update
-    sigmaPointSet1 = cvecrep([state; processNoise.mean], numSigmaPointSet1);    
-    offsetSet1     = [cholCovState zeros(stateDim, stateNoiseDim); zeros(stateNoiseDim, stateDim) processNoise.covariance];    
+    if processNoise.covariance == 0
+        sigmaPointSet1 = cvecrep(state, numSigmaPointSet1);    
+        offsetSet1     = cholCovState;
+    else
+        sigmaPointSet1 = cvecrep([state; processNoise.mean], numSigmaPointSet1);    
+        offsetSet1     = [cholCovState zeros(stateDim, stateNoiseDim); zeros(stateNoiseDim, stateDim) processNoise.covariance];    
+    end
     sigmaPointSet1(:, 2:numSigmaPointSet1) = sigmaPointSet1(:, 2:numSigmaPointSet1) + [h*offsetSet1 -h*offsetSet1];    
     
     %% propagate sigma-points through process model

@@ -29,12 +29,21 @@ function [ ephemeris ] = loadEphemeris(type, capacity, repeatInterval)
     % data generated in http://ssd.jpl.nasa.gov/horizons.cgi in csv has comma after last column, therefore matlab think that it's another new empty column
     columnCount = columnCount - 1; 
     
-    interpolated = data(:, 1:columnCount);
+    capacity = fix(capacity);
+    
+    data = data(:, 1:columnCount);
     
     if (nargin == 3 && repeatInterval > 0)
-        interpolated = interp1(1:length(interpolated), interpolated, 1:capacity, 'spline');
-%         extrapolated = repelem(extrapolated, repeatInterval, 1); 
+        n = length(data)*repeatInterval;
+        indexes = linspace(1, n, length(data));
+        interpolated = zeros(capacity, 6);
+        for i=1:6
+            interpolated(:, i) = interp1(indexes, data(:, i), 1:capacity, 'spline');
+        end
+    else
+        interpolated = data;
     end
+    
     
     ephemeris.x  = interpolated(1:capacity, 1);
     ephemeris.y  = interpolated(1:capacity, 2);

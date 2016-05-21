@@ -100,7 +100,7 @@ classdef XRayNavSystem
                     case 'cdkf'
                         [state, covState, processNoise, observationNoise] = cdkf(state, covState, processNoise, observationNoise, observation, inferenceDataSet);
                     case 'srcdkf'
-                        [state, decompCovState, processNoise, observationNoise] = srcdkf(state, decompCovState, processNoise, observationNoise, inferenceDataSet);
+                        [state, decompCovState, processNoise, observationNoise] = srcdkf(state, decompCovState, processNoise, observationNoise, observation, inferenceDataSet);
                     case 'ckf'
                         [state, covState, processNoise, observationNoise] = ckf(state, covState, processNoise, observationNoise, observation, inferenceDataSet);
                     case 'sckf'
