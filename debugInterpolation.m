@@ -15,15 +15,10 @@ time                    = (1:simulationNumber) * sampleTime;
 timeMinutes             = time / 60;
 iterationNumber         = 1;
 
-filterTypeArray         = {'srcdkf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf'};
-
-T_till_current_epoch = 0.1465;
-xRaySourceCount      = 7;
-backgroundPhotnRate  = 5.9;
-timeBucket           = 1e5; % 1e5
-detectorArea         = 1;
-
 inter = loadEphemeris('earth', simulationNumber, 60/sampleTime);
 % orig = loadEphemeris('earth', simulationNumber);
-t = ((inter.x(simulationNumber) - inter.x(simulationNumber-1)) / (sampleTime)) - inter.vx(simulationNumber);
-display(t)
+interpError = ((inter.x(2) - inter.x(1)) / (sampleTime)) - inter.vx(2);
+display(interpError)
+
+interpErrorEnd = ((inter.x(simulationNumber) - inter.x(simulationNumber-1)) / (sampleTime)) - inter.vx(simulationNumber);
+display(interpErrorEnd)

@@ -6,7 +6,7 @@ function [ phase ] = diffToa2phase( xRaySources, diffToa )
 %       diffToa     - difference between toa to spaceshift and ssb (solar system baricenter);
 % OUTPUT:
 %       phase       - array of phase for every xRaySource;
-% %     
+%%     
     dimension = length(xRaySources);    
     invPeriods   = zeros(1, dimension);
     for i = 1:dimension        

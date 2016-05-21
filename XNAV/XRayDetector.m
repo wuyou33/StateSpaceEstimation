@@ -87,16 +87,18 @@ classdef XRayDetector < handle
             noise = randn(capacity, sourceCount)*diag(sqrt(covariance));
         end
         
-        function [] = visualize(this, signal)                                                      
-            for i = 1:length(this.xRaySources)
-                figure();
-                plot(signal(:, i)); 
+        function [] = visualize(this, signal)     
+            legends = {length(this.xRaySources)};
+            figure();
+            for i = 1:length(this.xRaySources)               
+                plot(signal(:, i));
                 hold on;
-                grid on;
-                legend(this.xRaySources(i).name);
-                xlabel('digit time');
-                ylabel('phase, rad');
-            end            
+                legends{i} = this.xRaySources(i).name;
+            end
+            grid on;
+            xlabel('digit time');
+            ylabel('phase, rad');
+            legend(legends);
         end
     end
 end
