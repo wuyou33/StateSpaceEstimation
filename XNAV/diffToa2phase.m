@@ -10,7 +10,7 @@ function [ phase ] = diffToa2phase( invPeriods, diffToa )
     [capacity, ~] = size(diffToa);
     
     absPhase = diffToa.*repmat(invPeriods, capacity, 1);
-%     phase = absPhase;
-    phase = ang180(absPhase);
+    phase = absPhase;
+%     phase = ang180(absPhase);
 %     phase = unwrap(absPhase);
 end

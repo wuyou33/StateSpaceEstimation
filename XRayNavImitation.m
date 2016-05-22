@@ -10,7 +10,7 @@ addpath(genpath('XNAV'));
 
 secondInOneMinute       = 60;
 sampleTime              = 0.0001; % seconds
-simulationNumber        = 1*60/sampleTime; % x minutes * y seconds / sampleTime
+simulationNumber        = 1*0.01/sampleTime; % x minutes * y seconds / sampleTime
 simulationTime          = sampleTime*simulationNumber;
 time                    = (1:simulationNumber) * sampleTime;
 timeMinutes             = time / secondInOneMinute;
