@@ -10,7 +10,7 @@ addpath(genpath('XNAV'));
 
 secondInOneMinute       = 60;
 sampleTime              = 0.0001; % seconds
-simulationNumber        = 1*0.1/sampleTime; % x minutes * y seconds / sampleTime
+simulationNumber        = 1*60/sampleTime; % x minutes * y seconds / sampleTime
 simulationTime          = sampleTime*simulationNumber;
 time                    = (1:simulationNumber) * sampleTime;
 timeMinutes             = time / secondInOneMinute;
@@ -20,7 +20,7 @@ filterTypeArray         = {'ckf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcd
 
 T_till_current_epoch = 0.1465;
 xRaySourceCount      = 7;
-backgroundPhotnRate  = 5.9;
+backgroundPhotnRate  = 5.9e4;
 timeBucket           = 1e5; % 1e5
 detectorArea         = 1;
 
@@ -36,29 +36,32 @@ simulator             = TrajectoryPhaseSpaceSatelliteSimulatorFree(initial, T_ti
 spaceshipStateTrue    = simulator.Simulate(time);
 initialSpaceshipState = spaceshipStateTrue(1:6, 1);
 
-xRayDetector = XRayDetector(xRaySources, detectorArea, timeBucket, backgroundPhotnRate, initial, earthEphemeris, sunEphemeris, T_till_current_epoch);
-
-initialCov = [(0.1)^2*eye(3), zeros(3, 3); ...
-    zeros(3, 3), (5e-5)^2*eye(3);
+initialCov = [(1)^2*eye(3), zeros(3, 3); ...
+    zeros(3, 3), (5e-3)^2*eye(3);
 ];
 initialState = initial + chol(initialCov)*randn(6, 1);
 
 estimatorType = filterTypeArray(1);
 
+xRayDetector  = XRayDetector(xRaySources, detectorArea, timeBucket, backgroundPhotnRate, initial, earthEphemeris, sunEphemeris, T_till_current_epoch);
 xRayNavSystem = XRayNavSystem(earthEphemeris, sunEphemeris, xRaySources, xRayDetector);
 tic;
-stateVector = xRayNavSystem.Simulate(initialState, initialCov, time, estimatorType, T_till_current_epoch, sampleTime);
-fprintf('xRayNavSystem.Simulate take: ')
+stateVector = xRayNavSystem.Simulate(initialState, initialCov, time, estimatorType, T_till_current_epoch, sampleTime, 1);
+fprintf('xRayNavSystem.Simulate: ')
 toc;
 
 figure();
     loglog(timeMinutes', abs(1e3*(stateVector(1:3, :) - spaceshipStateTrue(1:3, :))));
-    title('distance error, m');
+    ylabel('distance error, m');
+    xlabel('time, minutes')
+    title('distance error');
     legend('x axis', 'y axis', 'z axis');
     grid on;
 
 figure();
     loglog(timeMinutes', abs(1e3*(stateVector(4:6, :) - spaceshipStateTrue(4:6, :))));
-    title('velocity error, m / sec');
+    ylabel('velocity error, m / sec')
+    xlabel('time, minutes')
+    title('velocity error');
     legend('x axis', 'y axis', 'z axis');
     grid on;

@@ -15,22 +15,41 @@ function [ tRel ] = toaRelativeEffects( xRaySources, earthEphemeris, sunEphemeri
 %%
     if (nargin ~= 4); error('[ toaRelativeEffects ] incorrect number of input arg. Should be 3'); end
 %%      
-    c         = 299792.458; % speed of light [km/sec]  
+        
+    [capacity, ~]  = size(spaceshipTrajectory);
+    dimension = length(xRaySources);
+    
+    if dimension == 7 % optimization
+        tRel(:, 1) = relativeEffects(xRaySources(1), capacity, earthEphemeris, sunEphemeris, spaceshipTrajectory);
+        tRel(:, 2) = relativeEffects(xRaySources(2), capacity, earthEphemeris, sunEphemeris, spaceshipTrajectory);
+        tRel(:, 3) = relativeEffects(xRaySources(3), capacity, earthEphemeris, sunEphemeris, spaceshipTrajectory);
+        tRel(:, 4) = relativeEffects(xRaySources(4), capacity, earthEphemeris, sunEphemeris, spaceshipTrajectory);
+        tRel(:, 5) = relativeEffects(xRaySources(5), capacity, earthEphemeris, sunEphemeris, spaceshipTrajectory);
+        tRel(:, 6) = relativeEffects(xRaySources(6), capacity, earthEphemeris, sunEphemeris, spaceshipTrajectory);
+        tRel(:, 7) = relativeEffects(xRaySources(7), capacity, earthEphemeris, sunEphemeris, spaceshipTrajectory);
+    else
+        tRel      = zeros(capacity, dimension);
+        for i = 1:dimension        
+            tRel(:, i) = relativeEffects(xRaySources(i), capacity, earthEphemeris, sunEphemeris, spaceshipTrajectory);
+        end
+    end
+end
+
+function tRel = relativeEffects(x, capacity, earthEphemeris, sunEphemeris, spaceshipTrajectory)
+    c         = 299792.458; % speed of light [km/sec]   
     earthR    = [earthEphemeris.x earthEphemeris.y earthEphemeris.z];
     sunR      = [sunEphemeris.x sunEphemeris.y sunEphemeris.z];    
-    rSc       = earthR + spaceshipTrajectory;
-    dimension = length(xRaySources);
-    [capacity, ~]  = size(spaceshipTrajectory);
+    rSc       = earthR + spaceshipTrajectory;    
     
-    tRel      = zeros(capacity, dimension);
-    
-    for i = 1:dimension        
-        x = xRaySources(i);
-        xNorm = repmat(x.Normal, capacity, 1);        
-        
-        firstPart  = dot(xNorm, rSc, 2).^2 - normOfEveryRow(rSc).^2;
-        secondPart = dot(xNorm, sunR, 2).*dot(xNorm, rSc, 2) - dot(sunR, rSc, 2);
-        
-        tRel(:, i) = 1/(2*c*x.distance)*firstPart + 1/(c*x.distance)*secondPart;
+    if capacity == 1
+        xNorm = x.Normal;
+    else
+        xNorm = repmat(x.Normal, capacity, 1);
     end
+    
+    firstPart  = dotProduct(xNorm, rSc, 2).^2 - normOfEveryRow(rSc).^2;
+    secondPart = dotProduct(xNorm, sunR, 2).*dotProduct(xNorm, rSc, 2) - dotProduct(sunR, rSc, 2);
+%         firstPart  = dot(xNorm, rSc, 2).^2 - normOfEveryRow(rSc).^2;
+%         secondPart = dot(xNorm, sunR, 2).*dot(xNorm, rSc, 2) - dot(sunR, rSc, 2);
+    tRel = 1/(2*c*x.distance)*firstPart + 1/(c*x.distance)*secondPart;
 end

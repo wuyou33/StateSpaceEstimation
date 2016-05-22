@@ -34,6 +34,7 @@ classdef XRayNavSystem
             initArgs.earthEphemeris = [this.earthEphemeris.x(1); this.earthEphemeris.y(1); this.earthEphemeris.z(1)];
             initArgs.sunEphemeris = [this.sunEphemeris.x(1); this.sunEphemeris.y(1); this.sunEphemeris.z(1)];
             initArgs.observationNoiseMean = zeros(7, 1);
+            initArgs.invPeriods = this.getInvPeriods();
             
             observCov = xRayToaCovariance(this.xRaySources, this.xRayDetector.DetectorArea, this.xRayDetector.TimeBucket, this.xRayDetector.BackgroundPhotnRate);
             initArgs.observationNoiseCovariance = diag(observCov);
@@ -73,8 +74,12 @@ classdef XRayNavSystem
             
             simulationNumber = length(time);            
             stateEstimate    = zeros(6, simulationNumber);                      
-                        
+                                                
             for i = 2:1:simulationNumber
+                if mod((i / simulationNumber)*100, 5) == 0
+                    disp(['Completed: ', num2str((i / simulationNumber) * 100),' %' ]);
+                end
+                
                 observation = phase(i,:)';
                 
                 modelParams(1)      = tEpoh;
@@ -88,7 +93,8 @@ classdef XRayNavSystem
                     modelParams, ...
                     inferenceDataSet.model.xRaySources, ...
                     earthEphemerisStep, ...
-                    sunEphemerisStep ...
+                    sunEphemerisStep, ...
+                    inferenceDataSet.model.invPeriods ...
                 );
                 inferenceDataSet.model = updModel;
                 
@@ -112,5 +118,18 @@ classdef XRayNavSystem
                 stateEstimate(:, i) = state';
             end
         end
+    end
+    
+    methods (Access=private)
+        function invPeriods = getInvPeriods(this)
+            dimension = length(this.xRaySources);
+            
+            invPeriods   = zeros(1, dimension);
+            for i = 1:dimension
+                x = this.xRaySources(i);
+                invPeriods(i) = x.TwoPiOnPeriod;
+            end
+        end
+    
     end
 end

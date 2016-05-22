@@ -8,6 +8,11 @@ addpath(genpath('Utils'));
 addpath(genpath('Ephemeris'));
 addpath(genpath('XNAV'));
 
+matrix = randn(2);
+qr(matrix, 0)
+chol(matrix)
+
+% return
 sampleTime              = 0.0001; % seconds
 simulationNumber        = fix(1*0.5/sampleTime); % x minutes * y seconds / sampleTime
 simulationTime          = sampleTime*simulationNumber;

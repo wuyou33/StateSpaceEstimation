@@ -48,7 +48,8 @@ function model = init(initArgs)
                                             initArgs.initialParams, ...
                                             initArgs.xRaySources, ...
                                             initArgs.earthEphemeris, ...
-                                            initArgs.sunEphemeris);
+                                            initArgs.sunEphemeris, ...
+                                            initArgs.invPeriods);
 
     % Setup process noise source
     processNoiseArg.type           = 'gaussian';
@@ -70,7 +71,7 @@ function model = init(initArgs)
     model.observationNoise = generateNoiseDataSet(observationNoiseArg);
 end
 %%
-function updatedModel = setparams(model, params, xRaySources, earthEphemeris, sunEphemeris)
+function updatedModel = setparams(model, params, xRaySources, earthEphemeris, sunEphemeris, invPeriods)
     % Function to unpack a column vector containing system parameters into specific forms
     % needed by FFUN, HFUN and possibly defined sub-functional objects. Both the vectorized (packed)
     % form of the parameters as well as the unpacked forms are stored within the model data structure.
@@ -87,11 +88,12 @@ function updatedModel = setparams(model, params, xRaySources, earthEphemeris, su
     updatedModel.sunEphemerisX          = sunEphemeris(1);
     updatedModel.sunEphemerisY          = sunEphemeris(2);
     updatedModel.sunEphemerisZ          = sunEphemeris(3);
+    updatedModel.invPeriods             = invPeriods;
 end
 
 function newState = ffun(model, state, noise, stateControl)
     % State transition function (system dynamics).    
-%     [~, tmp] = ode113( @(t,y) EquationOfMotion(t, ...
+%     [~, tmp] = ode45( @(t,y) EquationOfMotion(t, ...
 %             y, ...
 %             model.acceleration, ...
 %             model.angularVelocity, ...
@@ -130,7 +132,7 @@ function observ = hfun(gssModel, state, noise, observationControl) % first argum
     sunEphemeris.z = gssModel.sunEphemerisZ;
     
     diffToa = calculateDiffToa(gssModel.xRaySources, earthEphemeris, sunEphemeris, state(1:3)');
-    observ = diffToa2phase(gssModel.xRaySources, diffToa);
+    observ = diffToa2phase(gssModel.invPeriods, diffToa);
     
     if ~isempty(noise)
         observ = observ + noise(1,:);

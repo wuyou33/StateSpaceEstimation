@@ -5,7 +5,7 @@ function [ diffToa ] = calculateDiffToa( xRaySources, earthEphemeris, sunEphemer
 % - time of arrival to ssb (solar system baricenter)
 % for every x-ray source
 % calculated by following expression:
-%     dToa = (n*(re + r))/c + tRel
+%     dToa = (n*(r + re))/c + tRel
 % INPUT:
 %       xRaySources          - array of x-ray sources (every item should be instance of the XRaySource);
 %       earthEphemeris       - earth ephemeris (x, y, z - vectors in [km], vx, vy, vz - vectors in [km/sec]);
@@ -28,6 +28,6 @@ function [ diffToa ] = calculateDiffToa( xRaySources, earthEphemeris, sunEphemer
         xNorm = repmat(x.Normal, capacity, 1);
         % 2*earthR - it's easy way to convert spaceshipTrajectory from eci
         % to icrf
-        diffToa(:, i) = 1/c*(dot(xNorm, 2*earthR + spaceshipTrajectory, 2)) + tRel(:, i);
+        diffToa(:, i) = 1/c*(dotProduct(xNorm, 2*earthR + spaceshipTrajectory, 2)) + tRel(:, i);
     end
 end

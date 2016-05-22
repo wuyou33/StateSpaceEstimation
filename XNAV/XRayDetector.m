@@ -50,7 +50,8 @@ classdef XRayDetector < handle
             spaceshipState = simulator.Simulate(time);
             spaceshipTrajectory = spaceshipState(1:3, :)';
             diffToa = calculateDiffToa(this.xRaySources, this.earthEphemeris, this.sunEphemeris, spaceshipTrajectory);
-            phase = diffToa2phase(this.xRaySources, diffToa);
+            
+            phase = diffToa2phase(this.getInvPeriods(), diffToa);
                         
             [capacity, ~] = size(phase);
             noise = this.generateNoise(capacity);
@@ -58,7 +59,7 @@ classdef XRayDetector < handle
             signal = phase + noise;
             
             if (visualize)
-                this.visualize(signal);
+                this.visualize(signal, time);
             end
         end
     end
@@ -78,6 +79,15 @@ classdef XRayDetector < handle
     end
     
     methods(Access = private)
+        function invPeriods = getInvPeriods(this)
+            dimension = length(this.xRaySources);            
+            invPeriods   = zeros(1, dimension);
+            for i = 1:dimension
+                x = this.xRaySources(i);
+                invPeriods(i) = x.TwoPiOnPeriod;
+            end
+        end
+        
         function noise = generateNoise(this, capacity)
             if (capacity <= 0); error('capacity should be positive integer'); end
             if (capacity-fix(capacity) ~= 0); error('capacity should be positive integer'); end
@@ -87,16 +97,16 @@ classdef XRayDetector < handle
             noise = randn(capacity, sourceCount)*diag(sqrt(covariance));
         end
         
-        function [] = visualize(this, signal)     
+        function [] = visualize(this, signal, time)     
             legends = {length(this.xRaySources)};
             figure();
             for i = 1:length(this.xRaySources)               
-                plot(signal(:, i));
+                plot(time, signal(:, i));
                 hold on;
                 legends{i} = this.xRaySources(i).name;
             end
             grid on;
-            xlabel('digit time');
+            xlabel('time, sec');
             ylabel('phase, rad');
             legend(legends);
         end
