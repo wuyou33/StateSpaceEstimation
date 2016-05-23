@@ -10,3 +10,5 @@
 Main.m~
 
 *.m~
+exclude/
+Res/
