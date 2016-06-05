@@ -9,8 +9,8 @@ addpath(genpath('Ephemeris'));
 addpath(genpath('XNAV'));
 
 secondInOneMinute       = 60;
-sampleTime              = 0.0001; % seconds
-simulationNumber        = 1*0.01/sampleTime; % x minutes * y seconds / sampleTime
+sampleTime              = 1e-4; % seconds
+simulationNumber        = 1*1*1/sampleTime; % x hours * y minutes * z seconds / sampleTime
 simulationTime          = sampleTime*simulationNumber;
 time                    = (1:simulationNumber) * sampleTime;
 timeMinutes             = time / secondInOneMinute;
@@ -36,8 +36,8 @@ simulator             = TrajectoryPhaseSpaceSatelliteSimulatorFree(initial, T_ti
 spaceshipStateTrue    = simulator.Simulate(time);
 initialSpaceshipState = spaceshipStateTrue(1:6, 1);
 
-initialCov = [(1)^2*eye(3), zeros(3, 3); ...
-    zeros(3, 3), (5e-3)^2*eye(3);
+initialCov = [(3)^2*eye(3), zeros(3, 3); ...
+    zeros(3, 3), (5e-4)^2*eye(3);
 ];
 initialState = initial + chol(initialCov)*randn(6, 1);
 

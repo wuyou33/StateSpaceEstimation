@@ -4,7 +4,7 @@ classdef WienerProcess < handle
     %   [0,T] is a random variable W(t) that depends continuously on $t in [0,T] and satisfies the following
     %   W(0) = 0
     %   0<= s <= t <= T
-    %   dW = dt?.5 * N(0, 1)
+    %   dW = sqrt(dt) * N(0, 1)
     %   where N(0, 1) - gaussian noise
     
     %%

@@ -16,7 +16,7 @@ function ins = init(initArgs)
     accelerometerParam = AccelerometerParam(initArgs.simulationNumber, ... simulationNumber
         [0 0 0], ... levelArm
         [0 0 0], ... angularAccelerationinBodyFrame
-        1.0003*eye(3), ... accelerometerScale
+        1*eye(3) + initArgs.accScale, ... accelerometerScale
         initArgs.accBiasMu, ... biasMu
         initArgs.accBiasSigma, ... biasSigma
         initArgs.accNoiseVar, ... noiseVar
@@ -24,8 +24,8 @@ function ins = init(initArgs)
     );
 
     gyroParam = GyroParam(initArgs.simulationNumber, ... simulationNumber
-        1e-10*eye(3), ... gyroGSensitiveBias
-        1.0003*eye(3), ... gyroScaleFactor
+        0*eye(3), ... gyroGSensitiveBias
+        1*eye(3) + initArgs.gyroScale, ... gyroScaleFactor
         initArgs.gyroBiasMu, ... gyroBiasMu
         initArgs.gyroBiasSigma, ... gyroBiasSigma
         initArgs.gyroNoiseVar, ... gyroNoiseVar
@@ -46,7 +46,7 @@ function ins = init(initArgs)
         figure(); 
             plot(initArgs.timeMinutes', inertialMeasurementUnit.AngularVelocity); 
             title('angular velocity'); 
-            ylabel('angular velocity, rad/s');
+            ylabel('angular velocity, rad/sec');
             xlabel('time, min');
             legend('x axis', 'y axis', 'z axis');
             grid on;
@@ -54,14 +54,14 @@ function ins = init(initArgs)
         figure(); 
             plot(initArgs.timeMinutes', initArgs.angularVelocityInBodyFrame.Velocity); 
             title('true angular velocity'); 
-            ylabel('angular velocity, rad/s');
+            ylabel('angular velocity, rad/sec');
             xlabel('time, min');
             legend('x axis', 'y axis', 'z axis');
             grid on;
 
         figure(); 
             plot(initArgs.timeMinutes', inertialMeasurementUnit.Acceleration); 
-            ylabel('acceleration, m/s^2');
+            ylabel('acceleration, km/sec^2');
             xlabel('time, min');
             legend('x axis', 'y axis', 'z axis');
             title('acceleration'); 
@@ -69,7 +69,7 @@ function ins = init(initArgs)
 
         figure(); 
             plot(initArgs.timeMinutes', initArgs.accelerationInBodyFrame.Acceleration); 
-            ylabel('acceleration, m/s^2');
+            ylabel('acceleration, km/sec^2');
             xlabel('time, min');
             legend('x axis', 'y axis', 'z axis');
             title('true acceleration'); 

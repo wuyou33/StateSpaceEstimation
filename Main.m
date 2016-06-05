@@ -1,38 +1,32 @@
 close all force; clc;
 
-% 
-% anonymousFunc = @(x, y) [...
-%     x^2;
-%     x*y...
-%     ];
-
 addpath(genpath('OrbitalMotion')); % include folder with orbital motion functions
 addpath(genpath('InertialMeasurementUnit')); % include folder with inertial measurement functions
 addpath(genpath('InertialNavigationSystem')); % include folder with inertial navigation system functions
 addpath(genpath('SNS')); % include folder with inertial navigation system functions
 addpath(genpath('Integrated')); % include folder with integrated navigation system functions
 addpath(genpath('Statistics')); % include folder with Statistics functions
-addpath(genpath('TOAMeasurementUnit')); % include folder with Pulsar & Quasar navigation
 addpath(genpath('StateSpaceEstimation')); % include folder with State Space Estimation algorithms
 addpath(genpath('Utils'));
-addpath(genpath('XNAV'));
 
-filterTypeArray         = {'sckf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf'};
+filterTypeArray         = {'ukf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf'};
 
-sampleTime              = 1; % seconds
-simulationTime          = 1*20*60; % y hours * 60 min * 60 sec
+sampleTime              = 0.01; % seconds
+simulationTime          = 1*0.05*60; % y hours * 60 min * 60 sec
 simulationNumber        = round(simulationTime / sampleTime);
 time                    = (1:simulationNumber) * sampleTime;
 timeMinutes             = time / 60;
 iterationNumber         = 1;
 
-accBiasMu               = 1e-8*[1;1;1];
-accBiasSigma            = 5e-7*[1;1;1];
-accNoiseVar             = 1e-8*[1;1;1];
+accBiasMu               = zeros(3, 1);  % [km / sec^2]
+accBiasSigma            = 5e-8*[1;1;1]; % [km / sec^2]
+accNoiseVar             = 4e-8*[1;1;1]; % [km / sec^2]
+accScale                = 1e-5*diag(3);
 
-gyroBiasMu              = 1e-8*[1;1;1];
-gyroBiasSigma           = 5e-6*[1;1;1];
-gyroNoiseVar            = 1e-5*[1;1;1];
+gyroBiasMu              = zeros(3, 1);  % [rad / sec]
+gyroBiasSigma           = 5e-5*[1;1;1]; % [rad / sec]
+gyroNoiseVar            = 4e-4*[1;1;1]; % [rad / sec]
+gyroScale               = 1e-5*diag(3);
 
 initialAcceleration     = zeros(3,1);
 initialAngularVelocity  = zeros(3,1);
@@ -40,36 +34,30 @@ initialQuaternion       = [1;0;0;0];
 
 %%  
 accelerationInBodyFrame = AccelerationInBodyFrame(simulationNumber, ... simulationNumber
-    sampleTime, ... sampleTime
-    [0; 0; 0], ... mu
-    1.75*1e-5*[1;1;1] ... sigma    
+    sampleTime, ... sampleTime [sec]
+    initialAcceleration, ... mu [km/sec^2]
+    1.75*1e-7*[1; 1; 1] ... sigma [km/sec^2]
 );
 
 angularVelocityInBodyFrame = AngularVelocityInBodyFrame(simulationNumber, ... simulationNumber
     sampleTime, ... sampleTime
-    [0; 0; 0], ... mu
+    initialAngularVelocity, ... mu
     1.2*1e-3*[1;1;1] ... sigma
 );
 
-T_till_current_epoch = 0.1465;
-initialSpaceshipState = loadInitialOrbit();
+tEpoch = 0.1465;
+initialOrbit = loadInitialOrbit();
 
 tic;
 
-simulator = TrajectoryPhaseSpaceSatelliteSimulator(initialSpaceshipState, ...
-    accelerationInBodyFrame, ... accelerationInBodyFrame
-    angularVelocityInBodyFrame, ... angularVelocityInBodyFrame
-    T_till_current_epoch);
-
-spaceshipStateTrue = simulator.Simulate(time, sampleTime);
-
+simulator = TrajectoryPhaseSpaceSatelliteSimulator(initialOrbit, accelerationInBodyFrame, angularVelocityInBodyFrame, tEpoch);
+spaceshipStateTrue = simulator.Simulate(time, sampleTime, 1);
 fprintf('Simulating true trajectory: ');
+
 toc;
 
-SatelliteOrbitVisualization(spaceshipStateTrue);
 
-%% simulate INS
-satellitePhaseState = SatellitePhaseSpace(initialSpaceshipState, simulationNumber);
+satellitePhaseState = SatellitePhaseSpace(initialOrbit, simulationNumber);
 iterations = repmat(satellitePhaseState, iterationNumber, 1);
 
 insInitArgs.accBiasMu                    = accBiasMu;
@@ -81,14 +69,25 @@ insInitArgs.angularVelocityInBodyFrame   = angularVelocityInBodyFrame;
 insInitArgs.simulationNumber             = simulationNumber;
 insInitArgs.timeMinutes                  = timeMinutes;
 insInitArgs.visualize                    = 0; % 1
-insInitArgs.T_till_current_epoch         = T_till_current_epoch;
+insInitArgs.T_till_current_epoch         = tEpoch;
 insInitArgs.sampleTime                   = sampleTime;
 insInitArgs.accNoiseVar                  = accNoiseVar;
 insInitArgs.gyroNoiseVar                 = gyroNoiseVar;
+insInitArgs.accScale                     = accScale;
+insInitArgs.gyroScale                    = gyroScale;
 
 snsInitArgs.Trajectory = spaceshipStateTrue.Trajectory';
 snsInitArgs.Velocity   = spaceshipStateTrue.Velocity';
-
+            
+initCov = [(3)^2*eye(3) zeros(3, 19); ... distance error [km]^2
+    zeros(3, 3) (5e-3)^2*eye(3) zeros(3, 16); ... velocity error [km/sec]^2
+    zeros(4, 6) (1e-4)^2*eye(4) zeros(4, 12); ... quaternion error [-]
+    zeros(3, 10) diag((insInitArgs.accBiasSigma.*insInitArgs.accBiasSigma)) zeros(3, 9); ... acceler bias [km/sec^2]^2
+    zeros(3, 13) diag((insInitArgs.gyroBiasSigma.*insInitArgs.gyroBiasSigma)) zeros(3, 6); ... gyro bias [rad/sec]^2
+    zeros(3, 16) 1e-10*eye(3) zeros(3, 3); ... acceler scale factor [-]
+    zeros(3, 19) 1e-10*eye(3) ... gyro scale factor [-]
+];
+            
 for j = 1:length(filterTypeArray)
     estimatorType = filterTypeArray(j);
     fprintf('estimator: %s\n', estimatorType{1});
@@ -96,12 +95,11 @@ for j = 1:length(filterTypeArray)
     
 %     parfor k = 1:iterationNumber    
     for k = 1:iterationNumber    
-        insSns = IntegratedInsSns(insInitArgs, snsInitArgs, initialAcceleration, initialAngularVelocity, initialQuaternion, time, sampleTime);        
-        iterations(k) = insSns.simulate(initialSpaceshipState + [1500*randn(3,1); 2.75*randn(3,1); 0.0001*randn(4,1)], estimatorType, 1, spaceshipStateTrue);
+        insSns = IntegratedInsSns(insInitArgs, snsInitArgs, initCov, initialAcceleration, initialAngularVelocity, initialQuaternion, time, sampleTime);        
+        iterations(k) = insSns.Simulate(initialOrbit + [3*randn(3,1); 5e-3*randn(3,1); zeros(4,1)], estimatorType, 0, spaceshipStateTrue);
         
-        fprintf ('thread of %d: ', k );
+        fprintf ('iteration of %d: completed', k );
     end
-
-    fprintf('Simulation: ');
+       
     toc;    
 end

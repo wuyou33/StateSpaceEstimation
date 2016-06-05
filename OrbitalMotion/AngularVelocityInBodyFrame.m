@@ -1,4 +1,7 @@
 classdef AngularVelocityInBodyFrame < handle
+    %% Provide angular velocity caused, which represent angular rotation of body fixed frame
+    % [rad / sec]
+    %%
     properties (Access = private)
         angularVelocity;
         model;

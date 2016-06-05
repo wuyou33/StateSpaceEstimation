@@ -6,7 +6,7 @@ classdef SatelliteNavigationSystemMock < SatelliteNavigationSystem
     methods (Access = public)
         function this = SatelliteNavigationSystemMock(realState)
             simulationNumber = length(realState);
-            this.simulatedState = realState + [10*randn(simulationNumber, 3) 0.01*randn(simulationNumber, 3) ];
+            this.simulatedState = realState + [1e-1*randn(simulationNumber, 3) 1e-4*randn(simulationNumber, 3) ];
         end
         
         function val = Simulate(this, sampleNumber)

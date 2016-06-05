@@ -6,5 +6,6 @@ function [ qout ] = quaternionNormalize( q )
 %   Each element of Q must be a real number.  Additionally, Q has its
 %   scalar number as the first column.
 %%
-qMod = norm(q, 2);
-qout = q / qMod;
+    qMod = norm(q, 2);
+    qout = q / qMod;
+end

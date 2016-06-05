@@ -18,8 +18,9 @@ classdef InertialNavigationSystem < handle
         function state = Simulate(this, initial, sample, sampleTime, currentTime)
             acceleration = this.inertialMeasurementUnit.getAcceleartion(sample);
             angularVelocity = this.inertialMeasurementUnit.getAngularVelocity(sample);
-%             [~, state] = ode113( @(t,y) this.dynamicEquation(t, y, acceleration, angularVelocity, sampleTime ), [currentTime - sampleTime, currentTime], initial );
-            state = rungeKuttaFourOrderWithFixedStep( @(t,y) this.dynamicEquation(t, y, acceleration, angularVelocity, sampleTime ), initial, currentTime, sampleTime );
+            [~, tmp] = ode113( @(t,y) this.dynamicEquation(t, y, acceleration, angularVelocity, sampleTime ), [currentTime - sampleTime, currentTime], initial );
+            state = tmp(end, :)';
+%             state = rungeKuttaFourOrderWithFixedStep( @(t,y) this.dynamicEquation(t, y, acceleration, angularVelocity, sampleTime ), initial, currentTime, sampleTime );
         end;
         
         function acceleration = GetAcceleration(this, sample)
