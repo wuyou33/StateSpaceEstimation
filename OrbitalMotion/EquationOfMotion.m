@@ -1,4 +1,4 @@
-function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoch, sampleTime)
+function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoch, sampleTime, startTime)
 %% EquationOfMotion - solve for spaceship
 %   INPUT
 %        time               - time in [sec];
@@ -6,7 +6,9 @@ function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoc
 %        acceleration       - acceleration of spaceship in [km/s^2];
 %        angularVelocity    - angular velocity of spaceship in [rad/sec];
 %        tEpoch             - time Epoch;
-%        sampleTime         - sample time [sec];
+%        sampleTime         - sample time required only if equation used in batch mode (batch mode used in imitator only) [sec];
+%        startTime          - the start time of the solving of the whole
+%                               problem as a whole. required only if equation used in batch mode (batch mode used in imitator only) [sec]'
 %   OUTPUT
 %        dy - increment (diff) of state space vector of spaceship (distance in [km], velocity in [km/s], quaternion);
 %%
@@ -14,35 +16,32 @@ function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoc
     MuE = 398600.4418;      % [km^3/s^2] - Earth gravity const
     J2 = .00108262575;
     J3 = -.000002533;
-    J4 = -0.000001616;
-        
-    iterationNumber = fix(time / sampleTime);
-
-    if (isvector(acceleration))
-        accelerationCurrent = acceleration;
+    J4 = -0.000001616;       
+       
+    if isvector(acceleration)
+        f = acceleration;
     else
-        accelerationCurrent = acceleration(iterationNumber, :);
+        iterationNumber = round((time - startTime) / sampleTime);
+        f = acceleration(:, iterationNumber);
     end
 
-    if (isvector(angularVelocity)) 
-        angularVelocityCurrent = angularVelocity;
+    if isvector(angularVelocity)
+        w = angularVelocity;
     else
-        angularVelocityCurrent = angularVelocity(iterationNumber, :);
+        w = angularVelocity(:, iterationNumber);
     end
 
     r = sqrt( state(1)^2 + state(2)^2 + state(3)^2 ); % distance from Earth center to spaceship center mass
     po = EarthRadius / r;
 
-    dy = zeros(length(state), 1);
-
     sunInfluence = SunInfluence(tEpoch, state(1:3));
     moonInfluence = MoonInfluence(tEpoch, state(1:3));
 
-    quaternion = state(7:10)';
-    rotatedAccelearation = quaternionRotation(quaternion, accelerationCurrent);
+    quaternion = state(7:10);
+    rotatedAccelearation = quaternionRotation(quaternion, f, 2);
 
-    dy(1:3) = state(4:6);
-    dy(4) = -(MuE*state(1)/r^3)*(...
+    dy(1:3, 1) = state(4:6);
+    dy(4, 1) = -(MuE*state(1)/r^3)*(...
             1 ...
             + J2*3/2*po^2*(1-5*(state(3)/r)^2) ...
             + J3*po^3*5/2*(3-7*(state(3)/r)^2)*state(3)/r ...
@@ -51,7 +50,7 @@ function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoc
         + rotatedAccelearation(1) ...
         + sunInfluence(1) ...
         + moonInfluence(1);
-    dy(5) = -(MuE*state(2)/r^3)*(...
+    dy(5, 1) = -(MuE*state(2)/r^3)*(...
             1 ...
             + J2*3/2*po^2*(1-5*(state(3)/r)^2) ...
             + J3*po^3*5/2*(3-7*(state(3)/r)^2)*state(3)/r ...
@@ -60,7 +59,7 @@ function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoc
         + rotatedAccelearation(2) ...
         + sunInfluence(2) ...
         + moonInfluence(2);
-    dy(6) = -(MuE*state(3)/r^3)*(...
+    dy(6, 1) = -(MuE*state(3)/r^3)*(...
             1 ... 
             + J2*3/2*po^2*(3-5*(state(3)/r)^2) ...
             + J3*po^3*5/2*(3-7*po^2)*state(3)/r ...
@@ -69,5 +68,5 @@ function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoc
         + rotatedAccelearation(3) ...
         + sunInfluence(3) ...
         + moonInfluence(3);
-    dy(7:10) = .5 * quaternionMultiply(quaternion, [0, angularVelocityCurrent]);
+    dy(7:10, 1) = 0.5 * quaternionMultiply(quaternion, [0; w]);
 end

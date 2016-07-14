@@ -81,7 +81,7 @@ switch targetCovarianceType
                         noiseDataStructure.covariance(:, :, k) = svdDecomposition(noiseDataStructure.covariance(:,:,k))';
                     end
                 else
-                    if (~isscalar(noiseDataStructure.covariance))
+                    if ~isscalar(noiseDataStructure.covariance)
                         noiseDataStructure.covariance = svdDecomposition(noiseDataStructure.covariance)';
                     end
                 end

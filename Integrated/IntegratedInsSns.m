@@ -4,221 +4,272 @@ classdef IntegratedInsSns < handle
     % provides method to solve navigation problem via INS and SNS (GPS)
     
     properties(Access = private)
-        initialCov;        
-        simulationNumber;
         ins;
         sns;
-        time;
-        gssmInsSnsInitArgs;
-        sampleTime;
-        gyroScale;
-        accScale;
+        timeData;
+        procNoise;
+        observNoise;
+        inferenceModel;
+        initArgs;
     end
     
-    methods (Access = public)               
-        function obj = IntegratedInsSns(insInitArgs, snsInitArgs, initialCov, initialAcceleration, initialAngularVelocity, initialQuaternion, time, sampleTime)
-            %% Create instance of the IntegratedInsSns
-            %             
-            % insInitArgs: structure with following fields:
-            %   insInitArgs.accBiasMu                    - accelerometer bias mean
-            %   insInitArgs.accBiasSigma                 - accelerometer bias RMS
-            %   insInitArgs.gyroBiasMu                   - gyro bias mean
-            %   insInitArgs.gyroBiasSigma                - gyro bias RMS
-            %   insInitArgs.accelerationInBodyFrame      - acceleration in body frame
-            %   insInitArgs.angularVelocityInBodyFrame   - angular velocity in body frame
-            %   insInitArgs.simulationNumber             - simulation number
-            %   insInitArgs.timeMinutes                  - time in minutes;
-            %   insInitArgs.visualize                    - 0 - not visualize, 1 - vizualize
-            %   insInitArgs.T_till_current_epoch         - T_till_current_epoch;
-            %   insInitArgs.sampleTime                   - sample time;
-            %   insInitArgs.accNoiseVar                  - accelerometer noise variance matrix;
-            %   insInitArgs.gyroNoiseVar                 - gyro noise variance matrix;
-            %   insInitArgs.accScale                     - scale factor of accelerometer;
-            %   insInitArgs.gyroScale                    - scale factor of gyro ;
-            %   
-            % snsInitArgs: structure with following fields:
-            %   snsInitArgs.Trajectory - trajectroy which was determined via SNS
-            %   snsInitArgs.Velocity   - velocity which was determined via SNS
-            %%
-                        
-            obj.time = time;
-            obj.initialCov = initialCov;                        
-            
-            obj.ins = initInertialNavigationSystem('init', insInitArgs);
-            obj.sns = initSatelliteNavigationSystem('init', snsInitArgs);
-            obj.simulationNumber = insInitArgs.simulationNumber;
-            obj.gyroScale = insInitArgs.gyroScale;
-            obj.accScale  = insInitArgs.accScale;
-            
-            gssmInsSnsInitArgs.initialParams = [insInitArgs.accBiasMu; ...
-                insInitArgs.accBiasSigma; ...
-                insInitArgs.gyroBiasMu; ...
-                insInitArgs.gyroBiasSigma; ...
-                initialAcceleration; ...
-                initialAngularVelocity; ...
-                initialQuaternion; ...
-                sampleTime;
-                time(1)];
-            
-            gssmInsSnsInitArgs.processNoiseMean              = [insInitArgs.accBiasMu; insInitArgs.gyroBiasMu];
-            gssmInsSnsInitArgs.processNoiseCovariance        = [diag(insInitArgs.accBiasSigma.*insInitArgs.accBiasSigma) zeros(3,3); ...
-                                                                zeros(3,3) diag(insInitArgs.gyroBiasSigma.*insInitArgs.gyroBiasSigma)];
-            gssmInsSnsInitArgs.observationNoiseMean          = zeros(6, 1);
-            gssmInsSnsInitArgs.observationNoiseCovariance    = [(1e-1)^2*eye(3) zeros(3,3); zeros(3,3) (1e-4)*eye(3)];
-            obj.gssmInsSnsInitArgs = gssmInsSnsInitArgs;
-            obj.sampleTime = sampleTime;
+    methods (Access = public)
+        function obj = IntegratedInsSns(ins, sns, timeData, initArgs)
+            obj.ins = ins;
+            obj.sns = sns;
+            obj.timeData = timeData;
+            obj.initArgs = initArgs;
         end
         
-        function stateVector = Simulate(this, insInitialStateVect, estimatorType, visualize, satellitePhaseStateTrue)
+        function stateMatrix = simulate(this, initalState, initialCov, insInitialState, estimatorType, visualize)
             args.type  = 'state';
             args.tag   = 'State estimation for loosely coupled Ins & Sns integrated system';
-            args.model = gssmInsSns('init', this.gssmInsSnsInitArgs);
+            args.model = gssmInsSns('init', this.initArgs);
             
-            [stateNoise, observNoise, inferenceDataSet] = inferenceNoiseGenerator(inferenceDataGenerator(args), estimatorType);
+            [this.procNoise, this.observNoise, this.inferenceModel] = inferenceNoiseGenerator(inferenceDataGenerator(args), estimatorType);
+                        
+            state  = initalState;
+            cov    = initialCov;
+            simNum = this.timeData.SimulationNumber;
+                        
+            tMoonSun = this.timeData.StartSecond;
+            stateMatrix = SatellitePhaseSpace(zeros(10, 1), simNum);
+            insErrorEst = zeros(22, simNum);
             
-            state = this.initializeState();
-            covState = this.initialCov;
+            insState = insInitialState;
+            filterParams = {};
             
+            num = ceil(this.timeData.TotalSeconds / this.timeData.RefreshSunMoonInfluenceTime);
+            blockSize = ceil(this.timeData.SimulationNumber / num);
+            startSample = 2;
+            time = this.timeData.Time;
+                                   
+            decompCov = this.updateFilterParams(cov, estimatorType);
+            
+            if strcmp(estimatorType{1}, 'pf')
+                numParticles = 5e2;
+                particleSet.particlesNum        = numParticles;
+                particleSet.particles           = chol(1*cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);                
+                particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
+                particleSet.weights             = (1 / numParticles)*ones(1, numParticles);
+            elseif strcmp(estimatorType{1}, 'sppf')
+                numParticles = 2e2;
+                particleSet.particlesNum        = numParticles;
+                particleSet.particles           = chol(1*cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
+                particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
+                particleSet.weights             = (1 / numParticles)*ones(1, numParticles);
+                particleSet.particlesCov        = repmat(decompCov, [1 1 numParticles]);
+                particleSet.processNoise        = this.procNoise;
+                particleSet.observationNoise    = this.observNoise;
+            else
+                particleSet = [];
+            end
+            
+            for i = 1:num
+                startBlock = (i-1)*blockSize + 1;
+                endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
+                
+                tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
+                
+                len = endBlock - startBlock + 1;
+                if i == 1
+                    stateMatrix.AddPhaseState(insInitialState, 1);
+                    insErrorEst(:, 1) = initalState;
+                end
+                
+                for j = startSample:len
+                    sample = j + startBlock - 1;
+                    
+                    if mod((sample / simNum)*100, 5) == 0
+                        disp(['Completed: ', num2str((sample / simNum) * 100),' %' ]);
+                    end
+                                        
+                    insState = this.ins.simulate(insState, sample, tEpoch);
+                    snsState = this.sns.getState(sample);                    
+                    observ   = insState(1:6) - snsState;   
+                    
+                    this.updateModelParams(state, time(sample), sample, insState(7:10));                 
+                    
+                    if sample == startSample
+                        controlProc = [zeros(3, 1); zeros(3, 1); [1; zeros(3, 1)]];
+                    else
+                        controlProc = state(1:10);
+                    end
+                                                                                
+                    [state, cov, decompCov, param, particleSet] = this.resolve(state, cov, decompCov, observ, estimatorType, controlProc, particleSet);
+                    
+                    insErrorEst(:, sample) = state;
+                    correctedState = insCorrection(insState, state(1:10));                    
+                    stateMatrix.AddPhaseState(correctedState, sample);
+                    insState = correctedState;
+                    
+                    if ~strcmp(estimatorType{1}, {'pf','sppf'})
+                        filterParams.meanPredictedState(sample, :) = param.meanPredictedState;
+                        
+                        if sum(strcmp(fieldnames(param), 'predictedStateCov')) == 1
+                            filterParams.predictedStateCov(sample, :, :) = param.predictedStateCov; 
+                        end
+                        
+                        filterParams.predictedObservMean(sample, :) = param.predictedObservMean;
+                        filterParams.inov(sample, :, :) = param.inov;
+                        
+                        if sum(strcmp(fieldnames(param), 'predictedObservCov')) == 1
+                            filterParams.predictedObservCov(sample, :, :) = param.predictedObservCov;
+                        end
+                        
+                        filterParams.filterGain(sample, :, :) = param.filterGain;
+                    else
+                        filterParams = [];
+                    end
+                end
+                
+                tMoonSun = tMoonSun + this.timeData.RefreshSunMoonInfluenceTime;
+                startSample = 1;
+            end
+            
+            if (visualize)
+                this.visualize(filterParams, insErrorEst);
+            end
+        end
+    end
+    
+    methods (Access = private)
+        function [state, cov, sCov, param, particleSetEst] = resolve(this, state, cov, sCov, observ, estimator, control, particleSet)            
+            param = [];
+            particleSetEst = [];
+            
+            switch estimator{1}
+                case 'ukf'
+                    [state, cov, this.procNoise, this.observNoise, param] = ukf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
+                case 'srukf'
+                    [state, sCov, this.procNoise, this.observNoise, param] = srukf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
+                case 'cdkf'
+                    [state, cov, this.procNoise, this.observNoise, param] = cdkf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
+                case 'srcdkf'
+                    [state, sCov, this.procNoise, this.observNoise, param] = srcdkf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
+                case 'ckf'
+                    [state, cov, this.procNoise, this.observNoise, param] = ckf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
+                case 'sckf'
+                    [state, sCov, this.procNoise, this.observNoise, param] = sckf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
+                case 'fdckf'
+                    [state, sCov, this.procNoise, this.observNoise, param] = fdckf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
+                case 'pf'
+                    [state, particleSetEst, this.procNoise, this.observNoise] = pf(particleSet, this.procNoise, this.observNoise, observ, control, [], this.inferenceModel);                    
+                case 'sppf'
+                    [state, particleSetEst, this.procNoise, this.observNoise] = sppf(particleSet, this.procNoise, this.observNoise, observ, control, [], this.inferenceModel);
+                otherwise
+                    error('not supported filter type' + estimator{1});
+            end            
+            state(7:10) = quaternionNormalize(state(7:10));
+            if ~isempty(particleSetEst)
+                particleSetEst.particles(7:10, :) = quaternionNormalize(particleSetEst.particles(7:10, :));
+            end
+        end
+        
+        function acceleration = getCorrectedAcceleration(this, sample, state)
+            a = this.ins.getAcceleration(sample);
+            acceleration = (a - state(11:13)) ./ (ones(3, 1) + state(17:19));
+        end
+        
+        function angVelocity = getCorrectedAngularVelocity(this, sample, state)
+            w = this.ins.getAngularVelocity(sample);
+            angVelocity = (w - state(14:16)) ./ (ones(3, 1) + state(20:22));
+        end
+        
+        function updateModelParams(this, state, time, sample, quaternion)
+            modelParams(1:3)    = this.inferenceModel.model.params(1:3);            % accelerationBiasMu
+            modelParams(4:6)    = this.inferenceModel.model.params(4:6);            % accelerationBiasSigma
+            modelParams(7:9)    = this.inferenceModel.model.params(7:9);            % gyroBiasMu
+            modelParams(10:12)  = this.inferenceModel.model.params(10:12);          % gyroBiasSigma
+            modelParams(13:15)  = this.getCorrectedAcceleration(sample, state);     % corrected acceleration
+            modelParams(16:18)  = this.getCorrectedAngularVelocity(sample, state);  % corrected angular velocity
+            modelParams(19:22)  = quaternion;                                       % quaternion
+            modelParams(23)     = this.timeData.SampleTime;                         % sampleTime
+            modelParams(24)     = time;
+            
+            updModel = this.inferenceModel.model.setParams(this.inferenceModel.model, modelParams);
+            this.inferenceModel.model = updModel;
+        end
+        
+        function decompCov = updateFilterParams(this, cov, estimatorType)
+            decompCov = [];
             switch estimatorType{1}
                 case 'ukf'
-                    alpha = 1e-3; % scale factor (UKF parameter)
-                    beta  = 2;    % 2 is a optimal setting for Gaussian priors (UKF parameter)
-                    kappa = 0.75; % 0 is optimal for state dimension = 2 (UKF parameter)
+                    alpha = 0.75;   % scale factor (UKF parameter) 1e-3
+                    beta  = 0.85;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
+                    kappa = 39;     % 0 is optimal for state dimension = 2 (UKF parameter)
                     
-                    inferenceDataSet.spkfParams = [alpha beta kappa];
+                    this.inferenceModel.spkfParams = [alpha beta kappa];
                 case 'srukf'
-                    alpha = 1e-3; % scale factor (UKF parameter)
-                    beta  = 2;    % 2 is a optimal setting for Gaussian priors (SRUKF parameter)
-                    kappa = 0.75; % 0 is optimal for state dimension = 2 (SRUKF parameter)
+                    alpha = 0.75;   % scale factor (UKF parameter) 1e-3
+                    beta  = 0.85;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
+                    kappa = 39;     % 0 is optimal for state dimension = 2 (UKF parameter)
                     
-                    inferenceDataSet.spkfParams = [alpha beta kappa];
-                    decompCovState = chol(this.initialCov)';
+                    this.inferenceModel.spkfParams = [alpha beta kappa];
+                    decompCov = chol(cov, 'lower');
                 case 'cdkf'
-                    inferenceDataSet.spkfParams = sqrt(70); % scale factor (CDKF parameter h) default sqrt(3)
+                    this.inferenceModel.spkfParams = sqrt(7); % scale factor (CDKF parameter h) default sqrt(3)
                 case 'srcdkf'
-                    inferenceDataSet.spkfParams = sqrt(25); % scale factor (CDKF parameter h) default sqrt(3)
-                    decompCovState = chol(this.initialCov)';
-                case 'sckf'
-                    decompCovState = svdDecomposition(this.initialCov);
+                    this.inferenceModel.spkfParams = sqrt(25); % scale factor (CDKF parameter h) default sqrt(3)
+                    decompCov = chol(cov, 'lower');
+                case {'sckf', 'fdckf'}
+                    decompCov = svdDecomposition(cov);
+                case 'pf'
+                    this.inferenceModel.resampleThreshold   = 1;
+                    this.inferenceModel.estimateType        = 'mean';
+                case 'sppf'
+                    this.inferenceModel.spkfType    = 'srukf';
+                    decompCov                       = chol(cov, 'lower');
+                    
+                    alpha = 0.75;   % scale factor (UKF parameter) 1e-3
+                    beta  = 0.85;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
+                    kappa = 39;     % 0 is optimal for state dimension = 2 (UKF parameter)
+                    
+                    this.inferenceModel.spkfParams = [alpha beta kappa];
+                    this.inferenceModel.resampleThreshold   = 1;
+                    this.inferenceModel.estimateType        = 'mean';
                 otherwise
                     % do nothing by default
             end
-            
-            insMeasurement = insInitialStateVect;
-            insMeasurement(7:10) = quaternionNormalize(insMeasurement(7:10));
-            
-            tmp  = zeros(22, this.simulationNumber);
-            tmp(:, 1)  = state;
-            inov = zeros(6, this.simulationNumber-1);
-            stateVector = SatellitePhaseSpace(insMeasurement, this.simulationNumber);
-            stateVector.AddPhaseState(insMeasurement, 1);
-            
-            for i = 2:1:this.simulationNumber
-                if mod((i / this.simulationNumber)*100, 5) == 0
-                    disp(['Completed: ', num2str((i / this.simulationNumber) * 100),' %' ]);
-                end
-                
-                insMeasurement = this.ins.Simulate(insMeasurement, i, this.sampleTime, this.time(i));
-                snsMeasurement = this.sns.Simulate(i);
-                observation    = insMeasurement(1:6) - snsMeasurement;
-                
-                modelParams(1:3)    = inferenceDataSet.model.params(1:3);         % accelerationBiasMu
-                modelParams(4:6)    = inferenceDataSet.model.params(4:6);         % accelerationBiasSigma
-                modelParams(7:9)    = inferenceDataSet.model.params(7:9);         % gyroBiasMu
-                modelParams(10:12)  = inferenceDataSet.model.params(10:12);       % gyroBiasSigma                
-                modelParams(13:15)  = this.GetCorrectedAcceleration(i, state);    % corrected acceleration                 
-                modelParams(16:18)  = this.GetCorrectedAngularVelocity(i, state); % corrected angular velocity
-                modelParams(19:22)  = insMeasurement(7:10);                       % quaternion
-                modelParams(23)     = inferenceDataSet.model.params(23);          % sampleTime
-                modelParams(24)     = this.time(i);
-                
-                updModel = inferenceDataSet.model.setParams(inferenceDataSet.model, modelParams);
-                inferenceDataSet.model = updModel;
-                
-                switch estimatorType{1}
-                    case 'ukf'
-                        [state, covState, stateNoise, observNoise, internalParams] = ukf(state, covState, stateNoise, observNoise, observation, inferenceDataSet);
-                    case 'srukf'
-                        [state, decompCovState, stateNoise, observNoise, internalParams] = srukf(state, decompCovState, stateNoise, observNoise, observation, inferenceDataSet);
-                    case 'cdkf'
-                        [state, covState, stateNoise, observNoise, internalParams] = cdkf(state, covState, stateNoise, observNoise, observation, inferenceDataSet);
-                    case 'srcdkf'
-                        [state, decompCovState, stateNoise, observNoise, internalParams] = srcdkf(state, decompCovState, stateNoise, observNoise, observation, inferenceDataSet);
-                    case 'ckf'
-                        [state, covState, stateNoise, observNoise, internalParams] = ckf(state, covState, stateNoise, observNoise, observation, inferenceDataSet);
-                    case 'sckf'
-                        [state, decompCovState, stateNoise, observNoise, internalParams] = sckf(state, decompCovState, stateNoise, observNoise, observation, inferenceDataSet);
-                    otherwise
-                        error('not supported filter type' + estimatorType{1});
-                end
-                
-                stateVector.AddPhaseState(insCorrection(insMeasurement, state(1:10))', i);
-                
-                tmp(:,i) = state;
-                inov(:, i-1) = internalParams.inov(1:6);
-            end          
-            
-%             if (visualize)
-%                 this.Visualize(stateVector, satellitePhaseStateTrue);
-% %                 this.Visualize(stateVector, satellitePhaseStateTrue, tmp);
-%             end
-        end
-    end
-        
-    methods (Access = private)
-        function acceleration = GetCorrectedAcceleration(this, sample, state)
-            accelerationEst = this.ins.GetAcceleration(sample)';
-            acceleration = (accelerationEst - state(11:13)) ./ (ones(3, 1) + state(17:19));
         end
         
-        function angVelocity = GetCorrectedAngularVelocity(this, sample, state)
-            angVelocityEst = this.ins.GetAngularVelocity(sample)';
-            angVelocity = (angVelocityEst - state(14:16)) ./ (ones(3, 1) + state(20:22));
-        end
-        
-        function Visualize(this, stateVector, satellitePhaseStateTrue, fullStateVector, inov)
-            timeMinutes = this.time / 60;
-            
-            SatelliteOrbitVisualization(stateVector);
-            
-            if nargin >= 4
-                this.Plot2(timeMinutes', fullStateVector(11:13, :), 'acceleration bias', {'x axis', 'y axis', 'z axis'}, 'acceleration bias, km/sec^2');
-                this.Plot2(timeMinutes', fullStateVector(14:16, :), 'gyro bias', {'x axis', 'y axis', 'z axis'}, 'gyro bias, rad/sec');
-                this.Plot2(timeMinutes', fullStateVector(17:19, :), 'acceleration scale factor', {'x axis', 'y axis', 'z axis'}, 'acceleration scale factor');
-                this.Plot2(timeMinutes', fullStateVector(20:22, :), 'gyro scale factor', {'x axis', 'y axis', 'z axis'}, 'gyro scale factor');
+        function visualize(this, filterParams, insErrorEst)
+            if ~isempty(insErrorEst)
+                figure(); 
+                subplot(3, 1, 1);
+                plot2(this.timeData.RelTime, 1e3*insErrorEst(1:3, :), 'estimation trajectory error', {'x', 'y', 'z'}, 'coordinate error, meter');
+                subplot(3, 1, 2);
+                plot2(this.timeData.RelTime, 1e3*insErrorEst(4:6, :), 'estimation velocity error', {'x', 'y', 'z'}, 'velocity error, meter / sec');
+                subplot(3, 1, 3);
+                plot2(this.timeData.RelTime, insErrorEst(7:10, :), 'estimation quaternion error', {'q0', 'q1', 'q2', 'q3'}, 'quaternion error,');
+
+                figure(); 
+                subplot(2, 2, 1);
+                plot2(this.timeData.RelTime, insErrorEst(11:13, :), 'acceleration bias', {'x', 'y', 'z'}, 'acceleration bias, km / sec^2');
+                subplot(2, 2, 2);
+                plot2(this.timeData.RelTime, insErrorEst(14:16, :), 'gyro bias', {'x', 'y', 'z'}, 'gyro bias, rad / sec');
+                subplot(2, 2, 3);
+                plot2(this.timeData.RelTime, insErrorEst(17:19, :), 'acceleration scale', {'x', 'y', 'z'}, 'acceleration scale');
+                subplot(2, 2, 4);
+                plot2(this.timeData.RelTime, insErrorEst(20:22, :), 'gyro scale', {'x', 'y', 'z'}, 'gyro scale');
             end
             
-            if nargin == 5
-                this.Plot2(timeMinutes', inov(1:3,:), 'innovation', {'inov_x', 'inov_y', 'inov_z'}, 'inov distance');
-                this.Plot2(timeMinutes', inov(4:6,:), 'innovation', {'inov_v_x', 'inov_v_y', 'inov_v_z'}, 'inov velocity');                
+            if ~isempty(filterParams)
+                gain = filterParams.filterGain;
+                figure(); 
+                subplot(3, 2, 1);
+                plot2(this.timeData.RelTime, gain(:, 1, 1), 'filter gain trajectory', {'x'}, 'filter gain');
+                subplot(3, 2, 3);
+                plot2(this.timeData.RelTime, gain(:, 2, 2), 'filter gain trajectory', {'y'}, 'filter gain');            
+                subplot(3, 2, 5);
+                plot2(this.timeData.RelTime, gain(:, 3, 3), 'filter gain trajectory', {'z'}, 'filter gain');            
+                subplot(3, 2, 2);
+                plot2(this.timeData.RelTime, gain(:, 4, 4), 'filter gain velocity', {'x'}, 'filter gain');
+                subplot(3, 2, 4);
+                plot2(this.timeData.RelTime, gain(:, 5, 5), 'filter gain velocity', {'y'}, 'filter gain');            
+                subplot(3, 2, 6);
+                plot2(this.timeData.RelTime, gain(:, 6, 6), 'filter gain velocity', {'z'}, 'filter gain');
             end
-            
-            this.Plot2Log(timeMinutes', 1e3*(stateVector.Trajectory - satellitePhaseStateTrue.Trajectory), 'distance error', {'x axis', 'y axis', 'z axis'}, 'distance error, m');
-            this.Plot2Log(timeMinutes', 1e3*(stateVector.Velocity - satellitePhaseStateTrue.Velocity), 'velocity error', {'x axis', 'y axis', 'z axis'}, 'velocity error, m/sec');
-            
-            [yawE, pitchE, rollE] = quat2angle(stateVector.Rotation');
-            angleEstimated        = [yawE, pitchE, rollE];
-            [yaw, pitch, roll]    = quat2angle(satellitePhaseStateTrue.Rotation');
-            angleTrue             = [yaw, pitch, roll];
-            this.Plot2Log(timeMinutes', abs(angleEstimated - angleTrue), 'angle rotation error', {'yaw', 'pitch', 'roll'}, 'angle error, rad');
-        end
-        
-        function initialState = initializeState(this)
-            initialState = sqrt(this.initialCov)*randn(22, 1); % sqrt(diag(initialCov))
-            
-            initialState(7) = 1;
-            initialState(7:10) = quaternionNormalize(initialState(7:10));
-            
-            initialState(17:19) = this.accScale + initialState(17:19);
-            initialState(20:22) = this.gyroScale + initialState(20:22);
-        end
-        
-        function Plot2(~, x, y, titleText, legendText, yLabelText)            
-            plot2(x, y, titleText, legendText, yLabelText, 'time, min');
-        end
-        
-        function Plot2Log(~, x, y, titleText, legendText, yLabelText)  
-            semilogy2(x, y, titleText, legendText, yLabelText, 'time, min');            
         end
     end
 end

@@ -1,94 +1,122 @@
 classdef InertialMeasurementUnit < handle
     % provides a measurement of acceleration (m / s^2) from three body axes accelerometer in body fixed frame
     % and measurement of angular velocity (redian per second) from three body axes gyro in body fixed frame
-    
-    %%
+        
     properties( Access = private)
         accelerometerParams;
         accelerationInBodyFrame;
         gyroParams;
         angularVelocityInBodyFrame;
-        simulationNumber;
+        timeData;
         acceleration;
         angularVelocity;
     end
-    
-    %%
+        
     properties (Constant)
-        g = 9.780327;
+        g = 9.780327e-3; % [km / sec^2]
     end
-    
-    %%
+        
     properties (Dependent)
         AngularVelocity;
         Acceleration;
+        AccelerometerBias;
+        GyroBias;
     end
-    
-    %%
+        
     methods
-        %%
+        
         function obj = InertialMeasurementUnit(accelerometerParams, ...
                                                gyroParams, ...
                                                accelerationInBodyFrame, ...
                                                angularVelocityInBodyFrame, ...
-                                               simulationNumber)
-            if (~isa(accelerometerParams, 'AccelerometerParam'))
-                error('params should be accelerometerParams of AccelerometerParam');
-            end
+                                               timeData)
+            if ~isa(accelerometerParams, 'AccelerometerParam'); error('accelerometerParams should be instance of the AccelerometerParam'); end
             
-            if (~isa(gyroParams, 'GyroParam'))
-                error('params should be gyroParams of GyroParam');
-            end
+            if ~isa(gyroParams, 'GyroParam'); error('gyroParams should be instance of the GyroParam'); end
             
-            if (~isa(accelerationInBodyFrame, 'AccelerationInBodyFrame'))
-                error('params should be accelerationInBodyFrame of AccelerationInBodyFrame');
-            end
+            if ~isa(accelerationInBodyFrame, 'AccelerationInBodyFrame'); error('accelerationInBodyFrame should be intance of the AccelerationInBodyFrame'); end
             
-            if (~isa(angularVelocityInBodyFrame, 'AngularVelocityInBodyFrame'))
-                error('params should be angularVelocityInBodyFrame of AngularVelocityInBodyFrame');
-            end
+            if ~isa(angularVelocityInBodyFrame, 'AngularVelocityInBodyFrame'); error('angularVelocityInBodyFrame should be intance of the AngularVelocityInBodyFrame'); end
             
-            obj.accelerometerParams = accelerometerParams;
-            obj.accelerationInBodyFrame = accelerationInBodyFrame;
-            obj.gyroParams = gyroParams;
-            obj.angularVelocityInBodyFrame = angularVelocityInBodyFrame;
-            obj.simulationNumber = simulationNumber;
+            if ~isa(timeData, 'TimeExt'); error('timeData should be intance of the TimeExt'); end
             
-            obj.acceleration = (...
-                        repmat(...
-                            cross(obj.accelerometerParams.LevelArm, obj.accelerometerParams.AngularAccelerationinBodyFrame), ...
-                                obj.simulationNumber, ...
-                                1) ...
-                        + cross(obj.angularVelocityInBodyFrame.Velocity, ...
-                            cross(obj.angularVelocityInBodyFrame.Velocity, ...
-                                repmat(obj.accelerometerParams.AngularAccelerationinBodyFrame, obj.simulationNumber, 1 ) ...
-                                ) ...
-                            ) ... 
-                        + obj.accelerationInBodyFrame.Acceleration ...
-                    ) * obj.accelerometerParams.AccelerometerScale ... 
-                    + obj.accelerometerParams.Bias ...
-                    + (repmat(obj.accelerometerParams.NoiseVar, 1, obj.simulationNumber) .* randn(3, obj.simulationNumber))';
-                
-            obj.angularVelocity = obj.accelerationInBodyFrame.Acceleration / obj.g * obj.gyroParams.GyroGSensitiveBias ...
-                + obj.angularVelocityInBodyFrame.Velocity * obj.gyroParams.GyroScaleFactor ...
-                + obj.gyroParams.GyroBias ...
-                + (repmat(obj.gyroParams.GyroNoiseVar, 1, obj.simulationNumber) .* randn(3, obj.simulationNumber))';
+            obj.accelerometerParams         = accelerometerParams;
+            obj.accelerationInBodyFrame     = accelerationInBodyFrame;
+            obj.gyroParams                  = gyroParams;
+            obj.angularVelocityInBodyFrame  = angularVelocityInBodyFrame;
+            obj.timeData                    = timeData;
         end
-        %%
+        
         function val = get.AngularVelocity(this)
+            if isempty(this.angularVelocity);
+                this.initializeAngularVelocity();
+            end
+            
             val = this.angularVelocity;
         end
-        %%
+        
         function val = get.Acceleration(this)
+            if isempty(this.acceleration)
+                this.initializeAcceleration();
+            end
+            
             val = this.acceleration;
         end
-        %%
+        
         function val = getAngularVelocity(this, index)
-            val = this.angularVelocity(index, :);
+            if isempty(this.angularVelocity);
+                this.initializeAngularVelocity();
+            end
+            
+            val = this.angularVelocity(:, index);
         end
-        %%
+        
         function val = getAcceleartion(this, index)
-            val = this.acceleration(index, :);
+            if isempty(this.acceleration)
+                this.initializeAcceleration();
+            end
+            
+            val = this.acceleration(:, index);
+        end
+        
+        function val = get.AccelerometerBias(this)
+            val = this.accelerometerParams.Bias;
+        end
+        
+        function val = get.GyroBias(this)
+            val = this.gyroParams.GyroBias;
+        end
+    end
+    
+    methods(Access = private)
+        function initializeAcceleration(this)
+            n = this.timeData.SimulationNumber;
+            
+            la_angAcc = cvecrep(cross(this.accelerometerParams.LevelArm, this.accelerometerParams.AngularAccelerationinBodyFrame), n);            
+            
+            w_w_la = cross(this.angularVelocityInBodyFrame.Velocity, ...
+                cross(this.angularVelocityInBodyFrame.Velocity, ...
+                cvecrep(this.accelerometerParams.LevelArm, n)) ...
+            );
+        
+            a  = this.accelerationInBodyFrame.Acceleration;
+            sa = this.accelerometerParams.AccelerometerScale;
+            ba = this.accelerometerParams.Bias;
+            na = cvecrep(this.accelerometerParams.NoiseVar, n) .* randn(3, n);
+            
+            this.acceleration = sa*(la_angAcc + w_w_la + a) +  ba + na;
+        end
+        
+        function initializeAngularVelocity(this)
+            n  = this.timeData.SimulationNumber;
+            w  = this.angularVelocityInBodyFrame.Velocity;
+            a  = this.accelerationInBodyFrame.Acceleration;            
+            ga = this.gyroParams.GyroGSensitiveBias * a / this.g;
+            sw = this.gyroParams.GyroScaleFactor;
+            bw = this.gyroParams.GyroBias;
+            nw = cvecrep(this.gyroParams.GyroNoiseVar, n) .* randn(3, n);
+            
+            this.angularVelocity = ga + sw*w +  bw + nw;
         end
     end
 end

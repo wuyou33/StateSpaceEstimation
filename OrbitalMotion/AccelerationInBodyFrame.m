@@ -19,27 +19,24 @@ classdef AccelerationInBodyFrame < handle
     end
     
     methods        
-        function obj = AccelerationInBodyFrame(simulationNumber, dt, mu, sigma)
+        function obj = AccelerationInBodyFrame(timeData, mu, sigma)
             %% Constructor. 
             %   mu               [km / sec^2]
             %   sigma            [km / sec^2]
             %   simulationNumber [-]
             %   dt               [sec]
             
-            % bmModel = bm(mu, sigma);
-            % bmModel.StartState = 0;
-            % obj.acceleration = simulate(bmModel, simulationNumber);
-            % obj.model = bmModel;
-            obj.simulationNumber = simulationNumber;
+            obj.simulationNumber = timeData.SimulationNumber;
+            
             if (nargin == 1)
                 obj.dt    = NaN;
                 obj.model = NaN;
                 obj.acceleration = zeros(simulationNumber, AccelerationInBodyFrame.Dimension);
             else
-                obj.dt = dt;                
+                obj.dt = timeData.SampleTime;                
                 dw = WienerProcess(mu, sigma);
                 obj.model = dw;
-                obj.acceleration = dw.simulate(dt, simulationNumber);
+                obj.acceleration = dw.simulate(timeData.SampleTime, timeData.SimulationNumber);
             end
         end
         

@@ -1,8 +1,0 @@
-kf     - kalman filter (linear kalman filter)
-ekf    - extended kalman filter: NOT IMPLEMENTED YET
-ukf    - unscented kalman filter
-cdkf   - ???
-srukf  - square root kalman filter algorithms
-srcdkf - square root kalman filter algorithms
-ckf    - cubature kalman filter
-srckf  - square root cubature kalman filter

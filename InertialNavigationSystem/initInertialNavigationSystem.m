@@ -13,66 +13,51 @@ function [varargout] = initInertialNavigationSystem(func, varargin)
 end
 
 function ins = init(initArgs)
-    accelerometerParam = AccelerometerParam(initArgs.simulationNumber, ... simulationNumber
-        [0 0 0], ... levelArm
-        [0 0 0], ... angularAccelerationinBodyFrame
-        1*eye(3) + initArgs.accScale, ... accelerometerScale
-        initArgs.accBiasMu, ... biasMu
-        initArgs.accBiasSigma, ... biasSigma
-        initArgs.accNoiseVar, ... noiseVar
-        initArgs.sampleTime ... sampleTime
+    accelerometerParam = AccelerometerParam(initArgs.timeData, ...
+        initArgs.levelArm, ... 
+        initArgs.angularAccelerBodyFrame, ... 
+        ones(3) + initArgs.accScale, ... 
+        initArgs.accBiasMu, ... 
+        initArgs.accBiasSigma, ... 
+        initArgs.accNoiseVar...
     );
 
-    gyroParam = GyroParam(initArgs.simulationNumber, ... simulationNumber
-        0*eye(3), ... gyroGSensitiveBias
-        1*eye(3) + initArgs.gyroScale, ... gyroScaleFactor
-        initArgs.gyroBiasMu, ... gyroBiasMu
-        initArgs.gyroBiasSigma, ... gyroBiasSigma
-        initArgs.gyroNoiseVar, ... gyroNoiseVar
-        initArgs.sampleTime ... sampleTime
+    gyroParam = GyroParam(initArgs.timeData, ...
+        initArgs.gyroGSensitiveBias , ...
+        ones(3) + initArgs.gyroScale, ...
+        initArgs.gyroBiasMu, ...
+        initArgs.gyroBiasSigma, ...
+        initArgs.gyroNoiseVar ...        
     );
 
     inertialMeasurementUnit = InertialMeasurementUnit(accelerometerParam, ...
         gyroParam, ...
         initArgs.accelerationInBodyFrame, ...
         initArgs.angularVelocityInBodyFrame, ...
-        initArgs.simulationNumber ...
+        initArgs.timeData ...
     );
        
-    ins = InertialNavigationSystem(inertialMeasurementUnit, ...
-        @(t, y, acceleration, angularVelocity, sampleTime) EquationOfMotion(t, y, acceleration, angularVelocity, initArgs.T_till_current_epoch, sampleTime ));       
+    ins = InertialNavigationSystem(inertialMeasurementUnit, initArgs.timeData);
     
     if (initArgs.visualize)
         figure(); 
-            plot(initArgs.timeMinutes', inertialMeasurementUnit.AngularVelocity); 
-            title('angular velocity'); 
-            ylabel('angular velocity, rad/sec');
-            xlabel('time, min');
-            legend('x axis', 'y axis', 'z axis');
-            grid on;
+        
+        subplot(3, 2, 1);
+        plot2(initArgs.timeData.RelTime, inertialMeasurementUnit.AngularVelocity, 'angular velocity', {'x axis', 'y axis', 'z axis'}, 'angular velocity, rad/sec');
 
-        figure(); 
-            plot(initArgs.timeMinutes', initArgs.angularVelocityInBodyFrame.Velocity); 
-            title('true angular velocity'); 
-            ylabel('angular velocity, rad/sec');
-            xlabel('time, min');
-            legend('x axis', 'y axis', 'z axis');
-            grid on;
-
-        figure(); 
-            plot(initArgs.timeMinutes', inertialMeasurementUnit.Acceleration); 
-            ylabel('acceleration, km/sec^2');
-            xlabel('time, min');
-            legend('x axis', 'y axis', 'z axis');
-            title('acceleration'); 
-            grid on;
-
-        figure(); 
-            plot(initArgs.timeMinutes', initArgs.accelerationInBodyFrame.Acceleration); 
-            ylabel('acceleration, km/sec^2');
-            xlabel('time, min');
-            legend('x axis', 'y axis', 'z axis');
-            title('true acceleration'); 
-            grid on;
+        subplot(3, 2, 3);
+        plot2(initArgs.timeData.RelTime, initArgs.angularVelocityInBodyFrame.Velocity, 'true angular velocity', {'x axis', 'y axis', 'z axis'}, 'angular velocity, rad/sec');
+            
+        subplot(3, 2, 5);
+        plot2(initArgs.timeData.RelTime, inertialMeasurementUnit.GyroBias, 'gyro bias', {'x axis', 'y axis', 'z axis'}, 'bias, rad/sec');
+        
+        subplot(3, 2, 2);
+        plot2(initArgs.timeData.RelTime, 1e3*inertialMeasurementUnit.Acceleration, 'acceleration', {'x axis', 'y axis', 'z axis'}, 'acceleration, m/sec^2');
+            
+        subplot(3, 2, 4);
+        plot2(initArgs.timeData.RelTime, 1e3*initArgs.accelerationInBodyFrame.Acceleration, 'true acceleration', {'x axis', 'y axis', 'z axis'}, 'acceleration, m/sec^2');            
+        
+        subplot(3, 2, 6);
+        plot2(initArgs.timeData.RelTime, inertialMeasurementUnit.AccelerometerBias, 'acceleration bias', {'x axis', 'y axis', 'z axis'}, 'bias, km/sec^2');            
     end
 end

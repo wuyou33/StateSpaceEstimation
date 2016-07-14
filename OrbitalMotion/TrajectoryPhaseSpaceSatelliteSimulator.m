@@ -3,42 +3,64 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
         initialState;
         accelerationInBodyFrame;
         angularVelocityInBodyFrame;
-        timeTillCurrentEpoch;
+        timeData;
     end
     
-    methods 
+    methods
         function obj = TrajectoryPhaseSpaceSatelliteSimulator(initialState, ...
                 accelerationInBodyFrame, ...
                 angularVelocityInBodyFrame, ...
-                timeTillCurrentEpoch)
+                timeData)
             
-            if (~isa(accelerationInBodyFrame, 'AccelerationInBodyFrame'))
-                error('accelerationInBodyFrame should be accelerometerParams of AccelerationInBodyFrame');
+            if ~isa(accelerationInBodyFrame, 'AccelerationInBodyFrame')
+                error('accelerationInBodyFrame should be instance of AccelerationInBodyFrame');
             end
             
-            if (~isa(angularVelocityInBodyFrame, 'AngularVelocityInBodyFrame'))
-                error('angularVelocityInBodyFrame should be accelerometerParams of AngularVelocityInBodyFrame');
+            if ~isa(angularVelocityInBodyFrame, 'AngularVelocityInBodyFrame')
+                error('angularVelocityInBodyFrame should be instance of AngularVelocityInBodyFrame');
+            end
+            
+            if ~isa(timeData, 'TimeExt')
+                error('timeData should be accelerometerParams of TimeExt');
             end
             
             obj.initialState = initialState;
             obj.accelerationInBodyFrame = accelerationInBodyFrame;
             obj.angularVelocityInBodyFrame = angularVelocityInBodyFrame;
-            obj.timeTillCurrentEpoch = timeTillCurrentEpoch;
+            obj.timeData = timeData;
         end
         
-        function signal = Simulate(this, time, sampleTime, visualize)
-            [~, tmp] = ode113( @(t,y) EquationOfMotion(t, ...
-                    y, ...
-                    this.accelerationInBodyFrame.Acceleration, ...
-                    this.angularVelocityInBodyFrame.Velocity, ...
-                    this.timeTillCurrentEpoch, ...
-                    sampleTime ), ...
-                time, ...
-                this.initialState ...
-            );
-            signal = SatellitePhaseSpace(tmp', length(tmp));
+        function signal = simulate(this, visualize)
+            tMoonSun = this.timeData.StartSecond;            
+            stateVector = zeros(10, this.timeData.SimulationNumber);            
+            initial = this.initialState;
             
-            if nargin == 4 && visualize == 1
+            num = ceil(this.timeData.TotalSeconds / this.timeData.RefreshSunMoonInfluenceTime);
+            blockSize = ceil(this.timeData.SimulationNumber / num);
+            
+            for i = 1:num
+                startBlock = (i-1)*blockSize + 1;
+                endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
+                
+                tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
+                time = this.timeData.Time(startBlock:endBlock);
+                
+                a  = this.accelerationInBodyFrame.Acceleration;
+                w  = this.angularVelocityInBodyFrame.Velocity;
+                dt = this.timeData.SampleTime;
+                t0 = this.timeData.StartSecond;
+                
+                odeFun = @(t, y) EquationOfMotion(t, y, a, w, tEpoch, dt, t0);                
+                [~, tmp] = ode45(odeFun, time, initial, odeset('MaxStep', dt));
+                                
+                stateVector(:, startBlock:endBlock) = tmp';
+                initial = tmp(end, :);
+                tMoonSun = tMoonSun + this.timeData.RefreshSunMoonInfluenceTime;
+            end
+            
+            signal = SatellitePhaseSpace(stateVector, this.timeData.SimulationNumber);
+            
+            if nargin == 2 && visualize == 1
                 SatelliteOrbitVisualization(signal);
             end
         end

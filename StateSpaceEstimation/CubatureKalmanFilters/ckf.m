@@ -58,9 +58,9 @@ function [newState, newCovState, processNoise, observationNoise, internalVariabl
     
     augmentDim = stateDim + procNoiseDim;
     numCubPointSet1 = 2*augmentDim;
-
-    if (gssModel.controlInputDimension == 0); controlProcess = zeros(0, numCubPointSet1); end
     
+    if (gssModel.controlInputDimension == 0); controlProcess = []; end
+
     %% Calculate cubature points
     if (procNoiseDim ~= 0)
         offsetPrediction = [svdDecomposition(covState) zeros(stateDim, procNoiseDim); zeros(procNoiseDim, stateDim) svdDecomposition(processNoise.covariance)];
@@ -71,10 +71,7 @@ function [newState, newCovState, processNoise, observationNoise, internalVariabl
     end   
 
     %% Propagate sigma-points through process model
-    predictedState = zeros(stateDim, numCubPointSet1);
-    for i = 1:numCubPointSet1
-        predictedState(:, i) = gssModel.stateTransitionFun(gssModel, cubatureSet(1:stateDim, i), cubatureSet(stateDim+1 : stateDim + procNoiseDim, i), controlProcess(:, i));
-    end
+    predictedState = gssModel.stateTransitionFun(gssModel, cubatureSet(1:stateDim, :), cubatureSet(stateDim + 1 : stateDim + procNoiseDim, :), controlProcess);
 
     predictedStateMean = sum(predictedState, 2) / numCubPointSet1;
     squareRootPredictedStateCov = (predictedState - cvecrep(predictedStateMean, numCubPointSet1)) / sqrt(numCubPointSet1);
@@ -87,26 +84,23 @@ function [newState, newCovState, processNoise, observationNoise, internalVariabl
     cubatureSet2 = cvecrep([predictedStateMean; observationNoise.mean], numCubPointSet2) + offsetObs*(sqrt(numCubPointSet2/2)*[eye(augmentDim) -eye(augmentDim)]);
 
     %% Propagate through observation model
-    if (gssModel.control2InputDimension == 0); controlObservation = zeros(0, numCubPointSet2); end
-    predictedObs = zeros(observDim, numCubPointSet2);
-    for i = 1:numCubPointSet2
-        predictedObs(:, i) = gssModel.stateObservationFun(gssModel, cubatureSet2(1:stateDim, i), cubatureSet2(stateDim+1:stateDim+obsNoiseDim, i), controlObservation(:, i));
-    end
-
-    predictedObsMean = sum(predictedObs, 2) / numCubPointSet2;
+    if (gssModel.control2InputDimension == 0); controlObservation = []; end
+    
+    predictObs = gssModel.stateObservationFun(gssModel, cubatureSet2(1:stateDim, :), cubatureSet2(stateDim+1:stateDim+obsNoiseDim, :), controlObservation);
+    predictObsMean = sum(predictObs, 2) / numCubPointSet2;
 
     %% Measurement update
-    x = (cubatureSet2(1:stateDim, :)-cvecrep(predictedStateMean, numCubPointSet2)) / sqrt(numCubPointSet2);
-    z = (predictedObs-cvecrep(predictedObsMean, numCubPointSet2)) / sqrt(numCubPointSet2);
+    x = (cubatureSet2(1:stateDim, :) - cvecrep(predictedStateMean, numCubPointSet2)) / sqrt(numCubPointSet2);
+    z = (predictObs-cvecrep(predictObsMean, numCubPointSet2)) / sqrt(numCubPointSet2);
 
     innovationCov = z*z'+ observationNoise.covariance;
     crossCov = x*z';
     filterGain = crossCov*pinv(innovationCov);
 
     if isempty(gssModel.innovationModelFunc)
-        inov = observation - predictedObsMean;
+        inov = observation - predictObsMean;
     else
-        inov = gssModel.innovationModelFunc( gssModel, observation, predictedObsMean);
+        inov = gssModel.innovationModelFunc( gssModel, observation, predictObsMean);
     end
 
     newState = predictedStateMean + filterGain*inov;
@@ -115,7 +109,7 @@ function [newState, newCovState, processNoise, observationNoise, internalVariabl
     %% additional ouptut param (required for debug)
     internalVariables.meanPredictedState    = predictedStateMean;
     internalVariables.predictedStateCov     = predictedStateCov;
-    internalVariables.predictedObservMean   = predictedObsMean;
+    internalVariables.predictedObservMean   = predictObsMean;
     internalVariables.inov                  = inov;
     internalVariables.predictedObservCov    = innovationCov;
     internalVariables.filterGain            = filterGain;

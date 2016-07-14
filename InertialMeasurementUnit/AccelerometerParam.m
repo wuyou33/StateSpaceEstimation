@@ -1,7 +1,7 @@
 classdef AccelerometerParam < handle
-    %%
+    
     properties( Access = private)
-        simulationNumber;
+        timeData;
         levelArm;
         angularAccelerationinBodyFrame;
         accelerometerScale;
@@ -9,9 +9,8 @@ classdef AccelerometerParam < handle
         biasSigma;
         noiseVar;
         bias;
-        sampleTime;
     end 
-    %%
+    
     properties (Dependent)        
         LevelArm;
         AngularAccelerationinBodyFrame;
@@ -19,52 +18,47 @@ classdef AccelerometerParam < handle
         Bias;
         NoiseVar;
     end
-    %%
+    
     methods
-        %%
-        function obj = AccelerometerParam(simulationNumber, ...
+        
+        function obj = AccelerometerParam(timeData, ...
                                           levelArm, ...
                                           angularAccelerationinBodyFrame, ...
                                           accelerometerScale, ...
                                           biasMu, ...
                                           biasSigma, ... 
-                                          noiseVar, ... 
-                                          sampleTime)
+                                          noiseVar)
                                       
-            obj.simulationNumber = simulationNumber;
+            obj.timeData = timeData;
             obj.levelArm = levelArm;
             obj.angularAccelerationinBodyFrame = angularAccelerationinBodyFrame;
             obj.accelerometerScale = accelerometerScale;
             obj.biasMu = biasMu;
             obj.biasSigma = biasSigma;
-            obj.noiseVar = noiseVar;  
-            obj.sampleTime = sampleTime;
+            obj.noiseVar = noiseVar;
         end
-        %%
+        
         function val = get.LevelArm(this)
             val = this.levelArm;
         end;
-        %%
+        
         function val = get.AngularAccelerationinBodyFrame(this)
             val = this.angularAccelerationinBodyFrame;
         end
-        %% 
+        
         function val = get.AccelerometerScale(this)
             val = this.accelerometerScale;
         end
-        %%
+        
         function val = get.Bias(this)
-            if (isempty(this.bias))
-                % bmModel = bm(this.biasMu, this.biasSigma);
-                % bmModel.StartState = 0;
-                % this.bias = simulate(bmModel, this.simulationNumber);             
+            if (isempty(this.bias))             
                 dw = WienerProcess(this.biasMu, this.biasSigma);
-                this.bias = dw.simulate(this.sampleTime, this.simulationNumber);
+                this.bias = dw.simulate(this.timeData.SampleTime, this.timeData.SimulationNumber);
             end
             
             val = this.bias;
         end
-        %% 
+        
         function val = get.NoiseVar(this)
             val = this.noiseVar;
         end

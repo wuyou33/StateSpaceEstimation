@@ -48,7 +48,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
             observationNoise  = deepClone(inferenceDataStructure.model.observationNoise);
 
             % Sigma point filters family
-            if stringmatch(estimatorType, {'kf','ekf','ukf','cdkf','srukf','srcdkf', 'ckf', 'sckf'})
+            if stringmatch(estimatorType, {'kf','ekf','ukf','cdkf','srukf','srcdkf', 'ckf', 'sckf', 'fdckf'})
                 % If default noise source is not Guassian, define a Gaussian noise source with the same dimension, mean and covariance
                 if ~stringmatch(processNoise.noiseSourceType, {'gaussian'})
                     processesNoiseArg.type       = 'gaussian';
@@ -72,7 +72,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                     processNoise = convertGassianNoise(processNoise, 'sqrt');                
                     observationNoise = convertGassianNoise(observationNoise, 'sqrt');
                 end
-                if stringmatch(estimatorType, {'sckf'})
+                if stringmatch(estimatorType, {'sckf', 'fdckf'})
                     processNoise = convertGassianNoise(processNoise, 'svd');
                     observationNoise = convertGassianNoise(observationNoise, 'svd');
                 end                

@@ -1,10 +1,10 @@
-function semilogy2( x, y, titleText, legendText, yLabelText, xLabelText )
-%SEMILOGY2 plots vector Y versus vector X. If X or Y is a matrix,
+function semilogx2( x, y, titleText, legendText, yLabelText, xLabelText )
+%SEMILOGX2 plots vector Y versus vector X. If X or Y is a matrix,
 %   then the vector is plotted versus the rows or columns of the matrix,
 %   whichever line up.  If X is a scalar and Y is a vector, disconnected
 %   line objects are created and plotted as discrete points vertically at
 %   X.
-% logarithmic (10) scale is used for the Y-axis
+% logarithmic (10) scale is used for the X-axis
 % INPUT:
 %       x           - vector
 %       y           - vector
@@ -17,7 +17,7 @@ function semilogy2( x, y, titleText, legendText, yLabelText, xLabelText )
         xLabelText = 'time, sec';
     end
 
-    semilogy(x, abs(y));
+    semilogx(x, y);
     grid on;
     hold on;
     title(titleText);

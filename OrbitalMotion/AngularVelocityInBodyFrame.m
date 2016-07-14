@@ -18,23 +18,23 @@ classdef AngularVelocityInBodyFrame < handle
     end
     
     methods
-        function obj = AngularVelocityInBodyFrame(simulationNumber, dt, mu, sigma)
+        function obj = AngularVelocityInBodyFrame(timeData, mu, sigma)
             %             bmModel = bm(mu, sigma);
             %             bmModel.StartState = 0;
             %
             %             this.angularVelocity = simulate(bmModel, simulationNumber);
             %             this.model = bmModel;
-            obj.simulationNumber = simulationNumber;
+            obj.simulationNumber = timeData.SimulationNumber;
             
             if (nargin == 1)
                 obj.dt    = NaN;
                 obj.model = NaN;
-                obj.angularVelocity = zeros(simulationNumber, AngularVelocityInBodyFrame.Dimension);
+                obj.angularVelocity = zeros(timeData.SimulationNumber, AngularVelocityInBodyFrame.Dimension);
             else
-                obj.dt = dt;                
+                obj.dt = timeData.SampleTime;                
                 dw = WienerProcess(mu, sigma);
                 obj.model = dw;
-                obj.angularVelocity = dw.simulate(dt, simulationNumber);
+                obj.angularVelocity = dw.simulate(timeData.SampleTime, timeData.SimulationNumber);
             end
         end
         

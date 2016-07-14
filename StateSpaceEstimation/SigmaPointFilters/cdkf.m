@@ -61,91 +61,85 @@ function [ newState, newCovState, processNoise, observationNoise, internalVariab
     hh             = h^2;
     
     % sigma-point weights set 1
-    weights1 = [(hh - stateDim - stateNoiseDim)/hh   1/(2*hh);
-                1/(2*h)                     sqrt(hh-1)/(2*hh)];
+    w1 = [(hh - stateDim - stateNoiseDim) / hh   1 / (2*hh);
+           1 / (2*h)                             sqrt(hh-1) / (2*hh)];
     
     % sigma-point weights set 2
-    weights2      = weights1;
-    weights2(1,1) = (hh - stateDim - obsNoiseDim)/hh;
+    w2       = w1;
+    w2(1, 1) = (hh - stateDim - obsNoiseDim) / hh;
         
-    numSigmaPointSet1 = 2*(stateDim + stateNoiseDim) + 1;
-    numSigmaPointSet2 = 2*(stateDim + obsNoiseDim) + 1;
+    numSigmaSet1 = 2*(stateDim + stateNoiseDim) + 1;
+    numSigmaSet2 = 2*(stateDim + obsNoiseDim) + 1;
     
-    if (gssModel.controlInputDimension  == 0); controlProcess = zeros(0, numSigmaPointSet1); end
-    if (gssModel.control2InputDimension == 0); controlObservation = zeros(0, numSigmaPointSet2); end
+    if (gssModel.controlInputDimension  == 0); controlProcess = []; end
+    
+    if (gssModel.control2InputDimension == 0); controlObservation = []; end
     
     if processNoise.covariance == 0
         squareRootProcNoiseCov = 0;
     else
-        squareRootProcNoiseCov = chol(processNoise.covariance)';
+        squareRootProcNoiseCov = chol(processNoise.covariance, 'lower');
     end
-    squareRootObsNoiseCov  = chol(observationNoise.covariance)';
-    squareRootProcCov      = chol(covState)';
+    
+    squareRootObsNoiseCov  = chol(observationNoise.covariance, 'lower');
+    squareRootProcCov      = chol(covState, 'lower');
     
     %% time update
     if processNoise.covariance == 0
-        sigmaPointSet1 = cvecrep(state, numSigmaPointSet1);
+        sigmaSet1 = cvecrep(state, numSigmaSet1);
         covStateExt    = squareRootProcCov;
     else
-        sigmaPointSet1 = cvecrep([state; processNoise.mean], numSigmaPointSet1);
-        covStateExt    = [squareRootProcCov zeros(stateDim, stateNoiseDim); zeros(stateNoiseDim, stateDim) squareRootProcNoiseCov];
+        sigmaSet1   = cvecrep([state; processNoise.mean], numSigmaSet1);
+        covStateExt = [squareRootProcCov zeros(stateDim, stateNoiseDim); zeros(stateNoiseDim, stateDim) squareRootProcNoiseCov];
     end    
     
-    sigmaPointSet1(:,2:numSigmaPointSet1) = sigmaPointSet1(:,2:numSigmaPointSet1) + [h*covStateExt -h*covStateExt];
+    sigmaSet1(:, 2 : numSigmaSet1) = sigmaSet1(:, 2:numSigmaSet1) + [h*covStateExt -h*covStateExt];
     
     %% propagate sigma-points through process model
-    predictedState = zeros(stateDim, numSigmaPointSet1);
-    for i = 1:numSigmaPointSet1                               
-        predictedState(:, i) = gssModel.stateTransitionFun(gssModel, sigmaPointSet1(1:stateDim, i), sigmaPointSet1(stateDim + 1 : stateDim + stateNoiseDim, i), controlProcess(:, i));
-    end
+    predictState = gssModel.stateTransitionFun(gssModel, sigmaSet1(1:stateDim, :), sigmaSet1(stateDim + 1 : stateDim + stateNoiseDim, :), controlProcess);               
+    meanPredictedState = w1(1, 1) * predictState(:, 1) + w1(1, 2) * sum(predictState(:, 2:numSigmaSet1), 2);
     
-    meanPredictedState = weights1(1, 1) * predictedState(:, 1) + weights1(1, 2) * sum(predictedState(:, 2:numSigmaPointSet1), 2);
+    a = w1(2, 1) * ( predictState(:, 2:stateDim + stateNoiseDim+1) - predictState(:, stateDim+stateNoiseDim + 2 : numSigmaSet1) ) ;
+    b = w1(2, 2) * ( predictState(:, 2:stateDim + stateNoiseDim+1) + predictState(:, stateDim+stateNoiseDim + 2 : numSigmaSet1) - ...
+        cvecrep(2*predictState(:, 1), stateDim + stateNoiseDim));
     
-    a = weights1(2, 1) * ( predictedState(:, 2:stateDim + stateNoiseDim+1) - predictedState(:, stateDim+stateNoiseDim + 2 : numSigmaPointSet1) ) ;
-    b = weights1(2, 2) * ( predictedState(:, 2:stateDim + stateNoiseDim+1) + predictedState(:, stateDim+stateNoiseDim + 2 : numSigmaPointSet1) - ...
-        cvecrep(2*predictedState(:, 1), stateDim + stateNoiseDim));
-    
-    [~, predictedStateCov] = qr([a b]', 0);
-    predictedStateCov= predictedStateCov';
+    [~, predictStateCov] = qr([a b]', 0);
+    predictStateCov= predictStateCov';
 
-    sigmaPointSet2 = cvecrep([meanPredictedState; observationNoise.mean], numSigmaPointSet2);   
-    crossCovExt    = [predictedStateCov zeros(stateDim, obsNoiseDim); zeros(obsNoiseDim, stateDim) squareRootObsNoiseCov];    
-    sigmaPointSet2(:,2:numSigmaPointSet2) = sigmaPointSet2(:,2:numSigmaPointSet2) + [h*crossCovExt -h*crossCovExt];
+    sigmaSet2   = cvecrep([meanPredictedState; observationNoise.mean], numSigmaSet2);   
+    crossCovExt = [predictStateCov zeros(stateDim, obsNoiseDim); zeros(obsNoiseDim, stateDim) squareRootObsNoiseCov];    
+    sigmaSet2(:, 2:numSigmaSet2) = sigmaSet2(:, 2:numSigmaSet2) + [h*crossCovExt -h*crossCovExt];
     
     %% propagate sigma-points through observation model
-    predictedObs = zeros(obsNoiseDim, numSigmaPointSet2);
-    for i = 1:numSigmaPointSet2                                
-        predictedObs(:, i) = gssModel.stateObservationFun(gssModel, sigmaPointSet2(1:stateDim, i), sigmaPointSet2(stateDim+1:stateDim+obsNoiseDim, i), controlObservation(:, i));
-    end
+    predictObs = gssModel.stateObservationFun(gssModel, sigmaSet2(1:stateDim, :), sigmaSet2(stateDim+1:stateDim+obsNoiseDim, :), controlObservation);    
+    meanPredictObs = w2(1, 1) * predictObs(:, 1) + w2(1, 2) * sum(predictObs(:, 2:numSigmaSet2), 2);
+    c = w2(2,1) * ( predictObs(:, 2:stateDim + obsNoiseDim + 1) - predictObs(:, stateDim+obsNoiseDim + 2:numSigmaSet2) );
+    d = w2(2,2) * ( predictObs(:, 2:stateDim + obsNoiseDim + 1) + predictObs(:, stateDim+obsNoiseDim + 2:numSigmaSet2) - cvecrep(2*predictObs(:, 1), stateDim+obsNoiseDim));
     
-    meanPredictedObs = weights2(1, 1) * predictedObs(:, 1) + weights2(1, 2) * sum(predictedObs(:, 2:numSigmaPointSet2), 2);
-    c = weights2(2,1) * ( predictedObs(:, 2:stateDim+obsNoiseDim + 1) - predictedObs(:, stateDim+obsNoiseDim + 2:numSigmaPointSet2) );
-    d = weights2(2,2) * ( predictedObs(:, 2:stateDim+obsNoiseDim + 1) + predictedObs(:, stateDim+obsNoiseDim + 2:numSigmaPointSet2) - cvecrep(2*predictedObs(:, 1), stateDim+obsNoiseDim));
-    
-    [~, predictedObservCov] = qr([c d observationNoise.covariance]', 0); % qr([c d]', 0);
-    predictedObservCov = predictedObservCov';
+    [~, predictObsCov] = qr([c d observationNoise.covariance]', 0); % qr([c d]', 0);
+    predictObsCov = predictObsCov';
     
     %% measurement update    
-    crossCov = predictedStateCov*c(:, 1:stateDim)';
-    filterGain = (crossCov / predictedObservCov') / predictedObservCov;
+    crossCov = predictStateCov*c(:, 1:stateDim)';
+    filterGain = (crossCov / predictObsCov') / predictObsCov;
 
     if isempty(gssModel.innovationModelFunc)
-        inov = observation - meanPredictedObs;
+        inov = observation - meanPredictObs;
     else
-        inov = gssModel.innovationModelFunc( gssModel, observation, meanPredictedObs);
+        inov = gssModel.innovationModelFunc( gssModel, observation, meanPredictObs);
     end
 
     newState = meanPredictedState + filterGain*inov;
 
-    [~, rCovState] = qr([predictedStateCov-filterGain*c(:, 1:stateDim) filterGain*c(:, stateDim+1:end) filterGain*d]', 0);
+    [~, rCovState] = qr([predictStateCov-filterGain*c(:, 1:stateDim) filterGain*c(:, stateDim+1:end) filterGain*d]', 0);
     rCovState = rCovState';
     newCovState = 	rCovState*rCovState';
     
     %% additional ouptut param (required for debug)
     internalVariables.meanPredictedState    = meanPredictedState;
-    internalVariables.predictedStateCov     = predictedStateCov;
-    internalVariables.predictedObservMean   = meanPredictedObs;
+    internalVariables.predictedStateCov     = predictStateCov;
+    internalVariables.predictedObservMean   = meanPredictObs;
     internalVariables.inov                  = inov;
-    internalVariables.predictedObservCov    = predictedObservCov;
+    internalVariables.predictedObservCov    = predictObsCov;
     internalVariables.filterGain            = filterGain;
 end

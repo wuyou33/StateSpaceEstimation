@@ -60,17 +60,18 @@ function [ newState, newCholCovState, processNoise, observationNoise, internalVa
     hh             = h^2;
     
     % sigma-point weights set 1
-    weights1 = [(hh - stateDim - stateNoiseDim)/hh   1/(2*hh);
-                1/(2*h)                     sqrt(hh-1)/(2*hh)];
+    w1 = [(hh - stateDim - stateNoiseDim) / hh   1 / (2*hh);
+           1 / (2*h)                             sqrt(hh-1) / (2*hh)];
     
     % sigma-point weights set 2
-    weights2      = weights1;
-    weights2(1,1) = (hh - stateDim - obsNoiseDim)/hh;
+    w2      = w1;
+    w2(1,1) = (hh - stateDim - obsNoiseDim)/hh;
         
     numSigmaPointSet1 = 2*(stateDim + stateNoiseDim) + 1;
     numSigmaPointSet2 = 2*(stateDim + obsNoiseDim) + 1;
     
-    if (gssModel.controlInputDimension  == 0); controlProcess = zeros(0, numSigmaPointSet1); end
+    if (gssModel.controlInputDimension  == 0); controlProcess = []; end
+    
     if (gssModel.control2InputDimension == 0); controlObservation = zeros(0, numSigmaPointSet2); end
     
     %% time update
@@ -84,39 +85,31 @@ function [ newState, newCholCovState, processNoise, observationNoise, internalVa
     sigmaPointSet1(:, 2:numSigmaPointSet1) = sigmaPointSet1(:, 2:numSigmaPointSet1) + [h*offsetSet1 -h*offsetSet1];    
     
     %% propagate sigma-points through process model
-    predictedState = zeros(stateDim, numSigmaPointSet1);
-    for i = 1:numSigmaPointSet1                               
-        predictedState(:, i) = gssModel.stateTransitionFun(gssModel, sigmaPointSet1(1:stateDim, i), sigmaPointSet1(stateDim + 1 : stateDim + stateNoiseDim, i), controlProcess(:, i));
-    end
+    predictState = gssModel.stateTransitionFun(gssModel, sigmaPointSet1(1:stateDim, :), sigmaPointSet1(stateDim + 1 : stateDim + stateNoiseDim, :), controlProcess);    
+    meanPredictState = w1(1, 1) * predictState(:, 1) + w1(1, 2) * sum(predictState(:, 2:numSigmaPointSet1), 2);
     
-    meanPredictedState = weights1(1, 1) * predictedState(:, 1) + weights1(1, 2) * sum(predictedState(:, 2:numSigmaPointSet1), 2);
+    a = w1(2, 1) * ( predictState(:, 2:stateDim + stateNoiseDim+1) - predictState(:, stateDim+stateNoiseDim + 2 : numSigmaPointSet1) ) ;
+    b = w1(2, 2) * ( predictState(:, 2:stateDim + stateNoiseDim+1) + predictState(:, stateDim+stateNoiseDim + 2 : numSigmaPointSet1) - ...
+        cvecrep(2*predictState(:, 1), stateDim + stateNoiseDim));
     
-    a = weights1(2, 1) * ( predictedState(:, 2:stateDim + stateNoiseDim+1) - predictedState(:, stateDim+stateNoiseDim + 2 : numSigmaPointSet1) ) ;
-    b = weights1(2, 2) * ( predictedState(:, 2:stateDim + stateNoiseDim+1) + predictedState(:, stateDim+stateNoiseDim + 2 : numSigmaPointSet1) - ...
-        cvecrep(2*predictedState(:, 1), stateDim + stateNoiseDim));
+    [~, sqrtPredictStateCov] = qr([a b]', 0);
+    sqrtPredictStateCov= sqrtPredictStateCov';
     
-    [~, sqrtPredictedStateCov] = qr([a b]', 0);
-    sqrtPredictedStateCov= sqrtPredictedStateCov';
-    
-    sigmaPointSet2 = cvecrep([meanPredictedState; observationNoise.mean], numSigmaPointSet2);       
-    offsetSet2     = [sqrtPredictedStateCov zeros(stateDim, obsNoiseDim); zeros(obsNoiseDim, stateDim) observationNoise.covariance];    
+    sigmaPointSet2 = cvecrep([meanPredictState; observationNoise.mean], numSigmaPointSet2);       
+    offsetSet2     = [sqrtPredictStateCov zeros(stateDim, obsNoiseDim); zeros(obsNoiseDim, stateDim) observationNoise.covariance];    
     sigmaPointSet2(:, 2:numSigmaPointSet2) = sigmaPointSet2(:,2:numSigmaPointSet2) + [h*offsetSet2 -h*offsetSet2];
     
     %% propagate sigma-points through observation model
-    predictedObs = zeros(obsNoiseDim, numSigmaPointSet2);
-    for i = 1:numSigmaPointSet2                                
-        predictedObs(:, i) = gssModel.stateObservationFun(gssModel, sigmaPointSet2(1:stateDim, i), sigmaPointSet2(stateDim+1:stateDim+obsNoiseDim, i), controlObservation(:, i));
-    end
-    
-    meanPredictedObs = weights2(1, 1) * predictedObs(:, 1) + weights2(1, 2) * sum(predictedObs(:, 2:numSigmaPointSet2), 2);
-    c = weights2(2,1) * ( predictedObs(:, 2:stateDim + obsNoiseDim + 1) - predictedObs(:, stateDim + obsNoiseDim + 2 : numSigmaPointSet2) );
-    d = weights2(2,2) * ( predictedObs(:, 2:stateDim + obsNoiseDim + 1) + predictedObs(:, stateDim + obsNoiseDim + 2 : numSigmaPointSet2) - cvecrep(2*predictedObs(:, 1), stateDim + obsNoiseDim));
+    predictedObs = gssModel.stateObservationFun(gssModel, sigmaPointSet2(1:stateDim, :), sigmaPointSet2(stateDim+1:stateDim+obsNoiseDim, :), controlObservation);        
+    meanPredictedObs = w2(1, 1) * predictedObs(:, 1) + w2(1, 2) * sum(predictedObs(:, 2:numSigmaPointSet2), 2);
+    c = w2(2,1) * ( predictedObs(:, 2:stateDim + obsNoiseDim + 1) - predictedObs(:, stateDim + obsNoiseDim + 2 : numSigmaPointSet2) );
+    d = w2(2,2) * ( predictedObs(:, 2:stateDim + obsNoiseDim + 1) + predictedObs(:, stateDim + obsNoiseDim + 2 : numSigmaPointSet2) - cvecrep(2*predictedObs(:, 1), stateDim + obsNoiseDim));
     
     [~, predictedObservCov] = qr([c d observationNoise.covariance]', 0); % qr([c d]', 0);
     predictedObservCov = predictedObservCov';
     
     %% measurement update    
-    crossCov = sqrtPredictedStateCov*c(:, 1:stateDim)';
+    crossCov = sqrtPredictStateCov*c(:, 1:stateDim)';
     filterGain = (crossCov / predictedObservCov') / predictedObservCov;
 
     if isempty(gssModel.innovationModelFunc)
@@ -125,14 +118,14 @@ function [ newState, newCholCovState, processNoise, observationNoise, internalVa
         inov = gssModel.innovationModelFunc( gssModel, observation, meanPredictedObs);
     end
 
-    newState = meanPredictedState + filterGain*inov;
+    newState = meanPredictState + filterGain*inov;
 
-    [~, newCholCovState] = qr([sqrtPredictedStateCov-filterGain*c(:, 1:stateDim) filterGain*c(:, stateDim+1:end) filterGain*d]', 0);
+    [~, newCholCovState] = qr([sqrtPredictStateCov-filterGain*c(:, 1:stateDim) filterGain*c(:, stateDim+1:end) filterGain*d]', 0);
     newCholCovState = newCholCovState';
     
     %% additional ouptut param (required for debug)
-    internalVariables.meanPredictedState    = meanPredictedState;
-    internalVariables.predictedStateCov     = sqrtPredictedStateCov;
+    internalVariables.meanPredictedState    = meanPredictState;
+    internalVariables.predictedStateCov     = sqrtPredictStateCov;
     internalVariables.predictedObservMean   = meanPredictedObs;
     internalVariables.inov                  = inov;
     internalVariables.predictedObservCov    = predictedObservCov;
