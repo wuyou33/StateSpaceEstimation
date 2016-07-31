@@ -27,11 +27,11 @@ classdef IntegratedInsSns < handle
             args.model = gssmInsSns('init', this.initArgs);
             
             [this.procNoise, this.observNoise, this.inferenceModel] = inferenceNoiseGenerator(inferenceDataGenerator(args), estimatorType);
-                        
+            
             state  = initalState;
             cov    = initialCov;
             simNum = this.timeData.SimulationNumber;
-                        
+            
             tMoonSun = this.timeData.StartSecond;
             stateMatrix = SatellitePhaseSpace(zeros(10, 1), simNum);
             insErrorEst = zeros(22, simNum);
@@ -43,19 +43,37 @@ classdef IntegratedInsSns < handle
             blockSize = ceil(this.timeData.SimulationNumber / num);
             startSample = 2;
             time = this.timeData.Time;
-                                   
+            
             decompCov = this.updateFilterParams(cov, estimatorType);
             
             if strcmp(estimatorType{1}, 'pf')
-                numParticles = 5e2;
+                numParticles = 2e3;
                 particleSet.particlesNum        = numParticles;
-                particleSet.particles           = chol(1*cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);                
+                particleSet.particles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
                 particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
                 particleSet.weights             = (1 / numParticles)*ones(1, numParticles);
+            elseif strcmp(estimatorType{1}, 'gspf')
+                numParticles = 2e3;
+                particleSet.particlesNum        = numParticles;
+                
+                initialParticles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
+                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));
+                
+                % fit a N component GMM to initial state distribution
+                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 35, [eps 1e5], 'sqrt', 1e-20);
+            elseif strcmp(estimatorType{1}, 'gmsppf')
+                numParticles = 2e3;
+                particleSet.particlesNum        = numParticles;
+                
+                initialParticles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
+                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));
+                
+                % fit a N component GMM to initial state distribution
+                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 25, [eps 1e5], 'sqrt', 1e-20);
             elseif strcmp(estimatorType{1}, 'sppf')
                 numParticles = 2e2;
                 particleSet.particlesNum        = numParticles;
-                particleSet.particles           = chol(1*cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
+                particleSet.particles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
                 particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
                 particleSet.weights             = (1 / numParticles)*ones(1, numParticles);
                 particleSet.particlesCov        = repmat(decompCov, [1 1 numParticles]);
@@ -83,31 +101,31 @@ classdef IntegratedInsSns < handle
                     if mod((sample / simNum)*100, 5) == 0
                         disp(['Completed: ', num2str((sample / simNum) * 100),' %' ]);
                     end
-                                        
-                    insState = this.ins.simulate(insState, sample, tEpoch);
-                    snsState = this.sns.getState(sample);                    
-                    observ   = insState(1:6) - snsState;   
                     
-                    this.updateModelParams(state, time(sample), sample, insState(7:10));                 
+                    insState = this.ins.simulate(insState, sample, tEpoch);
+                    snsState = this.sns.getState(sample);
+                    observ   = insState(1:6) - snsState;
+                    
+                    this.updateModelParams(state, time(sample), sample, insState(7:10));
                     
                     if sample == startSample
                         controlProc = [zeros(3, 1); zeros(3, 1); [1; zeros(3, 1)]];
                     else
                         controlProc = state(1:10);
                     end
-                                                                                
+                    
                     [state, cov, decompCov, param, particleSet] = this.resolve(state, cov, decompCov, observ, estimatorType, controlProc, particleSet);
                     
                     insErrorEst(:, sample) = state;
-                    correctedState = insCorrection(insState, state(1:10));                    
+                    correctedState = insCorrection(insState, state(1:10));
                     stateMatrix.AddPhaseState(correctedState, sample);
                     insState = correctedState;
                     
-                    if ~strcmp(estimatorType{1}, {'pf','sppf'})
+                    if ~strcmp(estimatorType{1}, {'pf','sppf', 'gspf', 'gmsppf'})
                         filterParams.meanPredictedState(sample, :) = param.meanPredictedState;
                         
                         if sum(strcmp(fieldnames(param), 'predictedStateCov')) == 1
-                            filterParams.predictedStateCov(sample, :, :) = param.predictedStateCov; 
+                            filterParams.predictedStateCov(sample, :, :) = param.predictedStateCov;
                         end
                         
                         filterParams.predictedObservMean(sample, :) = param.predictedObservMean;
@@ -134,7 +152,7 @@ classdef IntegratedInsSns < handle
     end
     
     methods (Access = private)
-        function [state, cov, sCov, param, particleSetEst] = resolve(this, state, cov, sCov, observ, estimator, control, particleSet)            
+        function [state, cov, sCov, param, particleSetEst] = resolve(this, state, cov, sCov, observ, estimator, control, particleSet)
             param = [];
             particleSetEst = [];
             
@@ -154,14 +172,26 @@ classdef IntegratedInsSns < handle
                 case 'fdckf'
                     [state, sCov, this.procNoise, this.observNoise, param] = fdckf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
                 case 'pf'
-                    [state, particleSetEst, this.procNoise, this.observNoise] = pf(particleSet, this.procNoise, this.observNoise, observ, control, [], this.inferenceModel);                    
+                    [state, particleSetEst, this.procNoise, this.observNoise] = pf(particleSet, this.procNoise, this.observNoise, observ, control, [], this.inferenceModel);
+                case 'gspf'
+                    [state, particleSetEst, this.procNoise, this.observNoise] = gspf(particleSet, this.procNoise, this.observNoise, observ, control, [], this.inferenceModel);
+                    particleSetEst.stateGMM.mean(7:10, :) = quaternionNormalize(particleSetEst.stateGMM.mean(7:10, :));
                 case 'sppf'
                     [state, particleSetEst, this.procNoise, this.observNoise] = sppf(particleSet, this.procNoise, this.observNoise, observ, control, [], this.inferenceModel);
+                case 'gmsppf'
+                    [state, particleSetEst, this.procNoise, this.observNoise] = gmsppf(particleSet, this.procNoise, this.observNoise, observ, control, [], this.inferenceModel);
+                    particleSetEst.stateGMM.mean(7:10, :) = quaternionNormalize(particleSetEst.stateGMM.mean(7:10, :));
+                case 'cqkf'
+                    [state, cov, this.procNoise, this.observNoise, param] = cqkf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
+                case 'ghqf'
+                    [state, cov, this.procNoise, this.observNoise, param] = ghqf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
+                case 'sghqf'
+                    [state, cov, this.procNoise, this.observNoise, param] = sghqf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
                 otherwise
-                    error('not supported filter type' + estimator{1});
-            end            
+                    error(strcat('not supported filter type: ', estimator{1}));
+            end
             state(7:10) = quaternionNormalize(state(7:10));
-            if ~isempty(particleSetEst)
+            if ~isempty(particleSetEst) && isfield(particleSetEst, 'particles')
                 particleSetEst.particles(7:10, :) = quaternionNormalize(particleSetEst.particles(7:10, :));
             end
         end
@@ -217,6 +247,8 @@ classdef IntegratedInsSns < handle
                 case 'pf'
                     this.inferenceModel.resampleThreshold   = 1;
                     this.inferenceModel.estimateType        = 'mean';
+                case 'gspf'
+                    this.inferenceModel.estimateType = 'mean';
                 case 'sppf'
                     this.inferenceModel.spkfType    = 'srukf';
                     decompCov                       = chol(cov, 'lower');
@@ -228,6 +260,23 @@ classdef IntegratedInsSns < handle
                     this.inferenceModel.spkfParams = [alpha beta kappa];
                     this.inferenceModel.resampleThreshold   = 1;
                     this.inferenceModel.estimateType        = 'mean';
+                case 'gmsppf'
+                    this.inferenceModel.spkfType    = 'srukf';
+                    decompCov                       = chol(cov, 'lower');
+                    
+                    alpha = 0.75;   % scale factor (UKF parameter) 1e-3
+                    beta  = 0.85;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
+                    kappa = 39;     % 0 is optimal for state dimension = 2 (UKF parameter)
+                    
+                    this.inferenceModel.spkfParams = [alpha beta kappa];
+                    this.inferenceModel.resampleThreshold   = 1;
+                    this.inferenceModel.estimateType        = 'mean';
+                case 'cqkf'
+                    this.inferenceModel.cqkfParams = 9; % order of laguerre polynomial
+                case 'ghqf'
+                    this.inferenceModel.ghkfParams = 1; % order of gauss-hermite polynomial
+                case 'sghqf'
+                    this.inferenceModel.sghkfParams = [3 3]; % order of gauss-hermite polynomial & manner
                 otherwise
                     % do nothing by default
             end
@@ -235,15 +284,15 @@ classdef IntegratedInsSns < handle
         
         function visualize(this, filterParams, insErrorEst)
             if ~isempty(insErrorEst)
-                figure(); 
+                figure();
                 subplot(3, 1, 1);
                 plot2(this.timeData.RelTime, 1e3*insErrorEst(1:3, :), 'estimation trajectory error', {'x', 'y', 'z'}, 'coordinate error, meter');
                 subplot(3, 1, 2);
                 plot2(this.timeData.RelTime, 1e3*insErrorEst(4:6, :), 'estimation velocity error', {'x', 'y', 'z'}, 'velocity error, meter / sec');
                 subplot(3, 1, 3);
                 plot2(this.timeData.RelTime, insErrorEst(7:10, :), 'estimation quaternion error', {'q0', 'q1', 'q2', 'q3'}, 'quaternion error,');
-
-                figure(); 
+                
+                figure();
                 subplot(2, 2, 1);
                 plot2(this.timeData.RelTime, insErrorEst(11:13, :), 'acceleration bias', {'x', 'y', 'z'}, 'acceleration bias, km / sec^2');
                 subplot(2, 2, 2);
@@ -256,17 +305,17 @@ classdef IntegratedInsSns < handle
             
             if ~isempty(filterParams)
                 gain = filterParams.filterGain;
-                figure(); 
+                figure();
                 subplot(3, 2, 1);
                 plot2(this.timeData.RelTime, gain(:, 1, 1), 'filter gain trajectory', {'x'}, 'filter gain');
                 subplot(3, 2, 3);
-                plot2(this.timeData.RelTime, gain(:, 2, 2), 'filter gain trajectory', {'y'}, 'filter gain');            
+                plot2(this.timeData.RelTime, gain(:, 2, 2), 'filter gain trajectory', {'y'}, 'filter gain');
                 subplot(3, 2, 5);
-                plot2(this.timeData.RelTime, gain(:, 3, 3), 'filter gain trajectory', {'z'}, 'filter gain');            
+                plot2(this.timeData.RelTime, gain(:, 3, 3), 'filter gain trajectory', {'z'}, 'filter gain');
                 subplot(3, 2, 2);
                 plot2(this.timeData.RelTime, gain(:, 4, 4), 'filter gain velocity', {'x'}, 'filter gain');
                 subplot(3, 2, 4);
-                plot2(this.timeData.RelTime, gain(:, 5, 5), 'filter gain velocity', {'y'}, 'filter gain');            
+                plot2(this.timeData.RelTime, gain(:, 5, 5), 'filter gain velocity', {'y'}, 'filter gain');
                 subplot(3, 2, 6);
                 plot2(this.timeData.RelTime, gain(:, 6, 6), 'filter gain velocity', {'z'}, 'filter gain');
             end

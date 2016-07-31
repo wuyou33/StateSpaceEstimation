@@ -1,14 +1,18 @@
-function [newState, newCovState, stateNoise, observNoise, internal ] = ghqf(state, covState, stateNoise, observNoise, observation, model, control1, control2)
-    % GHQF Gauss-Hermite Quadrature Filter.
-    %   GHQF for nonlinear systems with additive Gaussian noise by linearizing the process
-    %   and measurement functions using statistical linear regression (SLR) through a set of Gauss–Hermite quadrature points that
-    %   parameterize the Gaussian density.
+function [newState, newCovState, stateNoise, observNoise, internal ] = sghqf(state, covState, stateNoise, observNoise, observation, model, control1, control2)
+    % SGHQF Sparse Gauss–Hermite Quadrature Filter.
+    %   Sparse Gauss–Hermite quadrature filter is proposed using a sparse-grid method for multidimensional
+    %   numerical integration in the Bayesian estimation framework. The conventional Gauss–Hermite quadrature filter is
+    %   computationally expensive for multidimensional problems, because the number of Gauss–Hermite quadrature
+    %   points increases exponentially with the dimension. The number of sparse-grid points of the computationally efficient
+    %   sparse Gauss–Hermite quadrature filter, however, increases only polynomially with the dimension. In addition, it is
+    %   proven in this paper that the unscented Kalman filter using the suggested optimal parameter is a subset of the sparse
+    %   Gauss–Hermite quadrature filter.
     %
-    %   For more details see "Discrete-Time Nonlinear Filtering Algorithms Using Gauss–Hermite Quadrature"
-    %   By Ienkaran Arasaratnam, Simon Haykin, Fellow IEEE, and Robert J. Elliott
-    %   Vol. 95, No. 5, May 2007 | Proceedings of the IEEE
+    %   For more details see "Sparse Gauss–Hermite Quadrature Filter with Application to Spacecraft Attitude Estimation"
+    %   By Bin Jia, Ming Xin and Yang Cheng
+    %   JOURNAL OF GUIDANCE, CONTROL, AND DYNAMICS Vol. 34, No. 2, March–April 2011
     %
-    %   [newState, newCovState, stateNoise, observNoise, internal ] = ghqf(state, covState, stateNoise, observNoise, observation, model, control1, control2)
+    %   [newState, newCovState, stateNoise, observNoise, internal ] = sghqf(state, covState, stateNoise, observNoise, observation, model, control1, control2)
     %
     %   This filter assumes the following standard state-space model:
     %
@@ -61,26 +65,28 @@ function [newState, newCovState, stateNoise, observNoise, internal ] = ghqf(stat
     %%
     stateDim = model.stateDimension;
     obsDim   = model.observationDimension;
-    order    = model.ghkfParams(1);
+    order    = model.sghkfParams(1);
+    manner   = model.sghkfParams(2);
     
     if (model.controlInputDimension == 0); control1 = []; end
     if (model.control2InputDimension == 0); control2 = []; end
     
-    [set, weights] = gaussHermiteRule(order, stateDim);
+    [set, weights] = sparseGaussHermiteRule(order, stateDim, manner);
+    weights1 = rvecrep(weights, stateDim);
+    weights2 = rvecrep(weights, obsDim);
     
     %% evaluate cubature points
-    numPoints = order^stateDim;
+    numPoints = size(set, 2);
     pointSet  = cvecrep(state, numPoints) + svdDecomposition(covState)*set;
     
     %% propagate quadrature points through process model
     predictedState = model.stateTransitionFun(model, pointSet, cvecrep(stateNoise.mean, numPoints), control1);
     
-    predictedStateMean = sum(predictedState.*weights, 2);
-    squareRootPredictedStateCov = (predictedState - cvecrep(predictedStateMean, numPoints)).*weights;
+    predictedStateMean = sum(predictedState.*weights1, 2);
+    squareRootPredictedStateCov = (predictedState - cvecrep(predictedStateMean, numPoints)).*weights1;
     predictedStateCov = squareRootPredictedStateCov*squareRootPredictedStateCov' + stateNoise.covariance;
     
     %% evaluate cubature points for measurement
-    [~, weights2] = gaussHermiteRule(order, obsDim);
     pointSet2 = cvecrep(predictedStateMean, numPoints) + svdDecomposition(predictedStateCov)*set;
     
     %% propagate through observation model
@@ -88,7 +94,7 @@ function [newState, newCovState, stateNoise, observNoise, internal ] = ghqf(stat
     predictObsMean = sum(predictObs.*weights2, 2);
     
     %% measurement update
-    x = (pointSet2 - cvecrep(predictedStateMean, numPoints)).*weights;
+    x = (pointSet2 - cvecrep(predictedStateMean, numPoints)).*weights1;
     z = (predictObs - cvecrep(predictObsMean, numPoints)).*weights2;
     
     innovationCov = z*z'+ observNoise.covariance;

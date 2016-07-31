@@ -1,111 +1,69 @@
-function [prior, likelihood, evidence, posterior] = gmmProbability( gmmDataSet, x, w )
-% GMMPROBABILITY  Calculates any of the related (through Bayes rule) probabilities
-%                 of a Gaussian Mixture Model (gmmDS) and a given dataset x.
-%                 'prob_type' is a string indicating which of the four probability
-%                 values are needed. These probabilities are:
-%
-%                      P(X|C) . P(C)                       likelihood . prior
-%           P(C|X) = -----------------       posterior =  --------------------
-%                          P(X)                                evidence
-%
-%            where C is the component classes (Gaussians) of the GMM and X is the data.
-%
-%   probability = gmmprobability(gmmDS, X, W)
-%
-%   INPUT
-%          gmmDS         Gaussian mixture model data structure with the following fields
-%            .cov_type   covariance matrix type 'full' , 'diag' , 'sqrt' , 'sqrt-diag'    [string]
-%            .dim        data dimension  [scalar]
-%            .M          number of Gaussian component densities  [scalar]
-%            .weights    mixing priors (component weights) [1-by-M vector]
-%            .mu         M Gaussian component means (columns of matrix) [dim-by-M matrix]
-%            .cov        covariance matrices of Gaussian components (must comply with .cov_type)
-%                        [dim-by-dim-by-M matrix]
-%          X             buffer of N dim-by-1 data set vectors to be evaluated  [dim-by-N]
-%          W             (optional) 1-by-N vector of sample weights. If specified, the sample
-%                                   set will be weighted according to these weights.
-%
-%   OUTPUT
-%          prior         The prior (without seeing data) probability of a component
-%                        density generating any given data vector, i.e. P(C(i)).
-%                        This is simply the same as the prior mixing weights,
-%                        'gmmDS.weights'. [M-by-1 matrix]
-%
-%          likelihood    M-by-N martrix where the j,i-th entry is the likelihood
-%                        of input column vector i (of X) conditioned on component
-%                        density j, i.e. P(X(i)|C(j))
-%
-%          evidence      1-by-N matrix where the i-th entry is the total data probability
-%                        for a given data vector X(i), i.e. P(X(i))=sum_over_all_j[P(X(i)|C(j))]
-%
-%          posterior     M-by-N matrix where the j,i-th entry is the posterior
-%                        probability (after seeing the data) that a component
-%                        density j has generated a specific data vector X(i), i.e.
-%                        P(C(j)|X(i))   (class posterior probabilities)
-
-    nOut = nargout;
-
-    [dim, nov] = size(x);
-
-    if (dim ~= gmmDataSet.dimension)
+function [ prior, likelihood, evidence, posterior ] = gmmProbability( gmmSet, dataSet, evidenceWeights )
+    % gmmProbability Calculates any of the related (through Bayes rule) probabilities of a Gaussian Mixture Model (gmmSet) and a given dataset (dataSet).
+    %       Probabilities are:
+    %                   P(X|C) . P(C)                   likelihood . prior
+    %       P(C|X) = -----------------   posterior =  --------------------
+    %                      P(X)                             evidence
+    %
+    %   where C is the component classes (Gaussians) of the GMM and X is the data.
+    %
+    %   [ prior, likelihood, evidence, posterior ] = gmmProbability( gmmSet, dataSet, evidenceWeights )
+    %
+    %   INPUT
+    %       gmmSet              - Gaussian mixture model data structure with the following fields;
+    %           .covarianceType - covariance matrix type ('full' , 'diag' , 'sqrt' , 'sqrt-diag');
+    %           .dimension      - data dimension;
+    %           .mixtureCount   - number of Gaussian component densities;
+    %           .weights        - mixing priors (component weights);
+    %           .mean           - Gaussian component means;
+    %           .covariance     - covariance matrices of Gaussian components;
+    %       dataSet             - buffer of N dim-by-1 data set vectors to be evaluated;
+    %       evidenceWeights     - <optional> vector of sample weights. If specified, the sampleset will be weighted according to these weights.
+    %
+    %   OUTPUT
+    %       prior       - The prior (without seeing data) probability of a componentdensity generating any given data vector, i.e. P(C(i)).
+    %                     This is simply the same as the prior mixing weights, 'gmmSet.weights';
+    %       likelihood  - Martrix where the j, i-th entry is the likelihoodof input column vector i (of dataSet) conditioned on component
+    %                     density j, i.e. P(X(i)|C(j));
+    %       evidence    - Matrix where the i-th entry is the total data probabilityfor a given data vector X(i), i.e. P(X(i)) = sum_over_all_j [P(X(i)|C(j)) ];
+    %       posterior   - Matrix where the j,i-th entry is the posteriorprobability (after seeing the data) that a component
+    %                     density j has generated a specific data vector X(i), i.e. P(C(j)|X(i))   (class posterior probabilities).
+    %%
+    [dim, bucketSize] = size(dataSet);
+    
+    if (dim ~= gmmSet.dimension)
         error(' [ gmmProbability ] Data dimension and GMM model dimension is not the same.');
     end
-
-    M        = gmmDataSet.M;                      % dumber of component densities
-    mu       = gmmDataSet.mean;
-    covar    = gmmDataSet.covariance;
-    prior    = gmmDataSet.weights(:);             % prior mixing probabilities
-    ones_nov = ones(nov,1);
-    ones_M   = ones(M,1);
-
-    if nOut > 1
-
-        likelihood = zeros(M, nov);
-        normfact = (2*pi) ^ (gmmDataSet.dimension / 2);
-
-        switch gmmDataSet.covarianceType
-            case {'full','diag'}            
-                for k=1:M,
-                    cmu = mu(:,k);
-                    xx = x - cmu(:,ones_nov);
-                    s = chol(covar(:,:,k))';
-                    foo = s \ xx;
-                    likelihood(k,:) = exp(-0.5*sum(foo.*foo, 1))/abs((normfact*prod(diag(s))));
-                end
-
-            case {'sqrt','sqrt-diag'}            
-                for k=1:M,
-                    cmu = mu(:,k);
-                    xx = x - cmu(:,ones_nov);
-                    s = covar(:,:,k);
-                    foo = s \ xx;
-                    likelihood(k,:) = exp(-0.5*sum(foo.*foo, 1))/abs((normfact*prod(diag(s))));
-                end
-
-            otherwise            
-                error([' [ gmmProbability ] Unknown covariance type ', mix.cov_type]);
-
+       
+    normFact = (2*pi)^(gmmSet.dimension / 2);
+        
+    prior = gmmSet.weights(:);
+    
+    likelihood = zeros(gmmSet.mixtureCount, bucketSize);
+    for i = 1 : gmmSet.mixtureCount        
+        centered = dataSet - cvecrep(gmmSet.mean(:, i), bucketSize);
+        
+        switch gmmSet.covarianceType
+            case {'full', 'diag'}
+                sqrtCov = chol(gmmSet.covariance(:, :, i), 'lower');
+            case {'sqrt', 'sqrt-diag'}
+                sqrtCov = gmmSet.covariance(:, :, i);
+            otherwise
+                error([' [ gmmProbability ] Unknown covariance type ', gmmSet.covarianceType]);
         end
-
+        
+        x = sqrtCov \ centered;
+        likelihood(i, :) = exp(-0.5*sum(x.*x, 1)) / abs( (normFact*prod(diag(sqrtCov))) );
     end
-
-    likelihood = likelihood + 1e-99; % avoid zero
-
-    % Calculate evidence
-    if nOut > 2    
-        if (nargin == 3)
-            evidence = prior' * (likelihood ./ w(ones_M,:)); % weighted
-        else
-            evidence = prior'*likelihood; % non-weighted
-        end
-
-        evidence = evidence + 1e-99; % avoid zero
+    
+    likelihood = likelihood + 1e-99;
+    
+    if (nargin == 3)
+        evidence = prior' * (likelihood ./ evidenceWeights(ones(gmmSet.mixtureCount, 1),:)) + 1e-99;
+    else
+        evidence = prior'*likelihood + 1e-99;
     end
-
-    % Calculate posterior
-    if nOut > 3    
-        posterior = likelihood ./ ((1./prior)*evidence) + 1e-99;    
-        posterior = posterior ./ rvecrep(sum(posterior,1),M);
-
-    end
+    
+    posterior = likelihood ./ ( (1 ./ prior) * evidence ) + 1e-99;
+    posterior = posterior ./ rvecrep(sum(posterior, 1), gmmSet.mixtureCount);
 end

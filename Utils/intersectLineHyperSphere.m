@@ -24,7 +24,7 @@ function [ points ] = intersectLineHyperSphere( line, sphere, n )
     delta = b.*b - 4*a.*c;
     
     % initialize empty results
-    points = NaN * ones(2 * size(delta, 1), n);
+    points = NaN * ones(n, 2 * size(delta, 1));
     
     % proces couples with two intersection points
     inds = find(delta > tolerance);
@@ -34,8 +34,8 @@ function [ points ] = intersectLineHyperSphere( line, sphere, n )
         u2 = (-b(inds) +sqrt(delta(inds))) / 2 ./ a(inds);
         
         % convert into 3D coordinate
-        points(inds, :) = line(inds, 1:n) + bsxfun(@times, u1, line(inds, n+1:end));
-        points(inds+length(delta), :) = line(inds, 1:n) + bsxfun(@times, u2, line(inds, n+1:end));
+        points(:, inds) = line(inds, 1:n) + bsxfun(@times, u1, line(inds, n+1:end));
+        points(:, inds+length(delta)) = line(inds, 1:n) + bsxfun(@times, u2, line(inds, n+1:end));
     end
     
     % process couples with one intersection point
@@ -46,7 +46,7 @@ function [ points ] = intersectLineHyperSphere( line, sphere, n )
         
         % convert into 3D coordinate
         pts = line(inds, 1:end) + bsxfun(@times, u, line(inds, n+1:end));
-        points(inds, :) = pts;
-        points(inds+length(delta), :) = pts;
+        points(:, inds) = pts;
+        points(:, inds+length(delta)) = pts;
     end
 end

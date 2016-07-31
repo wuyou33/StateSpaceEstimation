@@ -1,9 +1,9 @@
-function [ newState, newSvdCovState, stateNoise, observNoise, internal ] = cqkf( state, svdCovState, stateNoise, observNoise, observation, model, control1, control2)
+function [ newState, newCovState, stateNoise, observNoise, internal ] = cqkf( state, covState, stateNoise, observNoise, observation, model, control1, control2)
     % CQKF Cubature Quadrature Kalman Filter (some kind of High-degree Cubature Kalman Filter)
     %   [ newState, newSvdCovState, stateNoise, observNoise, internal ] = cqkf( state, svdCovState, stateNoise, observNoise, observation, model, control1, control2)
-    %       
+    %
     %   This filter assumes the following standard state-space model:
-    % 
+    %
     %     x(k) = f[x(k-1), v(k-1), u1(k-1)]
     %     y(k) = h[x(k), n(k), u2(k)]
     %
@@ -18,7 +18,7 @@ function [ newState, newSvdCovState, stateNoise, observNoise, internal ] = cqkf(
     %
     %   Cubature points calculated as intersection of unit hyper-sphere and its axes.
     %   Quadrature points calculated as solution of Chwbychev-Laguerre polynoms with order n' and a = (n / 2 - 1).
-    %   
+    %
     %   INPUT
     %         state                  state mean at time k-1          ( xh(k-1) )
     %         svdCovState            square root factor of matrix through Singular value decomposition of state covariance at time k-1
@@ -45,25 +45,63 @@ function [ newState, newSvdCovState, stateNoise, observNoise, internal ] = cqkf(
     %% ERROR CHECKING
     if (nargin ~= 8 && nargin ~= 6); error(' [ cqkf ] Not enough input arguments (should be 6 or 8).'); end
     
-    if (model.stateDimension ~= size(state, 1)); error('[ cqkf ] Prior state dimension differs from inferenceDataSet.stateDimension'); end
+    if (model.stateDimension ~= size(state, 1)); error('[ cqkf ] Prior state dimension differs from model.stateDimension'); end
     
-    if (model.stateDimension ~= size(svdCovState, 1)); error('[ cqkf ] Prior state covariance dimension differs from inferenceDataSet.stateDimension'); end
+    if (model.stateDimension ~= size(covState, 1)); error('[ cqkf ] Prior state covariance dimension differs from model.stateDimension'); end
     
-    if (model.observationDimension ~= size(observation, 1)); error('[ cqkf ] Observation dimension differs from inferenceDataSet.observationDimension'); end
+    if (model.observationDimension ~= size(observation, 1)); error('[ cqkf ] Observation dimension differs from model.observationDimension'); end
     %%
     stateDim = model.stateDimension;
     obsDim   = model.observationDimension;
     order    = model.cqkfParams(1);
-        
+    
     if (model.controlInputDimension == 0); control1 = []; end
     if (model.control2InputDimension == 0); control2 = []; end
     
-    cubaturePoints   = intersectUnitVectorHyperSphere(stateDim);
-    [ quadraturePoints, weigths ] = laguerreQuadratureRule(order, alpha);
-    points = zeros(2*stateDim*order, stateDim);
-    for i = 1:order
-        points(stateDim*(1-1) + 1, stateDim*i, :) = sqrt(2)*cubaturePoints*quadraturePoints(i);
+    [points, w] = cubatureQuadraturePoints(stateDim, order);
+               
+    %% Evaluate cubature points
+    numCubSet1 = 2*stateDim*order;
+    weights = elrep(w, stateDim, numCubSet1);
+    cubatureSet = cvecrep(state, numCubSet1) + svdDecomposition(covState)*points;
+    
+    %% Propagate cubature-points through process model
+    predictedState = model.stateTransitionFun(model, cubatureSet, cvecrep(stateNoise.mean, numCubSet1), control1);
+
+    predictedStateMean = sum(predictedState.*weights, 2);
+    squareRootPredictedStateCov = (predictedState - cvecrep(predictedStateMean, numCubSet1)).*weights;
+    predictedStateCov = squareRootPredictedStateCov*squareRootPredictedStateCov' + stateNoise.covariance;
+    
+    %% Evaluate cubature points for measurement
+    weights2 = elrep(w, obsDim, numCubSet1);
+    cubatureSet2 = cvecrep(predictedStateMean, numCubSet1) + svdDecomposition(predictedStateCov)*points;
+    
+    %% Propagate through observation model      
+    predictObs = model.stateObservationFun(model, cubatureSet2, cvecrep(observNoise.mean, numCubSet1), control2);
+    predictObsMean = sum(predictObs.*weights2, 2);
+    
+    %% Measurement update
+    x = (cubatureSet2 - cvecrep(predictedStateMean, numCubSet1)).*weights;
+    z = (predictObs-cvecrep(predictObsMean, numCubSet1)).*weights2;
+
+    innovationCov = z*z'+ observNoise.covariance;
+    crossCov = x*z';
+    filterGain = crossCov*pinv(innovationCov);
+
+    if isempty(model.innovationModelFunc)
+        inov = observation - predictObsMean;
+    else
+        inov = model.innovationModelFunc(model, observation, predictObsMean);
     end
-    
-    
+
+    newState = predictedStateMean + filterGain*inov;
+    newCovState = predictedStateCov - filterGain*innovationCov*filterGain';
+
+    %% additional ouptut param (required for debug)
+    internal.meanPredictedState    = predictedStateMean;
+    internal.predictedStateCov     = predictedStateCov;
+    internal.predictedObservMean   = predictObsMean;
+    internal.inov                  = inov;
+    internal.predictedObservCov    = innovationCov;
+    internal.filterGain            = filterGain;
 end

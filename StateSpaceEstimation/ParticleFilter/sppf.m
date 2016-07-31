@@ -1,4 +1,4 @@
-function [estimate, dataSet, processNoise, observationNoise] = sppf(dataSet, processNoise, observationNoise, observation, controlProc, controlObs, model)
+function [estimate, dataSet, stateNoise, observNoise] = sppf(dataSet, stateNoise, observNoise, observation, control1, control2, model)
     % sppf  Sigma-Point Particle Filter.
     %   This hybrid particle filter uses a sigma-point Kalman filter (SRUKF, SRCDKF) or Cubature Kalman filter (SCKF) for proposal distribution generation
     %   and is an extension of the original "Unscented Particle Filter.
@@ -20,20 +20,20 @@ function [estimate, dataSet, processNoise, observationNoise] = sppf(dataSet, pro
     %       y the noisy observation of the system.
     %
     %   INPUT
-    %         dataSet               particle filter data structure. Contains set of particles as well as their corresponding weights.
-    %         processNoise          process noise data structure
-    %         observationNoise      observation noise data structure
-    %         observation           noisy observations starting at time k ( y(k),y(k+1),...,y(k+N-1) )
-    %         controlProc           exogenous input to state transition function starting at time k-1 ( u1(k-1),u1(k),...,u1(k+N-2) )
-    %         controlObs            exogenous input to state observation function starting at time k  ( u2(k),u2(k+1),...,u2(k+N-1) )
-    %         gssModel              inference data structure.
+    %         dataSet           particle filter data structure. Contains set of particles as well as their corresponding weights.
+    %         stateNoise        process noise data structure
+    %         observNoise       observation noise data structure
+    %         observation       noisy observations starting at time k ( y(k),y(k+1),...,y(k+N-1) )
+    %         control1          exogenous input to state transition function starting at time k-1 ( u1(k-1),u1(k),...,u1(k+N-2) )
+    %         control2          exogenous input to state observation function starting at time k  ( u2(k),u2(k+1),...,u2(k+N-1) )
+    %         gssModel          inference data structure.
     %
     %   OUTPUT
-    %         estimate              state estimate generated from posterior distribution of state given all observation. Type of
-    %                                   estimate is specified by 'InferenceDS.estimateType'
-    %         dataSet               updated Particle filter data structure. Contains set of particles as well as their corresponding weights.
-    %         processNoise          process noise data structure     (possibly updated)
-    %         observationNoise      observation noise data structure (possibly updated)
+    %         estimate          state estimate generated from posterior distribution of state given all observation. Type of
+    %                           estimate is specified by 'InferenceDS.estimateType'
+    %         dataSet           updated Particle filter data structure. Contains set of particles as well as their corresponding weights.
+    %         stateNoise        process noise data structure     (possibly updated)
+    %         observNoise       observation noise data structure (possibly updated)
     %
     %   dataSet fields:
     %         .particlesNum        (scalar) number of particles
@@ -49,7 +49,7 @@ function [estimate, dataSet, processNoise, observationNoise] = sppf(dataSet, pro
     if nargin ~= 7; error('[ sppf ] Not enough input arguments.'); end
     
     %%
-    stateDim        = model.stateDimension;    
+    stateDim        = model.stateDimension;
     num             = dataSet.particlesNum;
     particles       = dataSet.particles;
     sqrtCov         = dataSet.particlesCov;
@@ -60,25 +60,24 @@ function [estimate, dataSet, processNoise, observationNoise] = sppf(dataSet, pro
     
     normWeights = cvecrep(1 / num, num);
     
-    if (model.controlInputDimension == 0); controlProc = zeros(0, 0); end
+    if (model.controlInputDimension == 0); control1 = []; end    
+    if (model.control2InputDimension == 0); control2 = []; end
     
-    if (model.control2InputDimension == 0); controlObs = zeros(0, 0); end
-            
     sqrtCovPred = zeros(stateDim, stateDim, num);
     stateNew    = zeros(stateDim, num);
     statePred   = zeros(stateDim, num);
-    proposal    = zeros(1, num);    
-    normFact    = (2*pi)^(stateDim / 2);       
+    proposal    = zeros(1, num);
+    normFact    = (2*pi)^(stateDim / 2);
     
-    %% TIME UPDATE
+    %% time update
     
     switch model.spkfType
         case 'srukf'
-            predict = @(x, s, xNoise, zNoise) srukf(x, s, xNoise, zNoise, observation, model, controlProc, controlObs);
+            predict = @(x, s, xNoise, zNoise) srukf(x, s, xNoise, zNoise, observation, model, control1, control2);
         case 'sckf'
-            predict = @(x, s, xNoise, zNoise) sckf(x, s, xNoise, zNoise, observation, model, controlProc, controlObs);
+            predict = @(x, s, xNoise, zNoise) sckf(x, s, xNoise, zNoise, observation, model, control1, control2);
         case 'srcdkf'
-            predict = @(x, s, xNoise, zNoise) srcdkf(x, s, xNoise, zNoise, observation, model, controlProc, controlObs);
+            predict = @(x, s, xNoise, zNoise) srcdkf(x, s, xNoise, zNoise, observation, model, control1, control2);
         otherwise
             error('[ sppf ] Unknown inner filter type.');
     end
@@ -88,15 +87,15 @@ function [estimate, dataSet, processNoise, observationNoise] = sppf(dataSet, pro
         statePred(:, i) = stateNew(:, i) + sqrtCovPred(:, :, i)*randn(stateDim, 1);
     end
     
-    %% EVALUATE IMPORTANCE WEIGHTS
-       
-    prior = model.stateTransitionPriorFun(model, statePred, particles, controlProc, processNoise) + 1e-99;
-        
-    likelihood = model.likelihoodStateFun(model, cvecrep(observation, num), statePred, controlObs, observationNoise) + 1e-99;
+    %% evalutate importance weights
+    
+    prior = model.stateTransitionPriorFun(model, statePred, particles, control1, stateNoise) + 1e-99;
+    
+    likelihood = model.likelihoodStateFun(model, cvecrep(observation, num), statePred, control2, observNoise) + 1e-99;
     
     difState = statePred - stateNew;
     
-    for i=1:num,
+    for i=1:num
         covFact = sqrtCovPred(:, :, i);
         expData = covFact \ difState(:, i);
         proposal(i) = exp(-0.5*(expData'*expData)) / abs( normFact * prod( diag(covFact) ) ) + 1e-99;
@@ -104,14 +103,14 @@ function [estimate, dataSet, processNoise, observationNoise] = sppf(dataSet, pro
     end
     
     weights = weights / sum(weights);
-        
-    if strcmp(model.estimateType, 'mean')        
+    
+    if strcmp(model.estimateType, 'mean')
         estimate = sum( weights(ones(1, stateDim), :) .* statePred, 2);
     else
         error('[ sppf ] Unknown estimate type.');
     end
     
-    %% RESAMPLE
+    %% resample
     
     effectiveSize = 1 / sum(weights.^2);
     
@@ -127,7 +126,7 @@ function [estimate, dataSet, processNoise, observationNoise] = sppf(dataSet, pro
     else
         particles   = statePred;
         sqrtCov     = sqrtCovPred;
-    end    
+    end
     
     dataSet.particles           = particles;
     dataSet.particlesCov        = sqrtCov;

@@ -6,9 +6,11 @@ function [ points, weights ] = cubatureQuadraturePoints( stateDim, order )
     cubaturePoints   = intersectUnitVectorHyperSphere(stateDim);
     [ quadraturePoints, weights ] = laguerreQuadratureRule(order, alpha);
     
-    points = zeros(2*stateDim*order, stateDim);
+    weights = weights/(2*stateDim*gamma(stateDim*0.5));
+    
+    points = zeros(stateDim, 2*stateDim*order);        
     for i = 1:order
-        points(2*stateDim*(i-1)+1 : 2*stateDim*i, :) = sqrt(2)*cubaturePoints*quadraturePoints(i);
+        points(:, 2*stateDim*(i-1)+1 : 2*stateDim*i) = sqrt(2)*cubaturePoints*quadraturePoints(i);        
     end
 end
 

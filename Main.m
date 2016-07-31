@@ -9,11 +9,8 @@ addpath(genpath('Statistics')); % include folder with Statistics functions
 addpath(genpath('StateSpaceEstimation')); % include folder with State Space Estimation algorithms
 addpath(genpath('Utils'));
 
-[x, w] = cubatureQuadraturePoints(1, 2);
-x
-w
-return
-estimatorType  = {'cqkf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'gspf', 'gmsppf', 'ghqf', 'ahdckf'};
+% ghqf not working due to dimension, too number of points :(
+estimatorType  = {'gmsppf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'ghqf', 'sghqf', 'gspf', 'gmsppf'};
 
 date.day  = 17;
 date.mon  = 11;
@@ -42,8 +39,8 @@ angularVelocitySigma        = 1e-4*ones(3, 1);      % [rad/sec]
 insTrajInitErrorKm          = 3e-2*ones(3, 1);      % [km]
 insVelInitErrorKmSec        = 5e-5*ones(3, 1);      % [km/sec]
 insQuaternionInitError      = 5e-5*ones(4, 1);      % [-] error converted to angle approx equal 3-5 grad.
-accScaleFactorInitError     = 1e-5*ones(3, 1);      % [-] 
-gyroScaleFactorInitError    = 1e-5*ones(3, 1);      % [-] 
+accScaleFactorInitError     = 1e-5*ones(3, 1);      % [-]
+gyroScaleFactorInitError    = 1e-5*ones(3, 1);      % [-]
 gyroBiasSigmaInitError      = 1e-2*gyroBiasSigma;   % [rad / sec]
 accBiasSigmaInitError       = 1e-2*accBiasSigma;    % [km / sec^2]
 
@@ -77,25 +74,25 @@ insInitialState(7:10) = quaternionNormalize(insInitialState(7:10));
 
 %========================================================================================================
 initCov = [diag(insTrajInitErrorKm).^2 zeros(3, 19); ... distance error [km]^2
-           zeros(3, 3) diag(insVelInitErrorKmSec).^2 zeros(3, 16); ... velocity error [km/sec]^2
-           zeros(4, 6) diag(2.5e-3*insQuaternionInitError).^2 zeros(4, 12); ... quaternion error [-]
-           zeros(3, 10) diag(5e-2*accBiasSigmaInitError).^2 zeros(3, 9); ... acceler bias [km/sec^2]^2
-           zeros(3, 13) diag(1e0*gyroBiasSigmaInitError).^2 zeros(3, 6); ... gyro bias [rad/sec]^2
-           zeros(3, 16) diag(1e-3*accScaleFactorInitError).^2 zeros(3, 3); ... acceler scale factor [-]
-           zeros(3, 19) diag(1e-3*gyroScaleFactorInitError).^2 ... gyro scale factor [-]
-        ];
+    zeros(3, 3) diag(insVelInitErrorKmSec).^2 zeros(3, 16); ... velocity error [km/sec]^2
+    zeros(4, 6) diag(insQuaternionInitError).^2 zeros(4, 12); ... quaternion error [-] 2.--- 5e-3
+    zeros(3, 10) diag(accBiasSigmaInitError).^2 zeros(3, 9); ... acceler bias [km/sec^2]^2 --- 5e-2
+    zeros(3, 13) diag(gyroBiasSigmaInitError).^2 zeros(3, 6); ... gyro bias [rad/sec]^2
+    zeros(3, 16) diag(1e-3*accScaleFactorInitError).^2 zeros(3, 3); ... acceler scale factor [-]
+    zeros(3, 19) diag(1e-3*gyroScaleFactorInitError).^2 ... gyro scale factor [-]
+    ];
 
 %========================================================================================================
 
-% nice setup for sigma point filter and gaussian noise.
-insSnsProcCov = [(1e-4*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
-                 zeros(3, 3) (5e-6*eye(3)).^2 zeros(3, 16); ... velocity error [km/sec]^2
-                 zeros(4, 6) (1e-7*eye(4)).^2 zeros(4, 12); ... quaternion error [-]
-                 zeros(3, 10) diag(accBiasSigma).^2 zeros(3, 9); ... acceler bias [km/sec^2]^2
-                 zeros(3, 13) diag(gyroBiasSigma).^2 zeros(3, 6); ... gyro bias [rad/sec]^2
-                 zeros(3, 16) (1e-10*eye(3)).^2 zeros(3, 3); ... acceler scale factor [-]
-                 zeros(3, 19) (1e-10*eye(3)).^2 ... gyro scale factor [-]
-                ];
+% % nice setup for sigma point filter and gaussian noise.
+% insSnsProcCov = [(1e-4*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
+%                  zeros(3, 3) (5e-6*eye(3)).^2 zeros(3, 16); ... velocity error [km/sec]^2
+%                  zeros(4, 6) (1e-7*eye(4)).^2 zeros(4, 12); ... quaternion error [-]
+%                  zeros(3, 10) diag(accBiasSigma).^2 zeros(3, 9); ... acceler bias [km/sec^2]^2
+%                  zeros(3, 13) diag(gyroBiasSigma).^2 zeros(3, 6); ... gyro bias [rad/sec]^2
+%                  zeros(3, 16) (1e-10*eye(3)).^2 zeros(3, 3); ... acceler scale factor [-]
+%                  zeros(3, 19) (1e-10*eye(3)).^2 ... gyro scale factor [-]
+%                 ];
 
 % nice setup for particle filter and gaussian noise.
 % insSnsProcCov = [(7.25e-4*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
@@ -116,8 +113,37 @@ insSnsProcCov = [(1e-4*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
 %                 zeros(3, 16) (1e-7*eye(3)).^2 zeros(3, 3); ... acceler scale factor [-]
 %                 zeros(3, 19) (1e-7*eye(3)).^2 ... gyro scale factor [-]
 %             ];
-        
-        
+
+% nice setup for cubature-quadrature kalman filter and gaussian noise.
+% insSnsProcCov = [(5.75e-3*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
+%                  zeros(3, 3) (5e-6*eye(3)).^2 zeros(3, 16); ... velocity error [km/sec]^2
+%                  zeros(4, 6) (5e-6*eye(4)).^2 zeros(4, 12); ... quaternion error [-]
+%                  zeros(3, 10) diag(accBiasSigma).^2 zeros(3, 9); ... acceler bias [km/sec^2]^2
+%                  zeros(3, 13) diag(gyroBiasSigma).^2 zeros(3, 6); ... gyro bias [rad/sec]^2
+%                  zeros(3, 16) (1e-8*eye(3)).^2 zeros(3, 3); ... acceler scale factor [-]
+%                  zeros(3, 19) (1e-8*eye(3)).^2 ... gyro scale factor [-]
+%                 ];
+
+% % nice setup for gaussian sum particle filter and gaussian noise.
+% insSnsProcCov = [(1e-3*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
+%                  zeros(3, 3) (1e-6*eye(3)).^2 zeros(3, 16); ... velocity error [km/sec]^2
+%                  zeros(4, 6) (2.5e-6*eye(4)).^2 zeros(4, 12); ... quaternion error [-]
+%                  zeros(3, 10) diag(accBiasSigma).^2 zeros(3, 9); ... acceler bias [km/sec^2]^2
+%                  zeros(3, 13) diag(gyroBiasSigma).^2 zeros(3, 6); ... gyro bias [rad/sec]^2
+%                  zeros(3, 16) (1e-10*eye(3)).^2 zeros(3, 3); ... acceler scale factor [-]
+%                  zeros(3, 19) (1e-10*eye(3)).^2 ... gyro scale factor [-]
+%                 ];
+
+% nice setup for gaussian sum sigma point particle filter and gaussian noise.
+insSnsProcCov = [(1e-4*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
+                 zeros(3, 3) (2.5e-7*eye(3)).^2 zeros(3, 16); ... velocity error [km/sec]^2
+                 zeros(4, 6) (2.5e-6*eye(4)).^2 zeros(4, 12); ... quaternion error [-]
+                 zeros(3, 10) diag(accBiasSigma).^2 zeros(3, 9); ... acceler bias [km/sec^2]^2
+                 zeros(3, 13) diag(gyroBiasSigma).^2 zeros(3, 6); ... gyro bias [rad/sec]^2
+                 zeros(3, 16) (1e-7*eye(3)).^2 zeros(3, 3); ... acceler scale factor [-]
+                 zeros(3, 19) (1e-7*eye(3)).^2 ... gyro scale factor [-]
+                ];
+            
 rCovKoeff = 1.0; % 1.5 for pf, otherwise 1
 vCovKoeff = 1.0; % 1.5 for pf, otherwise 1
 insSnsInitArgs.initialParams(1:3)           = accBiasMu;
@@ -145,7 +171,6 @@ for j = 1:iterationNumber
     %         insSnsInitState = [insTrajInitErrorKm; insVelInitErrorKmSec; qInit; [0; 0; 0]; [0; 0; 0]; 5e-5*ones(3, 1); 5e-5*ones(3, 1)];
     
     sns = SnsImitator(starshipTrueState.State, 'gaussian'); % gaussian markov1 wiener exp
-%     sns = SnsImitator();
     ins = initInertialNavigationSystem('init', insInitArgs);
     insSns = IntegratedInsSns(ins, sns, timeData, insSnsInitArgs);
     tic;
@@ -186,7 +211,7 @@ if iterationNumber > 1
     for i = 1:timeData.SimulationNumber
         errors(:, i) = ( sum( ( squeeze(iterations(:, :, i))' ).^2, 2) / iterationNumber ).^0.5;
     end
-
+    
     figure();
     subplot(3, 1, 1);
     plot2(timeData.RelTime, errors(1, :), 'trajectory errors in SNS & INS', {'INS & SNS'}, 'trajectory error, meter');

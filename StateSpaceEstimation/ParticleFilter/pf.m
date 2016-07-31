@@ -1,8 +1,8 @@
-function [estimate, dataSet, processNoise, observationNoise] = pf(dataSet, processNoise, observationNoise, observation, controlProc, controlObs, gssModel)
+function [estimate, dataSet, stateNoise, observNoise] = pf(dataSet, stateNoise, observNoise, observation, control1, control2, model)
     % PF  Generic Particle Filter
     %   This filter is also known as the 'Bootstrap Particle Filter' or the 'Condensation Algorithm'
     %
-    %   [estimate, dataSet, processNoise, observationNoise] = pf(dataSet, processNoise, observationNoise, observation, controlProc, controlObs, gssModel)
+    %   [estimate, dataSet, stateNoise, observNoise] = pf(dataSet, stateNoise, observNoise, observation, control1, control2, model)
     %
     %   This filter assumes the following standard state-space model:
     %
@@ -19,20 +19,20 @@ function [estimate, dataSet, processNoise, observationNoise] = pf(dataSet, proce
     %       y the noisy observation of the system.
     %
     %   INPUT
-    %         dataSet               particle filter data structure. Contains set of particles as well as their corresponding weights.
-    %         processNoise          process noise data structure
-    %         observationNoise      observation noise data structure
-    %         observation           noisy observations starting at time k ( y(k),y(k+1),...,y(k+N-1) )
-    %         controlProc           exogenous input to state transition function starting at time k-1 ( u1(k-1),u1(k),...,u1(k+N-2) )
-    %         controlObs            exogenous input to state observation function starting at time k  ( u2(k),u2(k+1),...,u2(k+N-1) )
-    %         gssModel              inference data structure.
+    %         dataSet           particle filter data structure. Contains set of particles as well as their corresponding weights.
+    %         stateNoise        process noise data structure
+    %         observNoise       observation noise data structure
+    %         observation       noisy observations starting at time k ( y(k),y(k+1),...,y(k+N-1) )
+    %         control1          exogenous input to state transition function starting at time k-1 ( u1(k-1),u1(k),...,u1(k+N-2) )
+    %         control2          exogenous input to state observation function starting at time k  ( u2(k),u2(k+1),...,u2(k+N-1) )
+    %         gssModel          inference data structure.
     %
     %   OUTPUT
-    %         estimate              state estimate generated from posterior distribution of state given all observation. Type of
-    %                                   estimate is specified by 'InferenceDS.estimateType'
-    %         dataSet               updated Particle filter data structure. Contains set of particles as well as their corresponding weights.
-    %         processNoise          process noise data structure     (possibly updated)
-    %         observationNoise      observation noise data structure (possibly updated)
+    %         estimate          state estimate generated from posterior distribution of state given all observation. Type of
+    %                           estimate is specified by 'InferenceDS.estimateType'
+    %         dataSet           updated Particle filter data structure. Contains set of particles as well as their corresponding weights.
+    %         stateNoise        process noise data structure     (possibly updated)
+    %         observNoise       observation noise data structure (possibly updated)
     %
     %   dataSet fields:
     %         .particlesNum        (scalar) number of particles
@@ -48,28 +48,28 @@ function [estimate, dataSet, processNoise, observationNoise] = pf(dataSet, proce
     %%
     if nargin ~= 7; error(' [ pf ] Incorrect number of input arguments.'); end
     
-    stateDim    = gssModel.stateDimension;
+    stateDim    = model.stateDimension;
     num         = dataSet.particlesNum;
     particles   = dataSet.particles;
     weights     = dataSet.weights;
-    threshold   = round(gssModel.resampleThreshold * num);    
+    threshold   = round(model.resampleThreshold * num);
     normWeights = cvecrep(1/num, num);
     
-    if (gssModel.controlInputDimension == 0); controlProc = []; end
+    if (model.controlInputDimension == 0); control1 = []; end
     
-    if (gssModel.control2InputDimension == 0); controlObs = []; end
-               
-    xNoise = processNoise.sample(processNoise, num);
+    if (model.control2InputDimension == 0); control2 = []; end
+    
+    xNoise = stateNoise.sample(stateNoise, num);
     %% propagate particles
-    particlesPred = gssModel.stateTransitionFun(gssModel, particles, xNoise, controlProc);
-        
-    %% evaluate importance weights    
-    likelihood = gssModel.likelihoodStateFun(gssModel, cvecrep(observation, num), particlesPred, controlObs, observationNoise) + 1e-99;
+    particlesPred = model.stateTransitionFun(model, particles, xNoise, control1);
+    
+    %% evaluate importance weights
+    likelihood = model.likelihoodStateFun(model, cvecrep(observation, num), particlesPred, control2, observNoise) + 1e-99;
     weights = weights .* likelihood;
     weights = weights / sum(weights);
     
-    %% resample    
-    effectiveSetSize = 1 / sum(weights.^2); % calculate effective particle set size    
+    %% resample
+    effectiveSetSize = 1 / sum(weights.^2); % calculate effective particle set size
     
     if (effectiveSetSize < threshold) % resample if effectiveSetSize is below threshold
         outIndex  = residualResample(1:num, weights);
@@ -80,14 +80,14 @@ function [estimate, dataSet, processNoise, observationNoise] = pf(dataSet, proce
     end
     
     %% caculate estimate
-    if strcmp(gssModel.estimateType, 'mean')
+    if strcmp(model.estimateType, 'mean')
         estimate = sum(rvecrep(weights, stateDim).*particles, 2);
-    elseif strcmp(gssModel.estimateType, 'median')
+    elseif strcmp(model.estimateType, 'median')
         estimate = median(rvecrep(weights, stateDim).*particles, 2);
     else
         error(' [ pf ] Unknown estimate type.');
-    end    
-            
+    end
+    
     dataSet.particles = particles;
     dataSet.weights   = weights;
 end

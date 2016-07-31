@@ -275,20 +275,20 @@ function noiseDataSet = generateNoiseDataSet(args)
             end
             
         case 'gmm' % Gaussian Mixture Model
-            if isfield(args, 'M')
-                noise.M = args.M;
+            if isfield(args, 'mixtureCount')
+                noise.mixtureCount = args.mixtureCount;
             else
                 error(' [ generateNoiseDataSet::gmm ] Number of mixture components not specified.');
             end
             
-            if (isequal(size(args.mean), [noise.dimension noise.M]))
+            if (isequal(size(args.mean), [noise.dimension noise.mixtureCount]))
                 noise.mean = args.mean;
             else
                 error(' [ generateNoiseDataSet::gmm ] Centroid mean dimension error.');
             end
             
             %-- check for and assign covarianceType
-            if isfield(args,'covarianceType')
+            if isfield(args, 'covarianceType')
                 noise.covarianceType = args.covarianceType;
             else
                 warning(' [ generateNoiseDataSet::gmm ] Covariance type field .covarianceType not assigned!. Assuming default value, ''full''');
@@ -296,9 +296,9 @@ function noiseDataSet = generateNoiseDataSet(args)
             end
             
             if ~isfield(args, 'weights')
-                noise.weights = (1/noise.M) * ones(1, noise.M);
+                noise.weights = (1/noise.mixtureCount) * ones(1, noise.mixtureCount);
             else
-                if (length(args.weights) == noise.M)
+                if (length(args.weights) == noise.mixtureCount)
                     noise.weights = args.weights / (sum(args.weights));
                 else
                     error(' [ generateNoiseDataSet::gmm ] Incorrect number of mixing weights (priors).');
@@ -307,8 +307,8 @@ function noiseDataSet = generateNoiseDataSet(args)
             
             switch (noise.covarianceType)
                 case {'full', 'diag', 'sqrt', 'sqrt-diag'}
-                    if ((noise.M == 1) && isequal(size(args.covariance), [noise.dimension noise.dimension]) ||...
-                            ((noise.M  > 1) && isequal(size(args.covariance), [noise.dimension noise.dimension noise.M])))
+                    if ((noise.mixtureCount == 1) && isequal(size(args.covariance), [noise.dimension noise.dimension]) ||...
+                            ((noise.M  > 1) && isequal(size(args.covariance), [noise.dimension noise.dimension noise.mixtureCount])))
                         noise.covariance = args.covariance;
                     else
                         error(' [ generateNoiseDataSet::gmm::full ] Noise source covariance matrix has incorrect dimensions.');
@@ -324,7 +324,7 @@ function noiseDataSet = generateNoiseDataSet(args)
             noiseDataSet.covarianceType   = noise.covarianceType;
             noiseDataSet.tag              = noise.tag;
             noiseDataSet.dimension        = noise.dimension;
-            noiseDataSet.M                = noise.M;
+            noiseDataSet.mixtureCount     = noise.mixtureCount;
             noiseDataSet.weights          = noise.weights;
             noiseDataSet.mean             = noise.mean;
             noiseDataSet.covariance       = noise.covariance;
