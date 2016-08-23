@@ -3,6 +3,11 @@ classdef InertialNavigationSystem < handle
     properties (Access = private)
         imu;
         timeData;
+        dimension = 10;
+    end
+    
+    properties (Dependent)
+        SimulationNumber;
     end
     
     methods
@@ -25,19 +30,49 @@ classdef InertialNavigationSystem < handle
             end
         end
         
+        function stateMatrix = evaluate(this, initial, timeStart, timeEnd)
+            narginchk(4, 4);
+            
+            startSample = this.timeData.evalSampleFromTime(timeStart);
+            fromSample  = startSample + 1;
+            endSample   = this.timeData.evalSampleFromTime(timeEnd);
+            
+            state = initial;
+            if fromSample == endSample
+                localTime = [0; timeStart];
+            else
+                localTime = timeStart : this.timeData.SampleTime : timeEnd - this.timeData.SampleTime;
+            end
+            
+            stateMatrix = zeros(this.dimension, endSample - startSample);
+            for i = fromSample : endSample
+                timeAtEndOfSample = localTime(i - startSample);
+                tMoonSunDelta = floor(timeAtEndOfSample / this.timeData.RefreshSunMoonInfluenceTime) * this.timeData.RefreshSunMoonInfluenceTime;
+                tMoonSun = this.timeData.StartSecond + tMoonSunDelta;
+                
+                state = this.resolve(state, i, currentEpoch(this.timeData.JD, tMoonSun));
+                stateMatrix(:, i - startSample) = state;
+            end
+        end
+        
         function acceleration = getAcceleration(this, sample)
             acceleration = this.imu.getAcceleartion(sample);
-        end;
+        end
         
         function angularVelocity = getAngularVelocity(this, sample)
             angularVelocity = this.imu.getAngularVelocity(sample);
-        end;
+        end
+        
+        function val = get.SimulationNumber(this)
+            val = this.timeData.SimulationNumber;
+        end
+        
     end
     
     methods (Access = private)
         function stateMatrix = resolveBatch(this, initial)
             tMoonSun = this.timeData.StartSecond;
-            stateMatrix = zeros(10, this.timeData.SimulationNumber);
+            stateMatrix = zeros(this.dimension, this.timeData.SimulationNumber);
             insState = initial;
             
             num = ceil(this.timeData.TotalSeconds / this.timeData.RefreshSunMoonInfluenceTime);
@@ -45,10 +80,10 @@ classdef InertialNavigationSystem < handle
             startSample = 2;
             
             for i = 1 : num
-                startBlock = (i-1)*blockSize + 1;
+                startBlock = (i-1)*blockSize + 1*(i == 1);
                 endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
                 
-                tEpoch = currentEpoch(this.timeData.JD, tMoonSun);                
+                tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
                 
                 len = endBlock - startBlock + 1;
                 if i == 1
@@ -59,7 +94,7 @@ classdef InertialNavigationSystem < handle
                     insState = this.resolve(insState, j + startBlock - 1, tEpoch);
                     stateMatrix(:, j + startBlock - 1) = insState;
                 end
-                                
+                
                 tMoonSun = tMoonSun + this.timeData.RefreshSunMoonInfluenceTime;
                 startSample = 1;
             end
@@ -74,7 +109,7 @@ classdef InertialNavigationSystem < handle
             timeSpan = [tEnd-dt, tEnd];
             
             odeFun = @(t,y) EquationOfMotion(t, y, a, w, tEpoch);
-            [~, tmp] = ode45(odeFun, timeSpan, initial, odeset('MaxStep', dt));
+            [~, tmp] = ode45(odeFun, timeSpan, initial);
             state = tmp(end, :)';
             state(7:10) = quaternionNormalize(state(7:10));
         end

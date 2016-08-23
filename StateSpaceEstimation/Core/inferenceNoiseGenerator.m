@@ -4,29 +4,29 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
         processNoiseAdaptParams, ...
         observationNoiseAdaptMethod, ...
         observationNoiseAdaptParams )
-    %% Generate process and observation noise data structures for a given InferenceDS data structure
-    % and algorithm type. All ReBEL estimation algorithms take an inference data structure (InferenceDS),
+    %% Generate process and observation noise data structures for a given inferenceDataStructure data structure
+    % and algorithm type. All estimation algorithms take an inference data structure (inferenceDataStructure),
     % as well as two system noise data structures (process noise and observation noise) as arguments.
     % INPUT
-    %          InferenceDS         (InferenceDS) Inference data structure generated from a GSSM file by 'geninfds'
-    %          estimatorType       (string) type of estimator to be used (i.e. 'kf', 'ukf', 'ekf', 'pf', etc.)
-    %          pNoiseAdaptMethod  <<optional>> (string) Process noise covariance adaptation method :
-    %                                      'anneal'        : annealing
-    %                                      'lambda-decay'  : RLS like lambda decay
-    %                                      'robbins-monro' : Robbins-Monro stochastic approximation
-    %                               If this field is set, then pNoiseAdaptParams must also be set.
-    %          pNoiseAdaptParams  <<optional>> (vector) noise adaptation parameters. Depend on pNoiseAdaptMethod
-    %                                 if 'anneal'        : [annealing_factor minimum_allowed_variance]
-    %                                 if 'lambda-decay'  : [lambda_factor minimum_allowed_variance]
-    %                                 if 'robbins-monro' : [1/nu_initial 1/nu_final]
-    %          oNoiseAdaptMethod  <<optional>> Observation noise covariance adaptation method : same as above
-    %                                          except the only allowed method is 'robbins-monro'
-    %          oNoiseAdaptParams  <<optional>> Same as above for process noise
+    %          inferenceDataStructure      - inference data structure generated from;
+    %          estimatorType               - type of estimator to be used (i.e. 'kf', 'ukf', 'ekf', 'pf', etc.);
+    %          processNoiseAdaptMethod     - <<optional>> (string) Process noise covariance adaptation method :
+    %                                           'anneal'        : annealing
+    %                                           'lambda-decay'  : RLS like lambda decay
+    %                                           'robbins-monro' : Robbins-Monro stochastic approximation
+    %                                           If this field is set, then pNoiseAdaptParams must also be set;
+    %          processNoiseAdaptParams      - <<optional>> (vector) noise adaptation parameters. Depend on pNoiseAdaptMethod
+    %                                           if 'anneal'        : [annealing_factor minimum_allowed_variance]
+    %                                           if 'lambda-decay'  : [lambda_factor minimum_allowed_variance]
+    %                                           if 'robbins-monro' : [1/nu_initial 1/nu_final];
+    %          observationNoiseAdaptMethod  - <<optional>> Observation noise covariance adaptation method : same as above
+    %                                          except the only allowed method is 'robbins-monro';
+    %          observationNoiseAdaptParams  - <<optional>> Same as above for process noise.
     %
     %   OUTPUT
-    %          pNoise              (NoiseDS) process noise data structure
-    %          oNoise              (NoiseDS) observation noise data structure
-    %          InferenceDS         (InferenceDS) updated inference data structure
+    %          processNoise                  - process noise data structure;
+    %          observationNoise              - observation noise data structure;
+    %          outputInferenceDataStructure  - updated inference data structure.
     
     %%
     if ((nargin < 2) || rem(nargin, 2))
@@ -104,7 +104,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                             error('[ inferenceNoiseGenerator::gspf ] Unknown process noise covariance type.');
                     end
                     
-                    processNoise = generateNoiseDataSet(processNoise);
+                    processNoise = generateNoiseDataSet(processNoiseArg);
                 else
                     % Make sure the GMM component densities is of covarianceType 'sqrt'
                     switch (processNoise.covarianceType)

@@ -47,15 +47,17 @@ classdef SnsImitator < handle
                 
                 obj.trajectory = state(1:3, :) + noiseTraj;
                 obj.velocity   = state(4:6, :) + noiseVel;
+                obj.trueTrajectory = state(1:3, :);
+                obj.trueVelocity   = state(4:6, :);
             else
                 gnssStateEstimated = load('exclude/GnssState.mat');            
                 obj.trajectory = gnssStateEstimated.GNSS_state2(1:3, :);
                 obj.velocity   = gnssStateEstimated.GNSS_state2(4:6, :);
+                
+                gnssStateTrue = load('exclude/ScEphem.mat');
+                obj.trueTrajectory = gnssStateTrue.SC2(1:3, :);
+                obj.trueVelocity   = gnssStateTrue.SC2(4:6, :);
             end
-            
-            gnssStateTrue = load('exclude/ScEphem.mat');
-            obj.trueTrajectory = gnssStateTrue.SC2(1:3, :);
-            obj.trueVelocity   = gnssStateTrue.SC2(4:6, :);
         end
         
         function res = getTrajectory(this, index)

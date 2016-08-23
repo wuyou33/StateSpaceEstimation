@@ -5,13 +5,13 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
     %   Sigma-Point Kalman Filters for the time-update and proposal distribution generation. The posterior state density
     %   is represented by a Gaussian mixture model that is recovered from the weighted particle set of the measurement
     %   update step by means of a weighted EM algorithm. This step replaces the resampling stage needed by most
-    %   particle filters and mitigates the “sample depletion” problem
+    %   particle filters and mitigates the sample depletion problem
     %
     %   For more details see:
     %       Rudolph van der Merwe Eric Wan, "GAUSSIAN MIXTURE SIGMA-POINT PARTICLE FILTERS FOR SEQUENTIAL PROBABILISTIC INFERENCE IN DYNAMIC STATE-SPACE MODELS"
     %       Conference Paper in Acoustics, Speech, and Signal Processing, 1988. ICASSP-88., 1988 International Conference on May 2003
     %
-    %   !!! [ estimate, dataSet, stateNoise, observNoise, extra ] = gmsppf( dataSet, stateNoise, observNoise, observation, control1, control2, model)
+    %   [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, stateNoise, observNoise, observation, control1, control2, model)
     %
     %   This filter assumes the following standard state-space model:
     %
@@ -19,38 +19,38 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
     %     z(k) = h[x(k), n(k), U2(k)]
     %
     %   where:
-    %       x is the system state,
-    %       v the process noise,
-    %       n the observation noise,
-    %       u1 the exogenous input to the state
-    %       f the transition function,
-    %       u2 the exogenous input to the state observation function
+    %       x is the system state;
+    %       v the process noise;
+    %       n the observation noise;
+    %       u1 the exogenous input to the state;
+    %       f the transition function;
+    %       u2 the exogenous input to the state observation function;
     %       y the noisy observation of the system.
     %
     %   INPUT
-    %         dataSet           particle filter data structure. Contains set of particles as well as their corresponding weights.
-    %         stateNoise        process noise data structure
-    %         observNoise       observation noise data structure
-    %         observation       noisy observations starting at time k ( y(k),y(k+1),...,y(k+N-1) )
-    %         control1          exogenous input to state transition function starting at time k-1 ( u1(k-1),u1(k),...,u1(k+N-2) )
-    %         control2          exogenous input to state observation function starting at time k  ( u2(k),u2(k+1),...,u2(k+N-1) )
-    %         gssModel          inference data structure.
+    %         dataSet           particle filter data structure. Contains set of particles as well as their corresponding weights;
+    %         stateNoise        process noise data structure;
+    %         observNoise       observation noise data structure;
+    %         observation       noisy observations starting at time k ( y(k),y(k+1),...,y(k+N-1) );
+    %         control1          exogenous input to state transition function starting at time k-1 ( u1(k-1),u1(k),...,u1(k+N-2) );
+    %         control2          exogenous input to state observation function starting at time k  ( u2(k),u2(k+1),...,u2(k+N-1) );
+    %         model             inference data structure.
     %
     %   OUTPUT
     %         estimate          state estimate generated from posterior distribution of state given all observation. Type of
-    %                           estimate is specified by 'model.estimateType'
-    %         dataSet           updated Particle filter data structure. Contains set of particles as well as their corresponding weights.
-    %         stateNoise        process noise data structure     (probably updated)
-    %         observNoise       observation noise data structure (probably updated)
+    %                           estimate is specified by 'model.estimateType';
+    %         dataSet           updated Particle filter data structure. Contains set of particles as well as their corresponding weights;
+    %         stateNoise        process noise data structure     (probably updated);
+    %         observNoise       observation noise data structure (probably updated).
     %
-    %   dataSet !!!!!!!!!!!!!
-    %       .N                (scalar) number of particles to use
-    %       .stateGMM         (gmm) Gaussian mixture model of state distribution with the following field:
-    %       	.M            (scalar) number of mixture components in GMM
-    %           .mu           (statedim-by-M) buffer of mean vectors (centroids) of state GMM components
-    %           .cov          (statedim-by-statedim-my-M) buffer of covariance matrices of state GMM components
-    %           .cov_type     (string) covariance matrix type ('full','sqrt','diag','swrt-diag') 'sqrt' is preferred.
-    %           .weights      (1-by-M) state GMM component weights (priors)
+    %   dataSet
+    %       .particlesNum        number of particles to use;
+    %       .stateGMM            Gaussian mixture model of state distribution with the following field:
+    %       	.mixtureCount    number of mixture components in GMM;
+    %           .mean            buffer of mean vectors (centroids) of state GMM components (statedim-by-M) ;
+    %           .covariance   	 buffer of covariance matrices of state GMM components (statedim-by-statedim-my-M) ;
+    %           .covarianceType  covariance matrix type ('full','sqrt','diag','swrt-diag') 'sqrt' is preferre;
+    %           .weights         state GMM component weights (priors) (1-by-M).
     %
     %   Required model fields:
     %         .spkfType            (string) Type of SPKF to use (srukf or srcdkf).
@@ -178,7 +178,7 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
     if strcmp(model.estimateType, 'mean')
         estimate = xSampleBuf*sampleW';
     else
-        error('[ sppf ] Unknown estimate type.');
+        error('[ gmsppf ] Unknown estimate type.');
     end
     
     %% resample    

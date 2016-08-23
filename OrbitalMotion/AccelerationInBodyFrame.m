@@ -1,7 +1,7 @@
 classdef AccelerationInBodyFrame < handle
     % Provide acceleration cuased by external forces.
     % [km / sec^2]
-    %    
+    %
     properties (Access = private)
         acceleration; % [km / sec^2]
         model;
@@ -18,9 +18,9 @@ classdef AccelerationInBodyFrame < handle
         Dimension = 3;
     end
     
-    methods        
+    methods
         function obj = AccelerationInBodyFrame(timeData, mu, sigma)
-            %% Constructor. 
+            % Constructor.
             %   mu               [km / sec^2]
             %   sigma            [km / sec^2]
             %   simulationNumber [-]
@@ -33,7 +33,7 @@ classdef AccelerationInBodyFrame < handle
                 obj.model = NaN;
                 obj.acceleration = zeros(simulationNumber, AccelerationInBodyFrame.Dimension);
             else
-                obj.dt = timeData.SampleTime;                
+                obj.dt = timeData.SampleTime;
                 dw = WienerProcess(mu, sigma);
                 obj.model = dw;
                 obj.acceleration = dw.simulate(timeData.SampleTime, timeData.SimulationNumber);

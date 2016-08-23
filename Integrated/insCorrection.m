@@ -17,7 +17,7 @@ function [ corrected ] = insCorrection( insMeasurement, correctionParams)
 %                               corrected(4:6) - velocity
 %                               corrected(7:10) - quaternion
 %%
-    corrected(1:3)  = insMeasurement(1:3) - correctionParams(1:3);
-    corrected(4:6)  = insMeasurement(4:6) - correctionParams(4:6);    
-    corrected(7:10) = quaternionMultiply(correctionParams(7:10), insMeasurement(7:10));
+    corrected(1:3, 1)  = insMeasurement(1:3) - correctionParams(1:3);
+    corrected(4:6, 1)  = insMeasurement(4:6) - correctionParams(4:6);    
+    corrected(7:10, 1) = quaternionMultiply(correctionParams(7:10), insMeasurement(7:10));
 end

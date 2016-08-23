@@ -4,45 +4,43 @@
 %%
 
 function [varargout] = gssmXNav(func, varargin)
-
-    switch func  
-
+    
+    switch func
+        
         case 'init'
-            model = init(varargin{1});
-            varargout{1} = model;        
-
-        otherwise        
+            varargout{1} = init(varargin{1});
+            
+        otherwise
             error(['Function ''' func ''' not supported.']);
-
+            
     end
 end
 %%
 function model = init(initArgs)
-
-    model.type                       = 'gssm';                         % object type 
+    model.type                       = 'gssm';                         % object type
     model.tag                        = 'X-Ray Navigation System';      % ID tag
-
+    
     model.setParams                  = @setparams;                     % function handle to SETPARAMS
     model.stateTransitionFun         = @ffun;                          % function handle to state transition function
     model.stateObservationFun        = @hfun;                          % function handle to state observation function
-
-    model.stateTransitionPriorFun    = @prior;                         % function handle to the state transition function that calculates P(x(k)|x(k-1)), 
-                                                                       % is a requirement for particle filter
-
-    model.observationLikelihoodFun   = @likelihood;                    % function handle to the observation likelihood function that calculates p(y(k)|x(k)), 
-                                                                       % is a requirement for particle filter
-
+    
+    model.stateTransitionPriorFun    = @prior;                         % function handle to the state transition function that calculates P(x(k)|x(k-1)),
+    % is a requirement for particle filter
+    
+    model.observationLikelihoodFun   = @likelihood;                    % function handle to the observation likelihood function that calculates p(y(k)|x(k)),
+    % is a requirement for particle filter
+    
     model.innovationModelFunc        = @innovation;                    % Function-handle to the innovation model function that calculates the difference between the output
-                                                                       % of the observation function (hfun) and the actual 'real-world' measurement/observation of that signal, 
-                                                                       % is a requirement for particle filter
-
+    % of the observation function (hfun) and the actual 'real-world' measurement/observation of that signal,
+    % is a requirement for particle filter
+    
     model.stateDimension             = 6;
-    model.observationDimension       = 7;
-    model.paramDimension             = 0;                             % param count = 7, but each param is 3D vector or quaternion
+    model.observationDimension       = 4;
+    model.paramDimension             = 0;                              % param
     model.controlInputDimension      = 0;                              % exogenous control input 1 dimension
     model.control2InputDimension     = 0;                              % exogenous control input 2 dimension
-    model.processNoiseDimension      = 0;                              % process noise dimension
-    model.observationNoiseDimension  = 7;                              % observation noise dimension
+    model.processNoiseDimension      = 6;                              % process noise dimension
+    model.observationNoiseDimension  = 4;                              % observation noise dimension
     model.params                     = initArgs.initialParams;         % setup parameter vector buffer
     model                            = setparams(model, ...
                                             initArgs.initialParams, ...
@@ -56,10 +54,12 @@ function model = init(initArgs)
     processNoiseArg.covarianceType = 'full';
     processNoiseArg.tag            = 'GSSM observation noise observation';
     processNoiseArg.dimension      = model.processNoiseDimension;
-    processNoiseArg.mean           = 0;
-    processNoiseArg.covariance     = 0;
+    processNoiseArg.mean           = initArgs.stateNoiseMean;
+    processNoiseArg.covariance     = initArgs.stateNoiseCovariance;
+    
     model.processNoise = generateNoiseDataSet(processNoiseArg);
-
+    
+    
     % Setup observation noise source
     observationNoiseArg.type           = 'gaussian';
     observationNoiseArg.covarianceType = 'full';
@@ -67,7 +67,7 @@ function model = init(initArgs)
     observationNoiseArg.dimension      = model.observationNoiseDimension;
     observationNoiseArg.mean           = initArgs.observationNoiseMean;
     observationNoiseArg.covariance     = initArgs.observationNoiseCovariance;
-
+    
     model.observationNoise = generateNoiseDataSet(observationNoiseArg);
 end
 %%
@@ -92,73 +92,67 @@ function updatedModel = setparams(model, params, xRaySources, earthEphemeris, su
 end
 
 function newState = ffun(model, state, noise, stateControl)
-    % State transition function (system dynamics).    
-%     [~, tmp] = ode45( @(t,y) EquationOfMotion(t, ...
-%             y, ...
-%             model.acceleration, ...
-%             model.angularVelocity, ...
-%             model.timeTillCurrentEpoch, ...
-%             model.sampleTime ), ...
-%         [model.time - model.sampleTime, model.time], ...
-%         state ...
-%     );
-%     newState = tmp(end, :);
-    newState = rungeKuttaFourOrderWithFixedStep(...
-        @(t,y) equationOfMotionFreeFly(t, ...
-            y, ...
-            model.timeTillCurrentEpoch), ...
-        state, ...
-        model.time, ...
-        model.sampleTime...
-    );
+    % State transition function (system dynamics).
+    %     [~, tmp] = ode45( @(t,y) EquationOfMotion(t, ...
+    %             y, ...
+    %             model.acceleration, ...
+    %             model.angularVelocity, ...
+    %             model.timeTillCurrentEpoch, ...
+    %             model.sampleTime ), ...
+    %         [model.time - model.sampleTime, model.time], ...
+    %         state ...
+    %     );
+    %     newState = tmp(end, :);
+    tSpan = [model.time - model.sampleTime; model.time];
+    odeFun = @(t,y) equationOfMotionFreeFly(t, y, model.timeTillCurrentEpoch);
+    [rn, cn] = size(state);
     
-    if ~isempty(noise)
-        newState = newState + noise';
+    newState = zeros(rn, cn);
+    for i = 1:cn  
+        [~, tmp]       = odeEuler(odeFun, tSpan, state(:, i), model.sampleTime);
+        newState(:, i) = tmp(:, end);
     end
     
-    if ~isempty(stateControl)
-        newState = newState + stateControl;
-    end
+    if ~isempty(noise); newState  = newState + noise; end
+            
+    if ~isempty(stateControl); newState = newState - cvecrep(stateControl, cn); end    
 end
 
-function observ = hfun(gssModel, state, noise, observationControl) % first argument is a model.
+function observ = hfun(model, state, noise, observationControl)
     % State observation function.
-    earthEphemeris.x = gssModel.earthEphemerisX;
-    earthEphemeris.y = gssModel.earthEphemerisY;
-    earthEphemeris.z = gssModel.earthEphemerisZ;
+    earthEphemeris.x = model.earthEphemerisX;
+    earthEphemeris.y = model.earthEphemerisY;
+    earthEphemeris.z = model.earthEphemerisZ;
     
-    sunEphemeris.x = gssModel.sunEphemerisX;
-    sunEphemeris.y = gssModel.sunEphemerisY;
-    sunEphemeris.z = gssModel.sunEphemerisZ;
+    sunEphemeris.x = model.sunEphemerisX;
+    sunEphemeris.y = model.sunEphemerisY;
+    sunEphemeris.z = model.sunEphemerisZ;
     
-    diffToa = calculateDiffToa(gssModel.xRaySources, earthEphemeris, sunEphemeris, state(1:3)');
-    observ = diffToa2phase(gssModel.invPeriods, diffToa);
-    
-    if ~isempty(noise)
-        observ = observ + noise(1,:);
+    cn = size(state, 2);
+    observ = zeros(model.observationDimension, cn);
+    for i = 1:cn
+        diffToa = calculateDiffToa(model.xRaySources, earthEphemeris, sunEphemeris, state(1:3, i));
+        observ(:, i) = diffToa2phase(model.invPeriods, diffToa);
     end
     
-    if ~isempty(observationControl)
-        observ = observ + observationControl;
-    end
+    if ~isempty(noise); observ = observ + noise; end    
+    if ~isempty(observationControl); observ = observ + observationControl; end
 end
 
 function tranprior = prior(model, predictedState, state, stateControl, processNoiseDataSet)
-%   Calculates P(nextstate|state).
+    %   Calculates P(nextstate|state).
     x = predictedState - ffun(model, state, [], stateControl);    
-
     tranprior = processNoiseDataSet.likelihood( processNoiseDataSet, x);
 end
 
 function llh = likelihood(model, observation, state, observationControl, observationNoiseDataSet)
-%   Observation likelihood function
-    x = observation - hfun(model, state, [], observationControl);
-
-    llh = observationNoiseDataSet.likelihood( observationNoiseDataSet, x);
+    %   Observation likelihood function
+    z = observation - hfun(model, state, [], observationControl);    
+    llh = observationNoiseDataSet.likelihood( observationNoiseDataSet, z);
 end
 
 function innov = innovation(~, observation, predictedObservation) % first argument is a model.
-%   Calculates the innovation signal (difference) between the
-%   output of hfun, i.e. observ (the predicted system observation) and an actual 'real world' observation OBS.
+    %   Calculates the innovation signal (difference) between the
+    %   output of hfun, i.e. observ (the predicted system observation) and an actual 'real world' observation.
     innov = observation - predictedObservation;
 end

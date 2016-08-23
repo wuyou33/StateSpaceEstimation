@@ -1,7 +1,7 @@
 function [] = SatelliteOrbitVisualization(satellitePhaseState)
 
 if (~isa(satellitePhaseState, 'SatellitePhaseSpace'))
-    error('satellitePhaseState should be accelerometerParams of SatellitePhaseSpace');
+    error('satellitePhaseState should be instance of the SatellitePhaseSpace');
 end
 
 grs80 = referenceEllipsoid('grs80','km');

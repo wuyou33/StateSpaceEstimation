@@ -3,11 +3,11 @@ function [ sources ] = loadXRaySources(count)
     %   count - number of required x-ray sources. should be positive
     %       integer between 1 and 7
     %
-    %% ERROR CHECKING
+    % ERROR CHECKING
     if (~isnumeric(count)); error('[ loadXRaySources ] count should be positive integer between 1 and 8'); end;
     if (count < 1 || count > 7); error('[ loadXRaySources ] count should be positive integer between 1 and 8'); end;
     
-    %%
+    %
     p1 = XRaySource('B0531+21', ... name it's Crub Pulsar
         33.51e-3,... period
         1.535,... intensity
@@ -20,41 +20,41 @@ function [ sources ] = loadXRaySources(count)
         2.0 ... distance
     );
 
-    p2 = XRaySource('B1821-24', ... name
-        3.05e-3,... period
-        1.93e-4,... intensity
-        0.9,... raError
-        12,... decError
-        1.9e-3,... gSource
-        1.1e-3,... gBackgr
-        7.8,... galacticLon
-        -5.58,... galacticLat
-        4.9 ... distance
-    );
+%     p2 = XRaySource('B1821-24', ... name
+%         3.05e-3,... period
+%         1.93e-4,... intensity
+%         0.9,... raError
+%         12,... decError
+%         1.9e-3,... gSource
+%         1.1e-3,... gBackgr
+%         7.8,... galacticLon
+%         -5.58,... galacticLat
+%         4.9 ... distance
+%     );
     
-    p3 = XRaySource('B1937+21', ... name
-        1.56e-3,... period
-        4.99e-5,... intensity
-        0.012,... raError
-        0.14,... decError
-        7.41e-4,... gSource
-        3.29e-4,... gBackgr
-        57.5,... galacticLon
-        -0.29,... galacticLat
-        5.0 ... distance
-    );
+%     p3 = XRaySource('B1937+21', ... name
+%         1.56e-3,... period
+%         4.99e-5,... intensity
+%         0.012,... raError
+%         0.14,... decError
+%         7.41e-4,... gSource
+%         3.29e-4,... gBackgr
+%         57.5,... galacticLon
+%         -0.29,... galacticLat
+%         5.0 ... distance
+%     );
 
-    p4 = XRaySource('J0218+4232', ... name
-        2.32e-3,... period
-        6.65e-5,... intensity
-        150,... raError
-        100,... decError
-        1.18e-4,... gSource
-        1.18e-4,... gBackgr
-        139.5,... galacticLon
-        -17.53,... galacticLat
-        5.8 ... distance
-    );
+%     p4 = XRaySource('J0218+4232', ... name
+%         2.32e-3,... period
+%         6.65e-5,... intensity
+%         150,... raError
+%         100,... decError
+%         1.18e-4,... gSource
+%         1.18e-4,... gBackgr
+%         139.5,... galacticLon
+%         -17.53,... galacticLat
+%         5.8 ... distance
+%     );
 
     p5 = XRaySource('B0540-69', ... name
         50.4e-3,... period
@@ -92,7 +92,14 @@ function [ sources ] = loadXRaySources(count)
         0.5 ... distance -- approximatelly
     );
 
-    allSources = [p1; p2; p3; p4; p5; p6; p7];
+%     allSources = [p1; p2; p3; p4; p5; p6; p7];
+    allSources = [p1; p5; p6; p7];
     
-    sources = allSources(1:count);
+    if count > length(allSources)
+        n = length(allSources);
+    else
+        n = count;
+    end
+    
+    sources = allSources(1:n);
 end

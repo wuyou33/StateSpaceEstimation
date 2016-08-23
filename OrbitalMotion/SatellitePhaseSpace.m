@@ -110,6 +110,12 @@ classdef SatellitePhaseSpace < handle
             this.velocity(:, index) = state(4:6);
             this.rotation(:, index) = state(7:10);            
         end
+        
+        function AddPhaseStateRange(this, stateMatrix, startIndex, endIndex)
+            this.trajectory(:, startIndex : endIndex) = stateMatrix(1:3, :);
+            this.velocity(:, startIndex : endIndex) = stateMatrix(4:6, :);
+            this.rotation(:, startIndex : endIndex) = stateMatrix(7:10, :);            
+        end
     end
     
 end

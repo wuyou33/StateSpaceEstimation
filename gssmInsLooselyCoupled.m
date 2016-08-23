@@ -3,7 +3,7 @@
 
 %%
 
-function [varargout] = gssmInsSns(func, varargin)
+function [varargout] = gssmInsLooselyCoupled(func, varargin)
     
     switch func
         
@@ -20,7 +20,7 @@ end
 function model = init(initArgs)
     
     model.type                       = 'gssm';                         % object type
-    model.tag                        = 'Loosely Coupled INS & SNS';    % ID tag
+    model.tag                        = 'Loosely Coupled NS';           % ID tag
     
     model.setParams                  = @setparams;                     % function handle to SETPARAMS
     model.stateTransitionFun         = @ffun;                          % function handle to state transition function
@@ -155,6 +155,6 @@ end
 
 function innov = innovation(~, observation, predictedObservation) % first argument is a model.
     %   Calculates the innovation signal (difference) between the
-    %   output of HFUN, i.e. OBSERV (the predicted system observation) and an actual 'real world' observation OBS.
+    %   output of HFUN, i.e. OBSERV (the predicted system observation) and an actual 'real world' observation.
     innov = observation - predictedObservation;
 end

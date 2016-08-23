@@ -1,6 +1,6 @@
 classdef XRaySource < handle
     % Describe source for x-Ray navigation.
-    % Source can be Pulsar or Quasar (with high stable EM emitting)        
+    % Source can be Pulsar or Quasar (with high stable EM emitting)
     properties (Access = public)
         name;
         period;             % sec
@@ -13,7 +13,7 @@ classdef XRaySource < handle
         galacticLat;        % [deg]
         distance;           % [km]
         normal;             % normal to x-ray source in solar system
-        twoPiOnPeriod;      % 2*pi/period [1/sec] 
+        twoPiOnPeriod;      % 2*pi/period [1/sec]
     end
     
     properties (Dependent)
@@ -22,12 +22,10 @@ classdef XRaySource < handle
     end
     
     methods
-        %% constructor
+        % constructor
         function obj = XRaySource(name, period, intensity, raError, decError, gSource, gBackgr, galacticLon, galacticLat, distance)
             % distance in kpc
-            if (nargin ~= 10)
-                error('[XRaySource] not enough input args');
-            end
+            narginchk(10, 10);
             
             obj.name           = name;
             obj.period         = period;
@@ -50,5 +48,5 @@ classdef XRaySource < handle
         function val = get.TwoPiOnPeriod(this)
             val = this.twoPiOnPeriod;
         end
-    end    
+    end
 end

@@ -6,7 +6,7 @@ classdef TimeExt < handle
         duration;                       % 'HH:MM:SS.FFF'
         sampleTime;                     % [sec]
         date;                           % day-month-year
-        refreshSunMoonInfluenceTime;    % [sec] 
+        refreshSunMoonInfluenceTime;    % [sec]
     end
     
     properties (Access = private, Constant)
@@ -33,11 +33,32 @@ classdef TimeExt < handle
     
     methods (Access = public)
         function obj = TimeExt(startTime, duration, sampleTime, date, refreshSunMoonInfluenceTime)
+            %   Constructor
+            %       startTime   - "hh.mm.ss.sss" (string);
+            %       duration    - "hh.mm.ss.sss" (string);
+            %       sampleTime  - sample time (number);
+            %       date        - current date "yyy.mm.dd" (string);
+            %       refreshSunMoonInfluenceTime - time in second when information about Moon & Sun influence should be refreshed (number).
+            
             obj.startTime                   = startTime;
             obj.duration                    = duration;
             obj.sampleTime                  = sampleTime;
             obj.date                        = date;
-            obj.refreshSunMoonInfluenceTime = refreshSunMoonInfluenceTime; 
+            obj.refreshSunMoonInfluenceTime = refreshSunMoonInfluenceTime;
+        end
+        
+        function sample = evalSampleFromTime(this, t)
+            sample = find(abs(this.Time - t) < (this.sampleTime / 10000) );
+        end
+        
+        function range = getSimulationRange(this, timeScale)
+            %   Calculate sample array for whole simulation interval specifed in timeScale
+            narginchk(2, 2);
+            
+            if ~isa(timeScale, 'TimeExt'); error(' [ TimeExt:getRange ] timeScale should be instance of the TimeExt'); end
+            
+            batchSize = this.SampleTime \ timeScale.SampleTime;
+            range = 1 : batchSize : this.SimulationNumber;
         end
     end
     
@@ -59,7 +80,7 @@ classdef TimeExt < handle
         end
         
         function val = get.SimulationNumber(this)
-            val = this.TotalSeconds / this.sampleTime;
+            val = length(this.Time);
         end
         
         function val = get.TotalSeconds(this)
@@ -67,15 +88,15 @@ classdef TimeExt < handle
         end
         
         function val = get.Time(this)
-            val = this.StartSecond + this.sampleTime : this.sampleTime : this.EndSecond;
+            val = this.StartSecond : this.sampleTime : this.EndSecond;
         end
         
         function val = get.RelTime(this)
-            val = (0:this.SimulationNumber-1)*this.sampleTime;
+            val = this.Time;
         end
         
         function val = get.DigitTime(this)
-            val = 1:this.SimulationNumber;
+            val = 1 : this.SimulationNumber;
         end
         
         function val = get.StartSecond(this)
@@ -85,7 +106,7 @@ classdef TimeExt < handle
         
         function val = get.EndSecond(this)
             deltaDateTime = datevec(this.duration, this.timeFormat);
-            dayAdd = deltaDateTime(3)-1;
+            dayAdd = deltaDateTime(3) - 1;
             val = dayAdd * 3600 * 24 + this.tFun(deltaDateTime(4:6));
         end
         
@@ -112,8 +133,7 @@ classdef TimeExt < handle
             fieldsDate = fieldnames(this.date);
             for i = 1:size(fieldsDate, 1)
                 val(4-i)=this.date.( char( fieldsDate(i) ) );
-            end;
-            
+            end            
         end
         
         function val = tFun (~, x)

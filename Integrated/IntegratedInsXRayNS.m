@@ -1,26 +1,41 @@
-classdef IntegratedInsSns < BaseIntegratedIns
-    % IntegratedInsSns - integrated inertial navigation system (INS) and satellity navigation system (SNS)
-    % provides method to solve navigation problem via INS and SNS (GPS)
+classdef IntegratedInsXRayNS < BaseIntegratedIns
+    % INTEGRATEDINSXRAYNS - integrated inertial navigation system (INS) and X-Ray navigation system (navigation system by signal of X-Ray sources: Pulsar & Quasar)
+    % provides method to solve navigation problem via INS and X-Ray nav system
     
     properties(Access = private)
-        sns;
-        snsTimeData;
+        xRayNav;
+        xRayState;
+        initialXRayState;
+        intialXRayCov;
+        xRayEstimator;
+        xRayTimeData;
     end
     
     methods (Access = public)
-        function obj = IntegratedInsSns(ins, sns, timeData, initArgs, snsTimeData)
+        function obj = IntegratedInsXRayNS(ins, xRayNav, timeData, initArgs, xRayTimeData, initialXRayState, intialXRayCov, xRayEstimator)
             obj.ins = ins;
-            obj.sns = sns;
+            obj.xRayNav = xRayNav;
             obj.timeData = timeData;
             obj.initArgs = initArgs;
-            obj.snsTimeData = snsTimeData;
+            obj.initialXRayState = initialXRayState;
+            obj.intialXRayCov = intialXRayCov;
+            obj.xRayEstimator = xRayEstimator;
+            obj.xRayTimeData = xRayTimeData;
+            obj.xRayState = [];
         end
     end
     
     methods (Access = protected)
         function [ state ] = evaluateSecondaryState(this, ~, ~, timeEnd)
-            endSample = this.snsTimeData.evalSampleFromTime(timeEnd);
-            state = this.sns.getState(endSample);
+            narginchk(4, 4);
+            
+            endSample = this.timeData.evalSampleFromTime(timeEnd);
+            
+            if isempty(this.xRayState)
+                this.evaluateXRayState();
+            end
+            
+            state = this.xRayState(:, endSample);
         end
         
         function decompCov = updateFilterParams(this, cov, estimatorType)
@@ -85,7 +100,14 @@ classdef IntegratedInsSns < BaseIntegratedIns
         end
         
         function [ description ] = tag(~)
-            description = 'State estimation for loosely coupled Ins & Sns integrated system';
+            description = 'State estimation for loosely coupled Ins & X-Ray integrated system';
         end
     end
+    
+    methods (Access = private)
+        function evaluateXRayState(this)
+            this.xRayState = this.xRayNav.resolve(this.initialXRayState, this.intialXRayCov, this.xRayEstimator, 0);
+        end
+    end
+    
 end

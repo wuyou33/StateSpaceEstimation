@@ -4,6 +4,7 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
         accelerationInBodyFrame;
         angularVelocityInBodyFrame;
         timeData;
+        dimension = 10;
     end
     
     methods
@@ -21,7 +22,7 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
             end
             
             if ~isa(timeData, 'TimeExt')
-                error('timeData should be accelerometerParams of TimeExt');
+                error('timeData should be instance of the TimeExt');
             end
             
             obj.initialState = initialState;
@@ -32,14 +33,14 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
         
         function signal = simulate(this, visualize)
             tMoonSun = this.timeData.StartSecond;            
-            stateVector = zeros(10, this.timeData.SimulationNumber);            
+            stateVector = zeros(this.dimension, this.timeData.SimulationNumber);            
             initial = this.initialState;
             
             num = ceil(this.timeData.TotalSeconds / this.timeData.RefreshSunMoonInfluenceTime);
             blockSize = ceil(this.timeData.SimulationNumber / num);
             
             for i = 1:num
-                startBlock = (i-1)*blockSize + 1;
+                startBlock = (i-1)*blockSize + 1*(i == 1);
                 endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
                 
                 tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
@@ -54,7 +55,7 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
                 [~, tmp] = ode45(odeFun, time, initial, odeset('MaxStep', dt));
                                 
                 stateVector(:, startBlock:endBlock) = tmp';
-                initial = tmp(end, :);
+                initial = stateVector(:, endBlock);
                 tMoonSun = tMoonSun + this.timeData.RefreshSunMoonInfluenceTime;
             end
             

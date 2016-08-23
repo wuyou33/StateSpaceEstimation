@@ -1,18 +1,19 @@
 function [ x, y ] = odeEuler(odefun, xspan, seed, step)
-    %ODEEULER Euler ODE solver.
+    % ODEEULER Euler ODE solver.
     %   [ x, y ] = odeEuler(odefun, xspan, seed, step).
     %    find details here: https://en.wikipedia.org/wiki/Euler_method
     %    uses EULER'S method to integrate an ODE.
-    % INPUT:
-    %   odefun  = pointer to ode function
-    %   tspan   = [ti,tf] where ti and tf = initial and final values of independent variables
-    %   y0      = initial value of dependent variable
-    %   h       = step size
-    %   p1,p2   = additional parameter used by dydt
     %
-    % OUTPUT:
-    %   t = vector of independent variable
-    %   y = vector of solution for dependent variable
+    %   INPUT:
+    %       odefun  - pointer to ode function
+    %       tspan   - [ti,tf] where ti and tf = initial and final values of independent variables
+    %       y0      - initial value of dependent variable
+    %       h       - step size
+    %       p1, p2  - additional parameter used by dydt
+    %
+    %   OUTPUT:
+    %       t - vector of independent variable
+    %       y - vector of solution for dependent variable
     
     if nargin<4; error('at least 4 input arguments required'); end
     
