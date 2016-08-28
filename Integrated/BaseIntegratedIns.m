@@ -77,7 +77,7 @@ classdef BaseIntegratedIns < handle
             end
             insIndex = 2;
             for i = 1:num
-                startBlock = (i-1)*blockSize + 1;
+                startBlock = (i-1)*blockSize + 1*(i == 1);
                 endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
                 
                 len = endBlock - startBlock + 1;

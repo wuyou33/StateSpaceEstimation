@@ -1,37 +1,33 @@
-classdef XRayNavSystem < handle
-    % XRayNavSystem Simulate navigation system based on X-Ray sources (Pulsars and Quasars)
+classdef DopplerNavSystem < handle
+    % DOPPLERNAV Describe Doppler navigation system (navigation using measurement of Doppler shift of radial velocity relative to the Sun)
     
-    properties(Access = private)
-        earthEphemeris;
-        sunEphemeris;
-        xRaySources;
-        xRayDetector;
+    properties (Access = private)
+        dmu; % Doppler Measurement Unit
         timeData;
         initArgs;
+        earthEphemeris;
+        sunEphemeris;
+        
         procNoise;
         observNoise;
         inferenceModel;
     end
     
-    properties (Dependent, Access = public)
-        SampleTime;
-    end
-    
-    methods
-        function obj = XRayNavSystem(earthEphemeris, sunEphemeris, xRaySources, timeData, initArgs, xRayDetector)
-            narginchk(6, 6);
-            if ~isa(timeData, 'TimeExt'); error('[ XRayNavSystem ] timeData should be instance of the TimeExt'); end;
+    methods (Access = public)
+        function obj = DopplerNavSystem(dmu, timeData, initArgs, earthEphemeris, sunEphemeris)
+            narginchk(5, 5);
             
-            obj.earthEphemeris = earthEphemeris;
-            obj.sunEphemeris = sunEphemeris;
-            obj.xRaySources = xRaySources;
-            obj.xRayDetector = xRayDetector;
+            if ~isa(dmu, 'DopplerMeasurementUnit')
+                error('[ DopplerNavSystem: dmu] dmu must be instance of the DopplerMeasurementUnit')
+            end
+            
+            obj.dmu = dmu;
             obj.timeData = timeData;
             obj.initArgs = initArgs;
+            obj.earthEphemeris = earthEphemeris;
+            obj.sunEphemeris = sunEphemeris;
         end
-    end
-    
-    methods(Access = public)
+        
         function stateMatrix = resolve(this, initialState, initialCov, estimatorType, reportProgress)
             narginchk(5, 5);
             
@@ -44,13 +40,11 @@ classdef XRayNavSystem < handle
             tMoonSun = this.timeData.StartSecond;
             stateMatrix = zeros(this.inferenceModel.stateDimension, simNum);
             
-            filterParams = {};
-            
             num = ceil(this.timeData.TotalSeconds / this.timeData.RefreshSunMoonInfluenceTime);
             blockSize = ceil(this.timeData.SimulationNumber / num);
             startSample = 2;
             
-            decompCov = this.updateFilterParams(cov, estimatorType);
+            decompCov = this.updateFilterParams(cov, estimatorType);            
             particleSet = this.initParticleSet(estimatorType, state, cov, decompCov);
             
             for i = 1:num
@@ -64,33 +58,14 @@ classdef XRayNavSystem < handle
                 
                 for j = startSample:len
                     sample = j + startBlock - 1;
-                                         
+                    
                     if reportProgress && mod((sample / (simNum - 1))*100, 10) == 0
                         disp(['Completed: ', num2str((sample / (simNum - 1)) * 100),' %' ]);
                     end
                     
-                    [state, cov, decompCov, particleSet, param] = this.estimate(state, cov, decompCov, estimatorType, particleSet, sample, tEpoch);
+                    [state, cov, decompCov, particleSet] = this.estimate(state, cov, decompCov, estimatorType, particleSet, sample, tEpoch);
                     
                     stateMatrix(:, sample) = state;
-                    
-                    if ~strcmp(estimatorType{1}, {'pf','sppf', 'gspf', 'gmsppf'})
-                        filterParams.meanPredictedState(sample, :) = param.meanPredictedState;
-                        
-                        if sum(strcmp(fieldnames(param), 'predictedStateCov')) == 1
-                            filterParams.predictedStateCov(sample, :, :) = param.predictedStateCov;
-                        end
-                        
-                        filterParams.predictedObservMean(sample, :) = param.predictedObservMean;
-                        filterParams.inov(sample, :, :) = param.inov;
-                        
-                        if sum(strcmp(fieldnames(param), 'predictedObservCov')) == 1
-                            filterParams.predictedObservCov(sample, :, :) = param.predictedObservCov;
-                        end
-                        
-                        filterParams.filterGain(sample, :, :) = param.filterGain;
-                    else
-                        filterParams = [];
-                    end
                 end
                 
                 tMoonSun = tMoonSun + this.timeData.RefreshSunMoonInfluenceTime;
@@ -98,46 +73,44 @@ classdef XRayNavSystem < handle
             end
         end
         
-        function [state, cov, decompCov, particleSet, param] = estimate(this, state, cov, decompCov, estimator, particleSet, sample, tEpoch)
-            narginchk(8, 8);
-            
-            observ = this.xRayDetector.getTOA(sample);
-            this.updateModelParams(tEpoch, sample);
-            
-            [state, cov, decompCov, particleSet, param] = this.evaluate(state, cov, decompCov, observ, estimator, particleSet);
-        end
-        
         function init(this, estimatorType)
             narginchk(2, 2);
-            
             args.type  = 'state';
-            args.tag   = 'State estimation for X-Ray navigation system';
-            args.model = gssmXNav('init', this.initArgs);
+            args.tag   = 'State estimation for Doppler navigation system (using radial velocity to the Sun)';
+            args.model = gssmDoppler('init', this.initArgs);
+            
             [this.procNoise, this.observNoise, this.inferenceModel] = inferenceNoiseGenerator(inferenceDataGenerator(args), estimatorType);
         end
         
-        function particleSet = initParticleSet(this, estimatorType, state, cov, decompCov)
-            narginchk(5, 5);
+        function [state, cov, decompCov, particleSet] = estimate(this, state, cov, decompCov, estimator, particleSet, sample, tEpoch)
+            narginchk(8, 8);
             
+            observ = this.dmu.dopplerShift(sample);
+            this.updateModelParams(tEpoch, sample);
+            
+            [state, cov, decompCov, particleSet] = this.evaluate(state, cov, decompCov, observ, estimator, particleSet);
+        end
+        
+        function particleSet = initParticleSet(this, estimatorType, state, cov, decompCov)
             if strcmp(estimatorType{1}, 'pf')
-                numParticles = 2e3;
+                numParticles = 2e4;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 particleSet.weights             = ones(1, numParticles) / numParticles;
             elseif strcmp(estimatorType{1}, 'gspf')
-                numParticles = 5e2;
+                numParticles = 2e3;
                 particleSet.particlesNum   = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
                 particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 35, [eps 1e5], 'sqrt', 1e-20);
             elseif strcmp(estimatorType{1}, 'gmsppf')
-                numParticles = 5e2;
+                numParticles = 2e3;
                 particleSet.particlesNum = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
                 particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 25, [eps 1e5], 'sqrt', 1e-20);
             elseif strcmp(estimatorType{1}, 'sppf')
-                numParticles = 2e2;
+                numParticles = 3e2;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 particleSet.weights             = ones(1, numParticles) / numParticles;
@@ -151,11 +124,11 @@ classdef XRayNavSystem < handle
         
         function decompCov = updateFilterParams(this, cov, estimatorType)
             narginchk(3, 3);
-            decompCov = [];
             
-            alpha = 0.075;   % scale factor (UKF parameter) 1e-3
-            beta  = 2.75;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
-            kappa = 0.1;     % 0 is optimal for state dimension = 2 (UKF parameter)
+            decompCov = [];
+            alpha = 1e-3;   % scale factor (UKF parameter) 1e-3
+            beta  = 2;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
+            kappa = 0;     % 0 is optimal for state dimension = 2 (UKF parameter)
             
             switch estimatorType{1}
                 case 'ukf'
@@ -164,15 +137,15 @@ classdef XRayNavSystem < handle
                     this.inferenceModel.spkfParams = [alpha beta kappa];
                     decompCov = chol(cov, 'lower');
                 case 'cdkf'
-                    this.inferenceModel.spkfParams = sqrt(7); % scale factor (CDKF parameter h) default sqrt(3)
+                    this.inferenceModel.spkfParams = sqrt(3); % scale factor (CDKF parameter h) default sqrt(3)
                 case 'srcdkf'
-                    this.inferenceModel.spkfParams = sqrt(7); % scale factor (CDKF parameter h) default sqrt(3)
+                    this.inferenceModel.spkfParams = sqrt(3); % scale factor (CDKF parameter h) default sqrt(3)
                     decompCov = chol(cov, 'lower');
                 case {'sckf', 'fdckf'}
                     decompCov = svdDecomposition(cov);
                 case 'pf'
-                    this.inferenceModel.resampleThreshold   = 1;
-                    this.inferenceModel.estimateType        = 'mean';
+                    this.inferenceModel.resampleThreshold = 1;
+                    this.inferenceModel.estimateType      = 'mean';
                 case 'gspf'
                     this.inferenceModel.estimateType = 'mean';
                 case 'sppf'
@@ -192,7 +165,7 @@ classdef XRayNavSystem < handle
                 case 'cqkf'
                     this.inferenceModel.cqkfParams = 9; % order of laguerre polynomial
                 case 'ghqf'
-                    this.inferenceModel.ghkfParams = 1; % order of gauss-hermite polynomial
+                    this.inferenceModel.ghkfParams = 3; % order of gauss-hermite polynomial
                 case 'sghqf'
                     this.inferenceModel.sghkfParams = [3 3]; % order of gauss-hermite polynomial & manner
                 otherwise
@@ -202,25 +175,25 @@ classdef XRayNavSystem < handle
     end
     
     methods (Access = private)
-        function [state, cov, sCov, particleSetEst, param] = evaluate(this, state, cov, sCov, observ, estimator, particleSet)
-            param = [];
+        function [state, cov, sCov, particleSetEst] = evaluate(this, state, cov, sCov, observ, estimator, particleSet)
+            
             particleSetEst = [];
             
             switch estimator{1}
                 case 'ukf'
-                    [state, cov, this.procNoise, this.observNoise, param] = ukf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, cov, this.procNoise, this.observNoise] = ukf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'srukf'
-                    [state, sCov, this.procNoise, this.observNoise, param] = srukf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, sCov, this.procNoise, this.observNoise] = srukf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'cdkf'
-                    [state, cov, this.procNoise, this.observNoise, param] = cdkf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, cov, this.procNoise, this.observNoise] = cdkf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'srcdkf'
-                    [state, sCov, this.procNoise, this.observNoise, param] = srcdkf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, sCov, this.procNoise, this.observNoise] = srcdkf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'ckf'
-                    [state, cov, this.procNoise, this.observNoise, param] = ckf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, cov, this.procNoise, this.observNoise] = ckf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'sckf'
-                    [state, sCov, this.procNoise, this.observNoise, param] = sckf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, sCov, this.procNoise, this.observNoise] = sckf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'fdckf'
-                    [state, sCov, this.procNoise, this.observNoise, param] = fdckf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, sCov, this.procNoise, this.observNoise] = fdckf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'pf'
                     [state, particleSetEst, this.procNoise, this.observNoise] = pf(particleSet, this.procNoise, this.observNoise, observ, [], [], this.inferenceModel);
                 case 'gspf'
@@ -230,42 +203,48 @@ classdef XRayNavSystem < handle
                 case 'gmsppf'
                     [state, particleSetEst, this.procNoise, this.observNoise] = gmsppf(particleSet, this.procNoise, this.observNoise, observ, [], [], this.inferenceModel);
                 case 'cqkf'
-                    [state, cov, this.procNoise, this.observNoise, param] = cqkf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, cov, this.procNoise, this.observNoise] = cqkf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'ghqf'
-                    [state, cov, this.procNoise, this.observNoise, param] = ghqf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, cov, this.procNoise, this.observNoise] = ghqf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'sghqf'
-                    [state, cov, this.procNoise, this.observNoise, param] = sghqf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, cov, this.procNoise, this.observNoise] = sghqf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 otherwise
                     error(strcat('not supported filter type: ', estimator{1}));
             end
         end
         
         function updateModelParams(this, tEpoch, sample)
-            modelParams(1) = tEpoch;
-            modelParams(2) = this.timeData.SampleTime;
-            modelParams(3) = this.timeData.Time(sample);
+            narginchk(3, 3);
             
-            earthEphemerisStep = [this.earthEphemeris.x(sample); this.earthEphemeris.y(sample); this.earthEphemeris.z(sample)];
-            sunEphemerisStep   = [this.sunEphemeris.x(sample); this.sunEphemeris.y(sample); this.sunEphemeris.z(sample)];
+            params(1) = tEpoch;
+            params(2) = this.timeData.SampleTime;
+            params(3) = this.timeData.Time(sample);
             
-            updModel = this.inferenceModel.model.setParams(this.inferenceModel.model, ...
-                modelParams, ...
-                this.inferenceModel.model.xRaySources, ...
-                earthEphemerisStep, ...
-                sunEphemerisStep, ...
-                this.inferenceModel.model.invPeriods ...
-                );
-            this.inferenceModel.model = updModel;
+            model = this.inferenceModel.model.setParams(this.inferenceModel.model, params, this.getEarthEphemeris(sample), this.getSunEphemeris(sample));
+            this.inferenceModel.model = model;
         end
         
-        function invPeriods = getInvPeriods(this)
-            invPeriods = getInvPeriods(this.xRaySources);
+        function ephemeris = getEarthEphemeris(this, sample)
+            narginchk(2, 2);
+            
+            ephemeris.x = this.earthEphemeris.x(sample);
+            ephemeris.y = this.earthEphemeris.y(sample);
+            ephemeris.z = this.earthEphemeris.z(sample);
+            ephemeris.vx = this.earthEphemeris.vx(sample);
+            ephemeris.vy = this.earthEphemeris.vy(sample);
+            ephemeris.vz = this.earthEphemeris.vz(sample);
+        end
+        
+        function ephemeris = getSunEphemeris(this, sample)
+            narginchk(2, 2);
+            
+            ephemeris.x = this.sunEphemeris.x(sample);
+            ephemeris.y = this.sunEphemeris.y(sample);
+            ephemeris.z = this.sunEphemeris.z(sample);
+            ephemeris.vx = this.sunEphemeris.vx(sample);
+            ephemeris.vy = this.sunEphemeris.vy(sample);
+            ephemeris.vz = this.sunEphemeris.vz(sample);
         end
     end
     
-    methods
-        function res = get.SampleTime(this)
-            res = this.timeData.SampleTime;
-        end
-    end
 end

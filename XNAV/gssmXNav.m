@@ -1,5 +1,4 @@
-% Generalized state space model for loosely coupled inertial navigation
-% system & satellite navigation system
+% Generalized state space model for loosely coupled inertial navigation X-Ray navigation system
 
 %%
 

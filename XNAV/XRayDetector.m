@@ -33,6 +33,7 @@ classdef XRayDetector < handle
             %   spaceshipState - state (trajectory and velocity of spaceship during simulation);
             %
             narginchk(1, 1);
+            
             obj.xRaySources            = args.xRaySources;
             obj.detectorArea           = args.detectorArea;
             obj.timeBucket             = args.timeBucket;
@@ -78,7 +79,7 @@ classdef XRayDetector < handle
             phase = diffToa2phase(this.getInvPeriods(), diffToa);
             this.signal = phase + this.generateNoise(size(phase, 2));
             
-            if visualize; this.visualize(this.signal, this.timeData.Time); end
+            if visualize; this.visualize(); end
         end
         
         function invPeriods = getInvPeriods(this)
@@ -94,11 +95,11 @@ classdef XRayDetector < handle
             noise = svdDecomposition(covariance)*randn(sourceCount, capacity);
         end
         
-        function [] = visualize(this, signal, time)
+        function [] = visualize(this)
             legends = {length(this.xRaySources)};
             figure();
             for i = 1:length(this.xRaySources)
-                plot(time, signal(i, :), 'LineWidth', 1);
+                plot(this.timeData.Time, this.signal(i, :), 'LineWidth', 1);
                 hold on;
                 legends{i} = this.xRaySources(i).name;
             end
