@@ -1,7 +1,7 @@
 classdef GyroParam < handle
     
     properties (Access = private)
-        gyroGSensitiveBias;             
+        gyroGSensitiveBias;
         gyroScaleFactor;
         gyroBiasMu;
         gyroBiasSigma;
@@ -20,11 +20,11 @@ classdef GyroParam < handle
     methods
         
         function this = GyroParam(timeData, ...
-                                  gyroGSensitiveBias, ...                                 
-                                  gyroScaleFactor, ... 
-                                  gyroBiasMu, ...
-                                  gyroBiasSigma, ...
-                                  gyroNoiseVar)            
+                gyroGSensitiveBias, ...
+                gyroScaleFactor, ...
+                gyroBiasMu, ...
+                gyroBiasSigma, ...
+                gyroNoiseVar)
             this.timeData = timeData;
             this.gyroGSensitiveBias = gyroGSensitiveBias;
             this.gyroScaleFactor = gyroScaleFactor;
@@ -52,6 +52,6 @@ classdef GyroParam < handle
         
         function val = get.GyroNoiseVar(this)
             val = this.gyroNoiseVar;
-        end 
-    end 
-end 
+        end
+    end
+end

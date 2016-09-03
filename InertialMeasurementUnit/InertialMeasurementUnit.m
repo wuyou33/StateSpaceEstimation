@@ -104,7 +104,7 @@ classdef InertialMeasurementUnit < handle
             ba = this.accelerometerParams.Bias;
             na = cvecrep(this.accelerometerParams.NoiseVar, n) .* randn(3, n);
             
-            this.acceleration = sa*(la_angAcc + w_w_la + a) +  ba + na;
+            this.acceleration = sa*(la_angAcc + w_w_la + a) + ba + na;
         end
         
         function initializeAngularVelocity(this)

@@ -175,12 +175,11 @@ for j = 1:iterationNumber
     
     sns = SnsImitator(starshipTrueState.State, 'gaussian'); % gaussian markov1 wiener exp
     ins = initInertialNavigationSystem('init', insInitArgs);
+    
     insSns = IntegratedInsSns(ins, sns, timeData, insSnsInitArgs, timeDataSubSystem);
     tic;
     insSnsState = insSns.evaluate(insSnsInitState, initCov, insInitialState, estimatorType, 0, 1);
     toc;
-    % сформировать массив индексов для истинного состояния потому что, истинные значеничя были смоделированы для другого времени дискретизации
-%     indexes = timeDataSubSystem.getSimulationRange(timeData);
     angErr = angleErrorsFromQuaternion(insSnsState.Rotation, starshipTrueState.Rotation);
     errTraj = [vectNormError(starshipTrueState.Trajectory, sns.Trajectory, 1e3); ...
         vectNormError(starshipTrueState.Trajectory, insSnsState.Trajectory, 1e3)];

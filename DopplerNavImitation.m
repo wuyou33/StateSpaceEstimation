@@ -24,7 +24,7 @@ accelerationSigma       = 2e-5*ones(3, 1);      % [km/sec^2]
 angularVelocitySigma    = 1e-4*ones(3, 1);      % [rad/sec]
 dmuVariance             = (1e-5)^2; % [ (km / sec)^2 ] data from IET Radar Sonar Navig., 2011, Vol. 5, Iss. 9, pp. 1010-1017
 
-filterType = {'pf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'gspf', 'gmsppf', 'ghqf', 'sghqf'};
+filterType = {'ukf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'gspf', 'gmsppf', 'ghqf', 'sghqf'};
 
 earthEphemeris = loadEphemeris('earth', timeDataDoppler.SimulationNumber, secondInOneMinute/timeDataDoppler.SampleTime);
 sunEphemeris   = loadEphemeris('sun', timeDataDoppler.SimulationNumber, secondInOneMinute/timeDataDoppler.SampleTime);
@@ -69,8 +69,10 @@ for j = 1:iterationNumber
     dmu = DopplerMeasurementUnit(earthEphemeris, sunEphemeris, trueState, timeDataDoppler, dmuVariance);
     % dmu.simulate(iterationNumber == 1);
     
+    tic;
     dopplerNavSystem = DopplerNavSystem(dmu, timeDataDoppler, initArgsDoppler, earthEphemeris, sunEphemeris);
     stateEstimation   = dopplerNavSystem.resolve(initialDopplerState, 2*initialDopplerCov, estimatorType, iterationNumber == 1);
+    toc;
     
     errTraj = vectNormError(trueState(1:3, :), stateEstimation(1:3, :), 1e3);
     errVel  = vectNormError(trueState(4:6, :), stateEstimation(4:6, :), 1e3);

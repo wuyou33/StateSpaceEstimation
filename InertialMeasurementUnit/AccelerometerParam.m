@@ -9,9 +9,9 @@ classdef AccelerometerParam < handle
         biasSigma;
         noiseVar;
         bias;
-    end 
+    end
     
-    properties (Dependent)        
+    properties (Dependent)
         LevelArm;
         AngularAccelerationinBodyFrame;
         AccelerometerScale;
@@ -22,13 +22,13 @@ classdef AccelerometerParam < handle
     methods
         
         function obj = AccelerometerParam(timeData, ...
-                                          levelArm, ...
-                                          angularAccelerationinBodyFrame, ...
-                                          accelerometerScale, ...
-                                          biasMu, ...
-                                          biasSigma, ... 
-                                          noiseVar)
-                                      
+                levelArm, ...
+                angularAccelerationinBodyFrame, ...
+                accelerometerScale, ...
+                biasMu, ...
+                biasSigma, ...
+                noiseVar)
+            
             obj.timeData = timeData;
             obj.levelArm = levelArm;
             obj.angularAccelerationinBodyFrame = angularAccelerationinBodyFrame;
@@ -51,7 +51,7 @@ classdef AccelerometerParam < handle
         end
         
         function val = get.Bias(this)
-            if (isempty(this.bias))             
+            if (isempty(this.bias))
                 dw = WienerProcess(this.biasMu, this.biasSigma);
                 this.bias = dw.simulate(this.timeData.SampleTime, this.timeData.SimulationNumber);
             end
