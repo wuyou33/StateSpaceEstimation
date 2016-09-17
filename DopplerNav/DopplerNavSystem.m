@@ -53,7 +53,7 @@ classdef DopplerNavSystem < handle
                 
                 tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
                 
-                len = endBlock - startBlock + 1*(i == 1);
+                len = endBlock - startBlock + 1;
                 if i == 1; stateMatrix(:, 1) = initialState; end
                 
                 for j = startSample:len

@@ -10,7 +10,7 @@ addpath(genpath('StateSpaceEstimation')); % include folder with State Space Esti
 addpath(genpath('Utils'));
 
 % ghqf not working due to dimension, too number of points :(
-estimatorType  = {'gspf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf', 'srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'ghqf', 'sghqf', 'gspf', 'gmsppf'};
+estimatorType  = {'ukf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf', 'srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'ghqf', 'sghqf', 'gspf', 'gmsppf'};
 
 date.day  = 17;
 date.mon  = 11;
@@ -20,7 +20,7 @@ initialOrbit = loadInitialOrbit();
 
 tStart = '00:00:00.000';
 % tEnd = '00:00:20.000';
-tEnd = '00:00:00.100';
+tEnd = '00:00:02.000';
 
 timeData = TimeExt(tStart, tEnd, 1e-3, date, 1); % time data for integrated navigation system
 timeDataSubSystem  = TimeExt(tStart, tEnd, 1e-4, date, 1); % time data for inertial navigation system & satellite navigation system

@@ -1,13 +1,13 @@
 close all; clc; clearvars;
 
-addpath(genpath('/Users/aleksey.konakov/Documents/Projects/StateSpaceEstimation'));
+addpath(genpath('./'));
 
 date.day  = 17;
 date.mon  = 11;
 date.year = 2015;
 timeStart = '00:00:00.000';
-timeEnd = '00:00:05.000';
-sunMoonInfluenceRefreshTime = 1e100; % sec
+timeEnd = '00:00:02.000';
+sunMoonInfluenceRefreshTime = 1; % sec
 sampleTime = 1e-1; % sec
 timeDataDoppler  = TimeExt(timeStart, timeEnd, sampleTime, date, sunMoonInfluenceRefreshTime);
 
@@ -74,8 +74,8 @@ for j = 1:iterationNumber
     stateEstimation   = dopplerNavSystem.resolve(initialDopplerState, 2*initialDopplerCov, estimatorType, iterationNumber == 1);
     toc;
     
-    errTraj = vectNormError(trueState(1:3, :), stateEstimation(1:3, :), 1e3);
-    errVel  = vectNormError(trueState(4:6, :), stateEstimation(4:6, :), 1e3);
+    errTraj = vectNormError(trueState(1:3, :), stateEstimation(1:3, :), 1);
+    errVel  = vectNormError(trueState(4:6, :), stateEstimation(4:6, :), 1);
     iterations(j, :, :) = [errTraj; errVel];
     
     if iterationNumber == 1 && length(estimatorType) == 1
@@ -100,7 +100,7 @@ if iterationNumber > 1
     
     figure();
     subplot(2, 1, 1);
-    plot2(timeDataDoppler.Time, errors(1, :), 'trajectory errors', {'Doppler Nav'}, 'trajectory error, meter');
+    plot2(timeDataDoppler.Time, errors(1, :), 'trajectory errors', {'Doppler Nav'}, 'trajectory error, km');
     subplot(2, 1, 2);
-    plot2(timeDataDoppler.Time, errors(2, :), 'velocity errors', {'Doppler Nav'}, 'velocity error, meter / sec');
+    plot2(timeDataDoppler.Time, errors(2, :), 'velocity errors', {'Doppler Nav'}, 'velocity error, km / sec');
 end
