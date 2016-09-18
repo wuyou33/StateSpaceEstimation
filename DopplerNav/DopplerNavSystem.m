@@ -48,7 +48,7 @@ classdef DopplerNavSystem < handle
             particleSet = this.initParticleSet(estimatorType, state, cov, decompCov);
             
             for i = 1:num
-                startBlock = (i-1)*blockSize + 1*(i == 1);
+                startBlock = (i-1)*blockSize + 1; % 1*(i == 1)
                 endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
                 
                 tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
@@ -93,18 +93,18 @@ classdef DopplerNavSystem < handle
         
         function particleSet = initParticleSet(this, estimatorType, state, cov, decompCov)
             if strcmp(estimatorType{1}, 'pf')
-                numParticles = 2e4;
+                numParticles = 2e3;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 particleSet.weights             = ones(1, numParticles) / numParticles;
             elseif strcmp(estimatorType{1}, 'gspf')
-                numParticles = 2e3;
+                numParticles = 1e3;
                 particleSet.particlesNum   = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
                 particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 35, [eps 1e5], 'sqrt', 1e-20);
             elseif strcmp(estimatorType{1}, 'gmsppf')
-                numParticles = 2e3;
+                numParticles = 1e3;
                 particleSet.particlesNum = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
@@ -165,9 +165,9 @@ classdef DopplerNavSystem < handle
                 case 'cqkf'
                     this.inferenceModel.cqkfParams = 9; % order of laguerre polynomial
                 case 'ghqf'
-                    this.inferenceModel.ghkfParams = 3; % order of gauss-hermite polynomial
+                    this.inferenceModel.ghkfParams = 5; % order of gauss-hermite polynomial
                 case 'sghqf'
-                    this.inferenceModel.sghkfParams = [3 3]; % order of gauss-hermite polynomial & manner
+                    this.inferenceModel.sghkfParams = [4 3]; % order of gauss-hermite polynomial & manner
                 otherwise
                     % do nothing by default
             end

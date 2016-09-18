@@ -1,16 +1,9 @@
 close all force; clc; clearvars;
-
-addpath(genpath('OrbitalMotion')); % include folder with orbital motion functions
-addpath(genpath('InertialMeasurementUnit')); % include folder with inertial measurement functions
-addpath(genpath('InertialNavigationSystem')); % include folder with inertial navigation system functions
-addpath(genpath('SNS')); % include folder with inertial navigation system functions
-addpath(genpath('Integrated')); % include folder with integrated navigation system functions
-addpath(genpath('Statistics')); % include folder with Statistics functions
-addpath(genpath('StateSpaceEstimation')); % include folder with State Space Estimation algorithms
-addpath(genpath('Utils'));
+addpath(genpath('./'));
 
 % ghqf not working due to dimension, too number of points :(
-estimatorType  = {'ukf'}; %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf', 'srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'ghqf', 'sghqf', 'gspf', 'gmsppf'};
+%{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf', 'srcdkf', 'pf', 'sppf', 'fdckf', 'cqkf', 'ghqf', 'sghqf', 'gspf', 'gmsppf'};
+estimatorType  = {'gmsppf'};
 
 date.day  = 17;
 date.mon  = 11;
@@ -20,7 +13,7 @@ initialOrbit = loadInitialOrbit();
 
 tStart = '00:00:00.000';
 % tEnd = '00:00:20.000';
-tEnd = '00:00:02.000';
+tEnd = '00:00:00.200';
 
 timeData = TimeExt(tStart, tEnd, 1e-3, date, 1); % time data for integrated navigation system
 timeDataSubSystem  = TimeExt(tStart, tEnd, 1e-4, date, 1); % time data for inertial navigation system & satellite navigation system

@@ -80,11 +80,13 @@ function [newState, newCovState, stateNoise, observNoise, internal ] = ghqf(stat
     predictedStateCov = squareRootPredictedStateCov*squareRootPredictedStateCov' + stateNoise.covariance;
     
     %% evaluate cubature points for measurement
-    [~, weights2] = gaussHermiteRule(order, obsDim);
+%     [~, weights2] = gaussHermiteRule(order, obsDim);
     pointSet2 = cvecrep(predictedStateMean, numPoints) + svdDecomposition(predictedStateCov)*set;
     
     %% propagate through observation model
     predictObs = model.stateObservationFun(model, pointSet2, cvecrep(observNoise.mean, numPoints), control2);
+    weights2 = weights(obsDim, :);
+    
     predictObsMean = sum(predictObs.*weights2, 2);
     
     %% measurement update

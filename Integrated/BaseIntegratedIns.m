@@ -38,46 +38,11 @@ classdef BaseIntegratedIns < handle
             time = this.timeData.Time;
             
             decompCov = this.updateFilterParams(cov, estimatorType);
+            particleSet = this.buildParticles(estimatorType, state, cov, decompCov);
             
-            if strcmp(estimatorType{1}, 'pf')
-                numParticles = 2e3;
-                particleSet.particlesNum        = numParticles;
-                particleSet.particles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
-                particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
-                particleSet.weights             = (1 / numParticles)*ones(1, numParticles);
-            elseif strcmp(estimatorType{1}, 'gspf')
-                numParticles = 2e3;
-                particleSet.particlesNum        = numParticles;
-                
-                initialParticles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
-                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));
-                
-                % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 35, [eps 1e5], 'sqrt', 1e-20);
-            elseif strcmp(estimatorType{1}, 'gmsppf')
-                numParticles = 2e3;
-                particleSet.particlesNum        = numParticles;
-                
-                initialParticles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
-                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));
-                
-                % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 25, [eps 1e5], 'sqrt', 1e-20);
-            elseif strcmp(estimatorType{1}, 'sppf')
-                numParticles = 2e2;
-                particleSet.particlesNum        = numParticles;
-                particleSet.particles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
-                particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
-                particleSet.weights             = (1 / numParticles)*ones(1, numParticles);
-                particleSet.particlesCov        = repmat(decompCov, [1 1 numParticles]);
-                particleSet.processNoise        = this.procNoise;
-                particleSet.observationNoise    = this.observNoise;
-            else
-                particleSet = [];
-            end
             insIndex = 2;
             for i = 1:num
-                startBlock = (i-1)*blockSize + 1*(i == 1);
+                startBlock = (i-1)*blockSize + 1; % 1*(i == 1)
                 endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
                 
                 len = endBlock - startBlock + 1;
@@ -88,6 +53,10 @@ classdef BaseIntegratedIns < handle
                 
                 for j = startSample:len
                     sample = j + startBlock - 1;
+                    
+                    if sample > this.ins.SimulationNumber
+                        error('fuck');
+                    end
                     
                     if reportProgress && mod((sample / (simNum - 1))*100, 10) == 0
                         disp(['Completed: ', num2str((sample / (simNum - 1)) * 100),' %' ]);
@@ -265,6 +234,41 @@ classdef BaseIntegratedIns < handle
                 plot2(this.timeData.RelTime, gain(:, 5, 5), 'filter gain velocity', {'y'}, 'filter gain');
                 subplot(3, 2, 6);
                 plot2(this.timeData.RelTime, gain(:, 6, 6), 'filter gain velocity', {'z'}, 'filter gain');
+            end
+        end
+        
+        function particleSet = buildParticles(this, estimatorType, state, cov, decompCov)
+            if strcmp(estimatorType{1}, 'pf')
+                numParticles = 2e3;
+                particleSet.particlesNum        = numParticles;
+                particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
+                particleSet.weights             = ones(1, numParticles) / numParticles;
+            elseif strcmp(estimatorType{1}, 'gspf')
+                numParticles = 2e3;
+                particleSet.particlesNum   = numParticles;                
+                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));                
+                % fit a N component GMM to initial state distribution
+                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 35, [eps 1e5], 'sqrt', 1e-20);
+            elseif strcmp(estimatorType{1}, 'gmsppf')
+                numParticles = 2e3;
+                particleSet.particlesNum   = numParticles;                
+                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));                
+                % fit a N component GMM to initial state distribution
+                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 25, [eps 1e5], 'sqrt', 1e-20);
+            elseif strcmp(estimatorType{1}, 'sppf')
+                numParticles = 2e2;
+                particleSet.particlesNum        = numParticles;
+                particleSet.particles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
+                particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
+                particleSet.weights             = ones(1, numParticles) / numParticles;
+                particleSet.particlesCov        = repmat(decompCov, [1 1 numParticles]);
+                particleSet.processNoise        = this.procNoise;
+                particleSet.observationNoise    = this.observNoise;
+            else
+                particleSet = [];
             end
         end
     end

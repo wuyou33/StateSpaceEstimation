@@ -5,7 +5,7 @@ function [ points, weights ] = gaussHermiteRule( order, dim )
     %   The interval of interest is chosen to be (-infinity; +infinity).
     %   According to the fundamental theorem of Gauss–Hermite quadrature, the quadrature points are chosen to be the zeros of the m-th order Hermite polynomial.
     %   Since the zeros of the Hermite polynomials are distinct,
-    %   it is noteworthy that the determinant of the coefficient matrix in is the well known Vandermonde’s determinant that is nonzero.
+    %   it is noteworthy that the determinant of the coefficient matrix in is the well known Vandermonde's determinant that is nonzero.
     %   For an m-point quadrature scheme, the resulting quadrature rule is exact for all polynomials of degree  <= 2m - 1
     %
     %   Suppose J is a symmetric tridiagonal matrix with zero diagonal elements and J(i, i+1) = sqrt(i/2), 1 <= i <= m-1

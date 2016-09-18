@@ -32,8 +32,8 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
         end
         
         function signal = simulate(this, visualize)
-            tMoonSun = this.timeData.StartSecond;            
-            stateVector = zeros(this.dimension, this.timeData.SimulationNumber);            
+            tMoonSun = this.timeData.StartSecond;
+            stateVector = zeros(this.dimension, this.timeData.SimulationNumber);
             initial = this.initialState;
             
             num = ceil(this.timeData.TotalSeconds / this.timeData.RefreshSunMoonInfluenceTime);
@@ -51,9 +51,9 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
                 dt = this.timeData.SampleTime;
                 t0 = this.timeData.StartSecond;
                 
-                odeFun = @(t, y) EquationOfMotion(t, y, a, w, tEpoch, dt, t0);                
+                odeFun = @(t, y) EquationOfMotion(t, y, a, w, tEpoch, dt, t0);
                 [~, tmp] = ode45(odeFun, time, initial, odeset('MaxStep', dt));
-                                
+                
                 stateVector(:, startBlock:endBlock) = tmp';
                 initial = stateVector(:, endBlock);
                 tMoonSun = tMoonSun + this.timeData.RefreshSunMoonInfluenceTime;
@@ -61,7 +61,7 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
             
             signal = SatellitePhaseSpace(stateVector, this.timeData.SimulationNumber);
             
-            if nargin == 2 && visualize == 1
+            if nargin == 2 && visualize
                 SatelliteOrbitVisualization(signal);
             end
         end
