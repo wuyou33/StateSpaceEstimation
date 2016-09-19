@@ -13,12 +13,12 @@ addpath(genpath('./'));
 % legends  = {'sns', 'ckf', 'ukf', 'cdkf'};
 
 % high degree sigma points family
-filterTypes  = {'fdckf', 'cqkf', 'sghqf'};
-legends  = {'sns', 'fdckf', 'cqkf', 'sghqf'};
+% filterTypes  = {'fdckf', 'cqkf', 'sghqf'};
+% legends  = {'sns', 'fdckf', 'cqkf', 'sghqf'};
 
 % particle filters family
-% filterTypes  = {'pf', 'sppf', 'gspf', 'gmsppf'};
-% legends  = {'sns', 'pf', 'sppf', 'gspf', 'gmsppf'};
+filterTypes  = {'pf', 'sppf', 'gspf', 'gmsppf'};
+legends  = {'sns', 'pf', 'sppf', 'gspf', 'gmsppf'};
 
 date.day  = 17;
 date.mon  = 11;
@@ -33,7 +33,7 @@ tEnd = '00:00:0.500';
 timeData = TimeExt(tStart, tEnd, 1e-3, date, 1); % time data for integrated navigation system
 timeDataSubSystem  = TimeExt(tStart, tEnd, 1e-4, date, 1); % time data for inertial navigation system & satellite navigation system
 
-iterationNumber             = 40;
+iterationNumber             = 25;
 esitimatedParams            = 5;
 accBiasMu                   = zeros(3, 1);      % [km / sec^2]
 accBiasSigma                = 5e-8*ones(3, 1);  % [km / sec^2]
@@ -237,7 +237,7 @@ for l = 1:length(filterTypes)
 end
 
 if iterationNumber > 1
-    fileName = strcat('errors_ins_sns_hd_sp_family.mat');
+    fileName = strcat('errors_ins_sns_pf_family.mat');
     save(fileName, 'errors');
     
     rErrors = [(sqrt( 3*(1e-2)^2 ))*1e3*ones(1, timeDataSubSystem.SimulationNumber); squeeze(errors(:, 1, :))];
