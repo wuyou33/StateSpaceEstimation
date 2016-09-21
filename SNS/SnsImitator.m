@@ -24,8 +24,8 @@ classdef SnsImitator < handle
                 if nargin == 2 
                     switch noiseType
                         case 'gaussian'
-                            noiseTraj = 1e-2*randn(3, num); % exprnd(ones(3, dim))
-                            noiseVel  = 1e-5*randn(3, num); % exprnd(ones(3, dim))
+                            noiseTraj = 2e-2*randn(3, num); % exprnd(ones(3, dim)) % km
+                            noiseVel  = 1e-5*randn(3, num); % exprnd(ones(3, dim)) % km / sec
                         case 'exp'
                             noiseTraj = 1e-2*exprnd(ones(3, num));
                             noiseVel  = 1e-5*exprnd(ones(3, num));

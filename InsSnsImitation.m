@@ -17,8 +17,11 @@ addpath(genpath('./'));
 % legends  = {'sns', 'fdckf', 'cqkf', 'sghqf'};
 
 % particle filters family
-filterTypes  = {'pf', 'sppf', 'gspf', 'gmsppf'};
-legends  = {'sns', 'pf', 'sppf', 'gspf', 'gmsppf'};
+% filterTypes  = {'pf', 'sppf', 'gspf', 'gmsppf'};
+% legends  = {'sns', 'pf', 'sppf', 'gspf', 'gmsppf'};
+
+filterTypes  = {'ukf'};
+legends  = {'ukf'};
 
 date.day  = 17;
 date.mon  = 11;
@@ -28,12 +31,13 @@ initialOrbit = loadInitialOrbit();
 
 tStart = '00:00:00.000';
 % tEnd = '00:00:20.000';
-tEnd = '00:00:0.500';
+tEnd = '00:00:0.200';
 
 timeData = TimeExt(tStart, tEnd, 1e-3, date, 1); % time data for integrated navigation system
 timeDataSubSystem  = TimeExt(tStart, tEnd, 1e-4, date, 1); % time data for inertial navigation system & satellite navigation system
 
-iterationNumber             = 25;
+logLastError                = 1;
+iterationNumber             = 20;
 esitimatedParams            = 5;
 accBiasMu                   = zeros(3, 1);      % [km / sec^2]
 accBiasSigma                = 5e-8*ones(3, 1);  % [km / sec^2]
@@ -85,6 +89,7 @@ insInitialState = initialOrbit + [insTrajInitErrorKm.*randn(3, 1); insVelInitErr
 insInitialState(7:10) = quaternionNormalize(insInitialState(7:10));
 
 errors = zeros(length(filterTypes), esitimatedParams, timeDataSubSystem.SimulationNumber);
+initialConditionStabilityCoeff = 1;
 
 for l = 1:length(filterTypes)
     estimatorType = filterTypes(l);
@@ -190,7 +195,7 @@ for l = 1:length(filterTypes)
     trueTrajectory = starshipTrueState.Trajectory;
     trueVelocity   = starshipTrueState.Velocity;
     
-%     parfor j = 1:iterationNumber
+    %     parfor j = 1:iterationNumber
     for j = 1:iterationNumber
         insSnsInitState = [[0; 0; 0]; [0; 0; 0]; [1; 0; 0; 0]; [0; 0; 0]; [0; 0; 0]; 5e-5*ones(3, 1); 5e-5*ones(3, 1)];
         
@@ -199,7 +204,7 @@ for l = 1:length(filterTypes)
         
         insSns = IntegratedInsSns(ins, sns, timeData, insSnsInitArgs, timeDataSubSystem);
         %         tic;
-        insSnsState = insSns.evaluate(insSnsInitState, initCov, insInitialState, estimatorType, iterationNumber == 1, iterationNumber == 1);
+        insSnsState = insSns.evaluate(insSnsInitState, initialConditionStabilityCoeff*initCov, insInitialState, estimatorType, iterationNumber == 1, iterationNumber == 1);
         %         toc;
         angErr = angleErrorsFromQuaternion(insSnsState.Rotation, trueRotation);
         errTraj = vectNormError(trueTrajectory, insSnsState.Trajectory, 1e3);
@@ -218,9 +223,9 @@ for l = 1:length(filterTypes)
             
             figure();
             subplot(2, 1, 1);
-            plot2(realTime, errTraj, 'trajectory errors in SNS and SNS & INS', {'SNS', 'INS & SNS'}, 'trajectory error, meter');
+            plot2(realTime, errTraj, 'trajectory errors in SNS and SNS & INS', estimatorType, 'trajectory error, meter');
             subplot(2, 1, 2);
-            plot2(realTime, errVel, 'velocity errors in SNS and SNS & INS', {'SNS', 'INS & SNS'}, 'velocity error, meter / sec');
+            plot2(realTime, errVel, 'velocity errors in SNS and SNS & INS', estimatorType, 'velocity error, meter / sec');
             
             figure()
             plot2(realTime, angErr, 'angle rotation error', {'yaw', 'pitch', 'roll'}, 'angle error, rad');
@@ -234,14 +239,23 @@ for l = 1:length(filterTypes)
             errors(l, :, i) = ( sum( ( squeeze(iterations(:, :, i))' ).^2, 2) / iterationNumber ).^0.5;
         end
     end
+    
+    if logLastError
+        fprintf('estimator: %s\n', estimatorType{1});
+        fprintf('RMS trajectory: %d\n', errors(l, 1, end));
+        fprintf('RMS velocity: %d\n', errors(l, 2, end));     
+    end
 end
 
 if iterationNumber > 1
     fileName = strcat('errors_ins_sns_pf_family.mat');
     save(fileName, 'errors');
     
-    rErrors = [(sqrt( 3*(1e-2)^2 ))*1e3*ones(1, timeDataSubSystem.SimulationNumber); squeeze(errors(:, 1, :))];
-    vErrors = [(sqrt( 3*(1e-5)^2 ))*1e3*ones(1, timeDataSubSystem.SimulationNumber); squeeze(errors(:, 2, :))];
+%     rErrors = [(sqrt( 3*(1e-2)^2 ))*1e3*ones(1, timeDataSubSystem.SimulationNumber); squeeze(errors(:, 1, :))];
+%     vErrors = [(sqrt( 3*(1e-5)^2 ))*1e3*ones(1, timeDataSubSystem.SimulationNumber); squeeze(errors(:, 2, :))];
+    rErrors = squeeze(errors(:, 1, :));
+    vErrors = squeeze(errors(:, 2, :));
+    
     figure();
     subplot(2, 1, 1);
     plot2(realTime, rErrors, 'trajectory errors in SNS & INS', legends, 'trajectory error, meter');
