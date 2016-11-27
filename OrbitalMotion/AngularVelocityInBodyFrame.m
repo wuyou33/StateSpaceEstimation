@@ -1,7 +1,6 @@
 classdef AngularVelocityInBodyFrame < handle
-    %% Provide angular velocity caused, which represent angular rotation of body fixed frame
-    % [rad / sec]
-    %%
+    % Provide angular velocity caused, which represent angular rotation of body fixed frame ([rad / sec]).
+    %
     properties (Access = private)
         angularVelocity;
         model;
@@ -31,7 +30,7 @@ classdef AngularVelocityInBodyFrame < handle
                 obj.model = NaN;
                 obj.angularVelocity = zeros(timeData.SimulationNumber, AngularVelocityInBodyFrame.Dimension);
             else
-                obj.dt = timeData.SampleTime;                
+                obj.dt = timeData.SampleTime;
                 dw = WienerProcess(mu, sigma);
                 obj.model = dw;
                 obj.angularVelocity = dw.simulate(timeData.SampleTime, timeData.SimulationNumber);
@@ -48,4 +47,5 @@ classdef AngularVelocityInBodyFrame < handle
             obj = AngularVelocityInBodyFrame(simulationNumber);
         end
     end
+    
 end

@@ -1,4 +1,6 @@
 classdef SatelliteNavigationSystemMock < SatelliteNavigationSystem
+    % Mock class, which generate observation from SNS as additive Gaussian noise.
+    
     properties (Access = private)
         simulatedState;
     end
@@ -12,6 +14,5 @@ classdef SatelliteNavigationSystemMock < SatelliteNavigationSystem
         function val = Simulate(this, sampleNumber)
             val = this.simulatedState(sampleNumber, :)';
         end
-    end    
+    end
 end
-

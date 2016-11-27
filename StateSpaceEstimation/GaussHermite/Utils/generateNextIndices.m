@@ -1,15 +1,17 @@
 function [ idx ] = generateNextIndices( order, indices, prevIndices )
-    % generateNextIndices
+    % generateNextIndices.
+    %
     %   [ idx ] = generateNextIndices( order, indices, prevIndices )
     %
-    %   INPUT:
+    %   INPUT
     %       order       - order of Gauss-Hermite polynomial;
     %       indices     - current indices;
     %       prevIndices - previous generated indices.
     %
-    %   OUTPUT:
+    %   OUTPUT
     %       idx - generated indeces.
-    %%
+    %
+    narginchk(3, 3);
     dim = numel(indices);
     idx = zeros(dim,dim);
     
@@ -22,7 +24,7 @@ function [ idx ] = generateNextIndices( order, indices, prevIndices )
         end
     end
     
-    %% erase empty column;
+    % erase empty column;
     idx(:, sum(abs(idx), 1) == 0) = [];
     
     for i = 1 : size(prevIndices, 2)

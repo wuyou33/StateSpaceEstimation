@@ -1,16 +1,19 @@
 function [ points ] = intersectLineHyperSphere( line, sphere, n )
-    % intersectUnitVectorHyperSphere Return intersection points between a line in hyper space and a hyper sphere.
+    % intersectLineHyperSphere. Return intersection points between a line in hyper space and a hyper sphere.
     %   For additional details please see https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
     %
     %   [ points ] = intersectLineHyperSphere( line, sphere, n )
+    %   
     %   INPUT
-    %       line    - array of line coordinates and in hyper space, for instance [x0 y0 z0 ... n0 dx dy dz ... dn];
-    %       sphere  - array of center points and radius of hyper sphere, for instance [x_center y_center z_center ... n_center  R];
-    %       n       - dimension of hyper space.
+    %       line    array of line coordinates and in hyper space, for instance [x0 y0 z0 ... n0 dx dy dz ... dn];
+    %       sphere  array of center points and radius of hyper sphere, for instance [x_center y_center z_center ... n_center  R];
+    %       n       dimension of hyper space.
     %       
     %   OUTPUT
-    %       points - intersection points between a unit hyper sphere and its axis.
-    %%
+    %       points  intersection points between a unit hyper sphere and its axis.
+    %
+    narginchk(3, 3);
+    
     tolerance = 1e-14;
     
     diffCenters = bsxfun(@minus, line(:, 1:n), sphere(:, 1:end-1));

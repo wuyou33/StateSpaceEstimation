@@ -1,4 +1,6 @@
 classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
+    % TrajectoryPhaseSpaceSatelliteSimulator. Simulate motion of spacecraft in spacecraft phase space.
+    
     properties (Access = private)
         initialState;
         accelerationInBodyFrame;

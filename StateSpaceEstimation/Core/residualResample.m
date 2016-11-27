@@ -1,27 +1,26 @@
 function [ outIndex ] = residualResample( inIndex, weights )
-    % RESIDUALRESAMPLE  Residual resampling for SIR.
+    % residualResample. Residual resampling for SIR (sequential importance sampling).
     %
     %   http://stackoverflow.com/questions/14091662/bootstrapping-hierarchical-multilevel-data-resampling-clusters/14131934#14131934
     %   http://robotics.stackexchange.com/questions/479/particle-filters-how-to-do-resampling
-    %   
+    %
     %   [ outIndex ] = residualResample( inIndex, weights )
     %
     %   Performs the resampling stage of the SIR algorithm in order (number of samples) steps.
-    %   outIndex = residualResample(inIndex, weights)
     %
     %   INPUT
-    %       inIndex - (r-vector) Input particle indices;
-    %       weights - (r-vector) Normalised importance weights.
+    %       inIndex     (r-vector) input particle indices;
+    %       weights 	(r-vector) normalised importance weights.
+    %
     %   OUTPUT
     %       outIndex  - resampled indices.
-    %%
+    %
+    narginchk(2, 2);
     
-    if nargin ~= 2; error(' [ residualResample ] Not enough input arguments.'); end
-    %%
     partilcesNum = length(weights);
     outIndex = zeros(1, partilcesNum);
     
-    %% residual resampling
+    % residual resampling
     weightsRes = partilcesNum * weights;
     nKind = fix(weightsRes);
     
@@ -44,7 +43,7 @@ function [ outIndex ] = residualResample( inIndex, weights )
         end
     end
     
-    %% copy resampled trajectories
+    % copy resampled trajectories
     index = 1;
     
     for i = 1 : partilcesNum

@@ -4,7 +4,7 @@ classdef XRaySource < handle
     properties (Access = public)
         name;
         period;             % sec
-        intensity;          % ph·sec–1·cm-2
+        intensity;          % ph / sec * cm-2
         raError;            % acrsec
         decError;           % acrsec
         gSource;
@@ -49,4 +49,5 @@ classdef XRaySource < handle
             val = this.twoPiOnPeriod;
         end
     end
+    
 end

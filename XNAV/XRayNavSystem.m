@@ -54,7 +54,7 @@ classdef XRayNavSystem < handle
             particleSet = this.initParticleSet(estimatorType, state, cov, decompCov);
             
             for i = 1:num
-                startBlock = (i-1)*blockSize + 1*(i == 1);
+                startBlock = (i-1)*blockSize + 1;
                 endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
                 
                 tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
@@ -64,7 +64,7 @@ classdef XRayNavSystem < handle
                 
                 for j = startSample:len
                     sample = j + startBlock - 1;
-                                         
+                    
                     if reportProgress && mod((sample / (simNum - 1))*100, 10) == 0
                         disp(['Completed: ', num2str((sample / (simNum - 1)) * 100),' %' ]);
                     end
@@ -120,7 +120,7 @@ classdef XRayNavSystem < handle
             narginchk(5, 5);
             
             if strcmp(estimatorType{1}, 'pf')
-                numParticles = 2e3;
+                numParticles = 1e4;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 particleSet.weights             = ones(1, numParticles) / numParticles;
@@ -137,7 +137,7 @@ classdef XRayNavSystem < handle
                 % fit a N component GMM to initial state distribution
                 particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 25, [eps 1e5], 'sqrt', 1e-20);
             elseif strcmp(estimatorType{1}, 'sppf')
-                numParticles = 2e2;
+                numParticles = 1e3;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 particleSet.weights             = ones(1, numParticles) / numParticles;
@@ -192,9 +192,9 @@ classdef XRayNavSystem < handle
                 case 'cqkf'
                     this.inferenceModel.cqkfParams = 9; % order of laguerre polynomial
                 case 'ghqf'
-                    this.inferenceModel.ghkfParams = 1; % order of gauss-hermite polynomial
+                    this.inferenceModel.ghkfParams = 3; % order of gauss-hermite polynomial
                 case 'sghqf'
-                    this.inferenceModel.sghkfParams = [3 3]; % order of gauss-hermite polynomial & manner
+                    this.inferenceModel.sghkfParams = [5 3]; % order of gauss-hermite polynomial & manner
                 otherwise
                     % do nothing by default
             end
@@ -268,4 +268,5 @@ classdef XRayNavSystem < handle
             res = this.timeData.SampleTime;
         end
     end
+    
 end

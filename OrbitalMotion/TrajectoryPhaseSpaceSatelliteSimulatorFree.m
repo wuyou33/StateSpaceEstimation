@@ -1,4 +1,6 @@
 classdef TrajectoryPhaseSpaceSatelliteSimulatorFree
+    % TrajectoryPhaseSpaceSatelliteSimulatorFree. Simulate motion of spacecraft in simple spacecraft phase space (without attitude estimation).
+    
     properties (Access = private)
         timeData;
         dimension = 6;

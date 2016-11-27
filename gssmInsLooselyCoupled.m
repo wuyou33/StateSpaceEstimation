@@ -1,5 +1,4 @@
-% Generalized state space model for loosely coupled inertial navigation
-% system & satellite navigation system
+% Generalized state space model for loosely coupled inertial navigation system & satellite navigation system.
 
 %%
 
@@ -35,6 +34,8 @@ function model = init(initArgs)
     model.innovationModelFunc        = @innovation;                    % Function-handle to the innovation model function that calculates the difference between the output
     % of the observation function (hfun) and the actual 'real-world' measurement/observation of that signal,
     % is a requirement for particle filter
+    
+    model.linearize                  = @linearize;                     % Function-handle to the linearization function that calculates Jacobians e.t.c.
     
     model.stateDimension             = 22;
     model.observationDimension       = 6;
@@ -110,14 +111,14 @@ function newState = ffun(model, state, noise, stateControl)
     newState = zeros(rn, cn);
     for i = 1:cn
         %     [~, tmp] = ode45(odeFun, tSpan, state, odeset('MaxStep', model.sampleTime));
-        %     newState = tmp(end, :)';    
+        %     newState = tmp(end, :)';
         [~, tmp]       = odeEuler(odeFun, tSpan, state(:, i), model.sampleTime);
         newState(:, i) = tmp(:, end);
     end
     
     if ~isempty(noise)
         newState  = newState + cvecrep([ones(10, 1); sqrt(model.sampleTime)*ones(6, 1); ones(6, 1)], cn).*noise;
-%         newState(11:16) = newState(11:16) + sqrt(model.sampleTime)*([model.accelerationBiasSigma; model.gyroBiasSigma].*randn(6, 1));
+        %         newState  = newState + noise;
     end
     
     newState(7:10, :) = quaternionNormalize(newState(7:10, :));
@@ -142,14 +143,14 @@ function observ = hfun(~, state, noise, observationControl) % first argument is 
 end
 
 function pr = prior(model, predictedState, state, stateControl, processNoiseDataSet)
-    % Calculates P(nextstate|state).    
-    x = predictedState - ffun(model, state, [], stateControl);        
+    % Calculates P(nextstate|state).
+    x = predictedState - ffun(model, state, [], stateControl);
     pr = processNoiseDataSet.likelihood(processNoiseDataSet, x);
 end
 
 function llh = likelihood(model, observation, state, observationControl, observationNoiseDataSet)
     %   Observation likelihood function
-    z = observation - hfun(model, state, [], observationControl);    
+    z = observation - hfun(model, state, [], observationControl);
     llh = observationNoiseDataSet.likelihood(observationNoiseDataSet, z);
 end
 
@@ -157,4 +158,43 @@ function innov = innovation(~, observation, predictedObservation) % first argume
     %   Calculates the innovation signal (difference) between the
     %   output of HFUN, i.e. OBSERV (the predicted system observation) and an actual 'real world' observation.
     innov = observation - predictedObservation;
+end
+
+function out = linearize(model, state, ~, ~, ~, ~, term, ~)
+    % (model, state, stateNoise, observNoise, control1, control2, term, index_vector)
+    narginchk(7, 8);
+    
+    switch (term)
+        case 'F'
+            % A = df / dstate
+            a = model.acceleration;
+            w = model.angularVelocity;
+            q = model.quaternion;
+            tSpan = [model.time - model.sampleTime; model.time];
+            func = @(y) SinsDynamicEquation(tSpan, y, a, w, q);
+            [ out, ~ ] = jacobianest(func, state);
+        case 'B'
+            % B = df / du1, where u1 - control1
+            out = zeros(model.stateDimension);
+        case 'C'
+            % C = dh / dx
+            out = [eye(model.observationDimension) zeros(model.observationDimension, model.stateDimension - model.observationDimension)];
+        case 'D'
+            % D = dh / du2, where u2 - control2
+            out = zeros(model.observationDimension);
+        case 'G'
+            % G = df / dv
+            out = eye(model.stateDimension);
+        case 'H'
+            % H = dh / dn
+            out = eye(model.observationDimension);
+        case 'JFW'
+            % dffun / dparameters
+            out = [];
+        case 'JHW'
+            % dhfun/dparameters
+            out = [];
+        otherwise
+            error('[ linearize::term ] Invalid model term requested!');
+    end
 end

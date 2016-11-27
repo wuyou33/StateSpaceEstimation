@@ -1,7 +1,6 @@
 % Generalized state space model for Doppler navigation system (navigation with using radial velocity relative to the Sun)
 
 %%
-
 function [varargout] = gssmDoppler(func, varargin)
     
     switch func
@@ -28,8 +27,8 @@ function model = init(initArgs)
     model.observationLikelihoodFun   = @likelihood;  % function handle to the observation likelihood function that calculates p(y(k)|x(k)), for particle filter
     
     model.innovationModelFunc        = @innovation;  % Function-handle to the innovation model function that calculates the difference between the output
-                                                     % of the observation function (hfun) and the actual 'real-world' measurement/observation of that signal,
-                                                     % for particle filter
+    % of the observation function (hfun) and the actual 'real-world' measurement/observation of that signal,
+    % for particle filter
     
     model.stateDimension             = 6;
     model.observationDimension       = 1;

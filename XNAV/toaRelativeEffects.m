@@ -1,18 +1,22 @@
 function [ tRel ] = toaRelativeEffects( xRaySources, earthEphemeris, sunEphemeris, spaceshipTrajectory)
-    % toaRelativeEffects: allow to consider of relative effect for time of
-    % arrival for specific x-ray source (
-    % 1. are referred to as Roemer delay (the first-order Doppler delay, the effects of annual parallax),
-    % 2. are referred to as the Shapiro delay% effect.)
+    % toaRelativeEffects. Calculate relativistic effects to signal from X-Ray sources.
     %
-    % INPUT:
-    %       xRaySources         - array of x-ray sources (every item should be instance of the XRaySource);
-    %       earthEphemeris      - earth ephemeris (x, y, z - vectors in [km], vx, vy, vz - vectors in [km/sec]);
-    %       sunEphemeris        - sun ephemeris (x, y, z - vectors in [km], vx, vy, vz - vectors in [km/sec]);
-    %       spaceshipTrajectory - state space vector of spaceship (array of 1-st, 2-nd, 3-d - trajectory coordinate vectors in [km]);
-    % OUTPUT:
-    %       tRel                - array of relative effect for each x-ray source;
+    %   Allow to consider of relative effect for time of arrival for specific x-ray source. Take into account following effects:
+    %       1. are referred to as Roemer delay (the first-order Doppler delay, the effects of annual parallax);
+    %       2. are referred to as the Shapiro delay% effect.
     %
-    if (nargin ~= 4); error('[ toaRelativeEffects ] incorrect number of input arg. Should be 3'); end
+    %   [ tRel ] = toaRelativeEffects( xRaySources, earthEphemeris, sunEphemeris, spaceshipTrajectory)
+    %
+    %   INPUT
+    %       xRaySources           array of x-ray sources (every item should be instance of the XRaySource);
+    %       earthEphemeris        earth ephemeris (x, y, z - vectors in [km], vx, vy, vz - vectors in [km/sec]);
+    %       sunEphemeris          sun ephemeris (x, y, z - vectors in [km], vx, vy, vz - vectors in [km/sec]);
+    %       spaceshipTrajectory   state space vector of spaceship (array of 1-st, 2-nd, 3-d - trajectory coordinate vectors in [km]).
+    %
+    %   OUTPUT
+    %       tRel    array of relative effect for each x-ray source.
+    %
+    narginchk(4, 4);
     
     capacity  = size(spaceshipTrajectory, 2);
     dimension = length(xRaySources);

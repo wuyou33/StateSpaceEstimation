@@ -54,7 +54,7 @@ accScaleFactorInitError     = 1e-5*ones(3, 1);      % [-]
 gyroScaleFactorInitError    = 1e-5*ones(3, 1);      % [-]
 gyroBiasSigmaInitError      = 1e-2*gyroBiasSigma;   % [rad / sec]
 accBiasSigmaInitError       = 1e-2*accBiasSigma;    % [km / sec^2]
-
+reconciliationTime          = 500;                  % [sec]
 accelerationInBodyFrame     = AccelerationInBodyFrame(timeDataSubSystem, initialAcceleration, accelerationSigma);
 angularVelocityInBodyFrame  = AngularVelocityInBodyFrame(timeDataSubSystem, initialAngularVelocity, angularVelocitySigma);
 
@@ -214,7 +214,7 @@ for j = 1:iterationNumber
     
     xRayNavSystem = XRayNavSystem(earthEphemeris, sunEphemeris, xRaySources, timeDataSubSystem, initArgsXRay, XRayDetector(xRayDetectorArgs));
     ins = initInertialNavigationSystem('init', insInitArgs);
-    integratedNS = IntegratedInsXRayNS(ins, xRayNavSystem, timeData, insSnsInitArgs, timeDataSubSystem, initialXRayState, initialXRayCov, xRayEstimatorType);
+    integratedNS = IntegratedInsXRayNS(ins, xRayNavSystem, timeData, insSnsInitArgs, timeDataSubSystem, initialXRayState, initialXRayCov, xRayEstimatorType, reconciliationTime);
     
     tic;
     estimatedState = integratedNS.evaluate(initState, initCov, insInitialState, estimatorType, 0, 1);

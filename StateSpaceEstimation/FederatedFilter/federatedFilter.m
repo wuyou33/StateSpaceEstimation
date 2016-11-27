@@ -1,17 +1,19 @@
 function [ globalState, globalCov, state1New, cov1New, state2New, cov2New ] = federatedFilter( state1, cov1, state2, cov2 )
-    %FEDERATEDFILTER Federated filter.
+    % federatedFilter. Federated filter.
     %   Utilised for fusing the data from two separate filters using folliwng expression
+    %
+    %   [ globalState, globalCov, state1New, cov1New, state2New, cov2New ] = federatedFilter( state1, cov1, state2, cov2 )
     %
     %   Xg = [(P_1)^-1 + (P_2)^-1]^-1 * ( (P_1)^-1*X_1 + (P_2)^-1*X_2 );
     %   Pg = [(P_1)^-1 + (P_2)^-1]^-1;
     %
     %   where
-    %       Xg - global state;
-    %       Pg - global covariance;
-    %       X_1 - state estimation from 1-st local filter;
-    %       P_1 - covariance estimation from 1-st local filter;
-    %       X_2 - state estimation from 2-nd local filter;
-    %       P_2 - covariance estimation from 2-nd local filter.
+    %       Xg   global state;
+    %       Pg   global covariance;
+    %       X_1  state estimation from 1-st local filter;
+    %       P_1  covariance estimation from 1-st local filter;
+    %       X_2  state estimation from 2-nd local filter;
+    %       P_2  covariance estimation from 2-nd local filter.
     %
     %   The global estimation is fed back to two local filters by the following equations:
     %   Xi = Xg;

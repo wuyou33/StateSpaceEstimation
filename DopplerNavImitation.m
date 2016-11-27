@@ -10,8 +10,8 @@ timeEnd   = '00:00:50.000';
 sunMoonInfluenceRefreshTime = 1; % sec
 sampleTime         = 5e-3; % sec
 timeDataDoppler    = TimeExt(timeStart, timeEnd, sampleTime, date, sunMoonInfluenceRefreshTime);
-iterationNumber    = 40;
-secondInOneMinute  = 60;
+iterationNumber    = 120;
+secondInOneMinute  = 120;
 logData = 1;
 initialOrbit = loadInitialOrbit();
 initialDopplerNavState  = initialOrbit(1:6);
@@ -21,10 +21,10 @@ initialAngularVelocity  = zeros(3, 1);          % [rad/sec]
 initialQuaternion       = initialOrbit(7:10);   % [-]
 accelerationSigma       = 2e-5*ones(3, 1);      % [km/sec^2]
 angularVelocitySigma    = 1e-4*ones(3, 1);      % [rad/sec]
-dmuVariance             = (1e-5)^2; % [ (km / sec)^2 ] data from IET Radar Sonar Navig., 2011, Vol. 5, Iss. 9, pp. 1010-1017
+dmuVariance             = (1*1e-5)^2; % [ (km / sec)^2 ] data from IET Radar Sonar Navig., 2011, Vol. 5, Iss. 9, pp. 1010-1017
 
-filterTypes = {'ukf', 'cdkf', 'ckf', 'sckf', 'srcdkf', 'fdckf', 'cqkf', 'sghqf', 'pf'};
-% filterTypes = {'ukf', 'cdkf'};
+% filterTypes = {'ukf', 'cdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'sghqf', 'pf'};
+filterTypes = {'ckf'};
 
 earthEphemeris = loadEphemeris('earth', timeDataDoppler.SimulationNumber, secondInOneMinute/timeDataDoppler.SampleTime);
 sunEphemeris   = loadEphemeris('sun', timeDataDoppler.SimulationNumber, secondInOneMinute/timeDataDoppler.SampleTime);
@@ -56,19 +56,21 @@ initArgsDoppler.stateNoiseMean = [zeros(3, 1); zeros(3, 1)];
 initArgsDoppler.stateNoiseCovariance = [(2e0*eye(3)).^2 zeros(3); zeros(3) (2e-5*eye(3)).^2];
 
 errors = zeros(length(filterTypes), 2, timeDataDoppler.SimulationNumber);
-
+initialConditionStabilityKoeff = 1;
 for l = 1:length(filterTypes)
     estimatorType = filterTypes(l);
+    fprintf('estimator: %s\n', estimatorType{1});
     iterations = zeros(iterationNumber, 2, timeDataDoppler.SimulationNumber);
-    
+    estimationMatrix = zeros(iterationNumber, 6, timeDataDoppler.SimulationNumber);
     state = spaceshipTrueState.State;
+    
     parfor j = 1:iterationNumber
-        % for j = 1:iterationNumber
+%     for j = 1:iterationNumber
         initialDopplerCov = [(0.5)^2*eye(3), zeros(3, 3); zeros(3, 3), (1.5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
-        initialDopplerState = initialDopplerNavState + svdDecomposition(initialDopplerCov)*randn(6, 1);
+        initialDopplerState = initialDopplerNavState + initialConditionStabilityKoeff*svdDecomposition(initialDopplerCov)*randn(6, 1);
         
         trueState = state;
-        k = 1e2;
+        k = 1e0; %1e2;
         
         dmu = DopplerMeasurementUnit(earthEphemeris, sunEphemeris, trueState, timeDataDoppler, dmuVariance);
         dopplerNavSystem = DopplerNavSystem(dmu, timeDataDoppler, initArgsDoppler, earthEphemeris, sunEphemeris);
@@ -77,7 +79,8 @@ for l = 1:length(filterTypes)
         errTraj = vectNormError(trueState(1:3, :), stateEstimation(1:3, :), 1);
         errVel  = vectNormError(trueState(4:6, :), stateEstimation(4:6, :), 1);
         iterations(j, :, :) = [errTraj; errVel];
-        
+        estimationMatrix(j, :, :) = [(trueState(1:3, :) - stateEstimation(1:3, :)); (trueState(1:3, :) - stateEstimation(1:3, :))];
+                
         if iterationNumber == 1
             figure();
             subplot(2, 1, 1);
@@ -91,6 +94,38 @@ for l = 1:length(filterTypes)
         fprintf('iteration of %d: completed\n', j );
     end
     
+    % drow trajectory coord errors for each simulation
+    figure();
+    for i = 1:iterationNumber
+        subplot(3, 1, 1);
+        e1 = squeeze(estimationMatrix(i, 1, :));
+        plot2(timeDataDoppler.Time, e1, 'trajectory error', {'r_x'}, 'trajectory error, km');
+        
+        subplot(3, 1, 2);
+        e1 = squeeze(estimationMatrix(i, 2, :));
+        plot2(timeDataDoppler.Time, e1, 'trajectory error', {'r_y'}, 'trajectory error, km');
+        
+        subplot(3, 1, 3);
+        e1 = squeeze(estimationMatrix(i, 3, :));
+        plot2(timeDataDoppler.Time, e1, 'trajectory error', {'r_z'}, 'trajectory error, km');
+    end
+    
+    % drow velocity coord errors for each simulation
+    figure();
+    for i = 1:iterationNumber
+        subplot(3, 1, 1);
+        e1 = squeeze(estimationMatrix(i, 4, :));
+        plot2(timeDataDoppler.Time, e1, 'velocity error', {'v_x'}, 'velocity error, km/sec');
+        
+        subplot(3, 1, 2);
+        e1 = squeeze(estimationMatrix(i, 5, :));
+        plot2(timeDataDoppler.Time, e1, 'velocity error', {'v_y'}, 'velocity error, km/sec');
+        
+        subplot(3, 1, 3);
+        e1 = squeeze(estimationMatrix(i, 6, :));
+        plot2(timeDataDoppler.Time, e1, 'velocity error', {'v_z'}, 'velocity error, km/sec');
+    end
+    
     if iterationNumber > 1
         for i = 1:timeDataDoppler.SimulationNumber
             errors(l, :, i) = ( sum( ( squeeze(iterations(:, :, i))' ).^2, 2) / iterationNumber ).^0.5;
@@ -99,12 +134,19 @@ for l = 1:length(filterTypes)
 end
 
 if iterationNumber > 1
-    fileName = strcat('errors_dns.mat');
-    save(fileName, 'errors');
+    %     fileName = strcat('errors_dns.mat');
+    %     save(fileName, 'errors');
     
     figure();
     subplot(2, 1, 1);
     plot2(timeDataDoppler.Time, squeeze(errors(:, 1, :)), 'trajectory errors', filterTypes, 'trajectory error, km');
     subplot(2, 1, 2);
     plot2(timeDataDoppler.Time, squeeze(errors(:, 2, :)), 'velocity errors', filterTypes, 'velocity error, km / sec');
+    
+    for i = 1:length(filterTypes)
+        estimatorType = filterTypes(i);
+        fprintf('estimator: %s\n', estimatorType{1});
+        fprintf('trajectory RMS: %d\n', squeeze(errors(i, 1, end)));
+        fprintf('velocity RMS: %d\n', squeeze(errors(i, 2, end)));
+    end
 end

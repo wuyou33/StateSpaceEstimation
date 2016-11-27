@@ -1,27 +1,28 @@
-function likelihood = likelihoodGaussian(gausDataSet, x, logFlag)
-    % likelihoodGaussian
-    %   likelihood = likelihoodGaussian(gausDataSet, x, logFlag)
-    %   INPUT:
-    %       gausDataSet - model of gaussian noise;
-    %       x           - values of state vector;
-    %       logFlag     - determine that log likelihood is used instead of normal likelihood.
-    %   OUPUT:
-    %       likelihood  - calculated likelihood.
-    %   Calculates the likelihood of a 'real world' observation 'OBS' for a given
-    %   realization or instance of the state variable STATE
-    %   which has Gaussian noise. i.e. Calculates the value of P(OBS|STATE).
+function likelihood = likelihoodGaussian(gaussDataSet, noise, logFlag)
+    % likelihoodGaussian. Calculates the likelihood of sample 'noise', given the Gaussian noise model gaussDataSet.
     %
-    %%
-        
-    if nargin ~=2 && nargin ~= 3
-        error(' [ likelihoodGaussian ] Not enough inputs.');
-    elseif nargin == 2
+    %   Calculates the likelihood of a 'real world' observation for a given realization or instance of the state variable which has Gaussian noise.
+    %   i.e. Calculates the value of P(observation|state).
+    %
+    %   likelihood = likelihoodGaussian(gaussDataSet, noise, logFlag)
+    %
+    %   INPUT
+    %       gaussDataSet     model of gaussian stochastic process;
+    %       noise            values stochastic process;
+    %       logFlag     	 <<optional>> determine that log likelihood is used instead of normal likelihood.
+    %
+    %   OUPUT
+    %       likelihood    calculated likelihood.
+    %
+    narginchk(2, 3);
+    
+    if nargin == 2
         logFlag = 0;
     end
-        
-    normFact = (2*pi)^(gausDataSet.dimension / 2);
-    sqrtCov = chol(gausDataSet.covariance, 'lower');
-    xc = sqrtCov \ (x - cvecrep(gausDataSet.mean, size(x, 2)));
+    
+    normFact = (2*pi)^(gaussDataSet.dimension / 2);
+    sqrtCov = chol(gaussDataSet.covariance, 'lower');
+    xc = sqrtCov \ (noise - cvecrep(gaussDataSet.mean, size(noise, 2)));
     
     if logFlag
         likelihood = -0.5*sum(xc.*xc, 1) - log(normFact*abs(prod(diag(sqrtCov))));

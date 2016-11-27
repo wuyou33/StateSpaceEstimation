@@ -1,27 +1,29 @@
-function noise = sampleGaussian(gausDataSet, n)
-    % sampleGaussian Draw N samples from the Gaussian distribution (pdf) described by the
-    %   Gaussian data structure 'gausDataSet'.
-    %   noise = sampleGaussian(gausDataSet, n)
+function [ noise ] = sampleGaussian( gaussDataSet, count )
+    % sampleGaussian. Draw N (count samples from the Gaussian distribution (pdf) described by the Gaussian data structure 'gaussDataSet'.
+    %
+    %   [ noise ] = sampleGaussian( gaussDataSet, count )
     %
     %   INPUT
-    %          gausDataSet       Gaussian data structure with the following fields
-    %             .covarianceType   (string)   covariance matrix type 'full' , 'diag' , 'sqrt' , 'sqrt-diag'
-    %             .dimension        (scalar)   dimension.
-    %             .mean             (c-vector) mean vector  (dim-by-1)
-    %             .covariance       (matrix)   covariance matrix of type covarianceType  (dimension-by-dimension)
-    %          n                    (scalar)   number of samples to generate
-    %   OUTPUT
-    %       noise (matrix)   buffer of generated samples (dim-by-N)
+    %          gaussDataSet          Gaussian data structure with the following fields
+    %             .covarianceType        covariance matrix type 'full' , 'diag' , 'sqrt' , 'sqrt-diag', 'svd';
+    %             .dimension             stochastic process dimension;
+    %             .mean                  mean vector (dimension-by-1);
+    %             .covariance            covariance matrix with type covarianceType  (dimension-by-dimension);
+    %          count                 number of samples to generate.
     %
-    %%
-    switch gausDataSet.covarianceType
-        case {'full','diag'}
-            sqrtCov = chol(gausDataSet.covariance, 'lower');
-        case {'sqrt','sqrt-diag'}
-            sqrtCov = gausDataSet.covariance;
+    %   OUTPUT
+    %       noise   buffer of generated samples (dimension-by-count).
+    %
+    narginchk(2, 2);
+    
+    switch gaussDataSet.covarianceType
+        case {'full', 'diag'}
+            sqrtCov = chol(gaussDataSet.covariance, 'lower');
+        case {'sqrt', 'sqrt-diag', 'svd'}
+            sqrtCov = gaussDataSet.covariance;
         otherwise
-            error('[ sampleGaussian ] Unknown covariance type ');
+            error('[ sampleGaussian::gaussDataSet ] Unknown covariance type ');
     end
     
-    noise = sqrtCov * randn(gausDataSet.dimension, n) + gausDataSet.mean(:, ones(n, 1));
+    noise = sqrtCov * randn(gaussDataSet.dimension, count) + gaussDataSet.mean(:, ones(count, 1));
 end

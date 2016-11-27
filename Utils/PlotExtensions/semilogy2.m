@@ -1,22 +1,24 @@
 function semilogy2( x, y, titleText, legendText, yLabelText, xLabelText )
-%SEMILOGY2 plots vector Y versus vector X. If X or Y is a matrix,
-%   then the vector is plotted versus the rows or columns of the matrix,
-%   whichever line up.  If X is a scalar and Y is a vector, disconnected
-%   line objects are created and plotted as discrete points vertically at
-%   X.
-% logarithmic (10) scale is used for the Y-axis
-% INPUT:
-%       x           - vector
-%       y           - vector
-%       titleText   - title
-%       legendText  - legend,
-%       yLabelText  - y axis label
-%       xLabelText  - x axis label
+    % semilogy2. Plots figure with log scale for Y-axis.
+    %
+    %   Plots vector Y versus vector X. If X or Y is a matrix, then the vector is plotted versus the rows or columns of the matrix, whichever line up.
+    %   If X is a scalar and Y is a vector, disconnected line objects are created and plotted as discrete points vertically at X.
+    %   Logarithmic (10) scale is used for the Y-axis.
+    %
+    %   INPUT
+    %       x             vector;
+    %       y             vector;
+    %       titleText     title;
+    %       legendText    legend;
+    %       yLabelText    y axis label;
+    %       xLabelText    x axis label.
+    %
+    narginchk(5, 6);
     
     if nargin < 6
         xLabelText = 'time, sec';
     end
-
+    
     semilogy(x, abs(y));
     grid on;
     hold on;

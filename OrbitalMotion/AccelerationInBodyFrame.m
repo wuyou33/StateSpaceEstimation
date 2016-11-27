@@ -1,7 +1,6 @@
 classdef AccelerationInBodyFrame < handle
-    % Provide acceleration cuased by external forces.
-    % [km / sec^2]
-    %
+    % Provide acceleration cuased by external forces ([km / sec^2]).
+    
     properties (Access = private)
         acceleration; % [km / sec^2]
         model;

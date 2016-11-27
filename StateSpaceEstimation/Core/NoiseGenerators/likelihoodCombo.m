@@ -1,28 +1,39 @@
-function [ llh ] = likelihoodCombo( noiseDataSet, noise, idxVec )
-% Calculates the likelihood of sample 'noise', given the noise model NoiseDS.
-% 'idxVec' is an optional index vector that can be used to indicate which of the N sub-noise sources should be used.
-% to calculate the likelihood... this also requires 'noise' to have the same dimension of the relevant sub-noise source.
-
-    if (nargin == 2)
-        idxVec = 1:noiseDataSet.N;
+function [ llh ] = likelihoodCombo(noiseDataSet, noise, idxVec)
+    % likelihoodCombo. Calculates the likelihood of stochastic process (noise).
+    %
+    % [ llh ] = likelihoodCombo(noiseDataSet, noise, idxVec)
+    %
+    % Calculates the likelihood of sample 'noise', given the noise model noiseDataSet.
+    % 'idxVec' is an optional index vector that can be used to indicate which of the N sub-noise sources should be used to calculate the likelihood.
+    % This also requires 'noise' to have the same dimension of the relevant sub-noise source.
+    %
+    %   INPUT
+    %       noiseDataSet    model, which describe stochastic process;
+    %       noise           realization (vector of sample) of stochastic process;
+    %       idxVec          <<optional>> index vector that can be used to indicate which of the N sub-noise sources should be used to calculate the likelihood.
+    %
+    %   OUPUT
+    %       llh    likelihood vector.
+    %
+    narginchk(2, 3);
+    
+    if nargin == 2
+        idxVec = 1 : noiseDataSet.N;
     end
-
-    numNS = length(idxVec);
-
-    [~, nov] = size(noise);
+    
+    noiseSetCount = length(idxVec);
     idxArr = noiseDataSet.idxArr;
     
-    llh = ones(1, nov);
+    llh = ones(1, size(noise, 2));
     
-    for j=1:numNS,
-
-        idx1 = idxArr(idxVec(j),1);
-        idx2 = idxArr(idxVec(j),2);
+    for j = 1:noiseSetCount
+        idx1 = idxArr(idxVec(j), 1);
+        idx2 = idxArr(idxVec(j), 2);
         
         subNoiseDS = noiseDataSet.noiseSources{idxVec(j)};
-        llh = llh .* subNoiseDS.likelihood( subNoiseDS, noise(idx1:idx2, :));
-
+        llh = llh .* subNoiseDS.likelihood(subNoiseDS, noise(idx1:idx2, :));
     end
-
-    llh = llh + 1e-99; % needed to avoid 0 likelihood (cause ill conditioning)
+    
+    % needed to avoid 0 likelihood (cause conditioning)
+    llh = llh + 1e-99;
 end

@@ -1,4 +1,5 @@
 classdef AccelerometerParam < handle
+    % AccelerometerParam. Describe accelerometer parameters.
     
     properties( Access = private)
         timeData;
@@ -63,4 +64,5 @@ classdef AccelerometerParam < handle
             val = this.noiseVar;
         end
     end
+    
 end

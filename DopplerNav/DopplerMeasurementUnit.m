@@ -1,9 +1,11 @@
 classdef DopplerMeasurementUnit < handle
-    %DOPPLERMEASUREMENTUNIT Doppler  measurement unit.
+    % DopplerMeasurementUnit. Doppler  measurement unit.
     %   The Doppler navigation utilises the Doppler shift to calculate the relative velocity between a fixed position and a spacecraft.
     %   This method usually adopts one of two Doppler shifts as the measurement:
-    %   1) the Doppler shift caused by the relative motion from a spacecraft to a ground station  and
-    %   2) the Doppler shift caused by the relative motion between a spacecraft and the Sun
+    %       1) the Doppler shift caused by the relative motion from a spacecraft to a ground station
+    %   and
+    %       2) the Doppler shift caused by the relative motion between a spacecraft and the Sun.
+    %
     %   Implemented according to "IET Radar Sonar Navig., 2011, Vol. 5, Iss. 9, pp. 1010-1017"
     
     properties (Access = private)

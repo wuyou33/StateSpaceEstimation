@@ -1,5 +1,5 @@
 classdef DopplerNavSystem < handle
-    % DOPPLERNAV Describe Doppler navigation system (navigation using measurement of Doppler shift of radial velocity relative to the Sun)
+    % DopplerNavSystem. Describe Doppler navigation system (navigation using measurement of Doppler shift of radial velocity relative to the Sun).
     
     properties (Access = private)
         dmu; % Doppler Measurement Unit
@@ -18,7 +18,7 @@ classdef DopplerNavSystem < handle
             narginchk(5, 5);
             
             if ~isa(dmu, 'DopplerMeasurementUnit')
-                error('[ DopplerNavSystem: dmu] dmu must be instance of the DopplerMeasurementUnit')
+                error('[ DopplerNavSystem::dmu] dmu must be instance of the DopplerMeasurementUnit')
             end
             
             obj.dmu = dmu;
@@ -44,7 +44,7 @@ classdef DopplerNavSystem < handle
             blockSize = ceil(this.timeData.SimulationNumber / num);
             startSample = 2;
             
-            decompCov = this.updateFilterParams(cov, estimatorType);            
+            decompCov = this.updateFilterParams(cov, estimatorType);
             particleSet = this.initParticleSet(estimatorType, state, cov, decompCov);
             
             for i = 1:num

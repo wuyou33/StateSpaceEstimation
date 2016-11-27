@@ -1,5 +1,5 @@
 classdef BaseIntegratedIns < handle
-    % BASEINTEGRATEDINS Provide base methods which allow integrate INS with any other navigation system using tougthly coupled alghorithm
+    % BaseIntegratedIns. Provide base methods which allow integrate INS with any other navigation system using tougthly coupled alghorithm
     
     properties (Access = protected)
         ins;
@@ -8,7 +8,8 @@ classdef BaseIntegratedIns < handle
         observNoise;
         inferenceModel;
         initArgs;
-        dimension = 10;
+        dimension = 10; % dimension of state space in INS navigation issue
+        reconciliationTime = NaN; % re-initialization time for filter [ seconds ]
     end
     
     methods (Access = public)
@@ -25,7 +26,6 @@ classdef BaseIntegratedIns < handle
             cov    = initialCov;
             simNum = this.timeData.SimulationNumber;
             
-            tMoonSun = this.timeData.StartSecond;
             stateMatrix = SatellitePhaseSpace(zeros(this.dimension, 1), this.ins.SimulationNumber);
             insErrorEst = zeros(this.inferenceModel.stateDimension, simNum);
             
@@ -36,6 +36,8 @@ classdef BaseIntegratedIns < handle
             blockSize = ceil(this.timeData.SimulationNumber / num);
             startSample = 2;
             time = this.timeData.Time;
+            
+            reconciliationIndexes = this.findReconciliationIndexes(simNum);
             
             decompCov = this.updateFilterParams(cov, estimatorType);
             particleSet = this.buildParticles(estimatorType, state, cov, decompCov);
@@ -54,8 +56,11 @@ classdef BaseIntegratedIns < handle
                 for j = startSample:len
                     sample = j + startBlock - 1;
                     
-                    if sample > this.ins.SimulationNumber
-                        error('fuck');
+                    if any(reconciliationIndexes == sample)
+                        state(11:end)   = initalState(11:end);
+                        cov             = initialCov;
+                        decompCov       = this.updateFilterParams(cov, estimatorType);
+                        particleSet     = this.buildParticles(estimatorType, state, cov, decompCov);
                     end
                     
                     if reportProgress && mod((sample / (simNum - 1))*100, 10) == 0
@@ -112,7 +117,6 @@ classdef BaseIntegratedIns < handle
                     end
                 end
                 
-                tMoonSun = tMoonSun + this.timeData.RefreshSunMoonInfluenceTime;
                 startSample = 1;
             end
             
@@ -129,6 +133,15 @@ classdef BaseIntegratedIns < handle
     end
     
     methods (Access = private)
+        function reconciliationIndexes = findReconciliationIndexes(this, num)
+            if isnumeric(this.reconciliationTime) && this.reconciliationTime > 0
+                reconciliationSample = floor(this.reconciliationTime / this.timeData.SampleTime);
+                reconciliationIndexes = 1 : reconciliationSample : num;
+            else
+                reconciliationIndexes = [];
+            end
+        end
+        
         function acceleration = getCorrectedAcceleration(this, sample, state)
             a = this.ins.getAcceleration(sample);
             acceleration = (a - state(11:13)) ./ (ones(3, 1) + state(17:19));
@@ -174,6 +187,8 @@ classdef BaseIntegratedIns < handle
                     [state, cov, this.procNoise, this.observNoise, param] = ghqf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
                 case 'sghqf'
                     [state, cov, this.procNoise, this.observNoise, param] = sghqf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
+                case 'ekf'
+                    [state, cov, this.procNoise, this.observNoise, param] = ekf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
                 otherwise
                     error(strcat('not supported filter type: ', estimator{1}));
             end
@@ -245,21 +260,21 @@ classdef BaseIntegratedIns < handle
                 particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
                 particleSet.weights             = ones(1, numParticles) / numParticles;
             elseif strcmp(estimatorType{1}, 'gspf')
-                numParticles = 2e3;
-                particleSet.particlesNum   = numParticles;                
+                numParticles = 1e3;
+                particleSet.particlesNum   = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
-                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));                
+                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));
                 % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 35, [eps 1e5], 'sqrt', 1e-20);
+                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 10, [eps 1e5], 'sqrt', 1e-20);
             elseif strcmp(estimatorType{1}, 'gmsppf')
-                numParticles = 2e3;
-                particleSet.particlesNum   = numParticles;                
+                numParticles = 5e1;
+                particleSet.particlesNum   = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
-                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));                
+                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));
                 % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 25, [eps 1e5], 'sqrt', 1e-20);
+                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 5, [eps 1e5], 'sqrt', 1e-20);
             elseif strcmp(estimatorType{1}, 'sppf')
-                numParticles = 2e2;
+                numParticles = 5e1;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
                 particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));

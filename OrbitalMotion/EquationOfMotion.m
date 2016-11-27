@@ -1,16 +1,18 @@
 function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoch, sampleTime, startTime)
-    % EquationOfMotion - solve for spaceship
+    % EquationOfMotion. Solve motion equation for spaceship.
+    %
     %   INPUT
-    %        time               - time in [sec];
-    %        state              - state space vector of spaceship (distance in [km], velocity in [km/s], quaternion);
-    %        acceleration       - acceleration of spaceship in [km/s^2];
-    %        angularVelocity    - angular velocity of spaceship in [rad/sec];
-    %        tEpoch             - time Epoch;
-    %        sampleTime         - sample time required only if equation used in batch mode (batch mode used in imitator only) [sec];
-    %        startTime          - the start time of the solving of the whole
-    %                               problem as a whole. required only if equation used in batch mode (batch mode used in imitator only) [sec]'
+    %        time                 time in [sec];
+    %        state                state space vector of spaceship (distance in [km], velocity in [km/s], quaternion);
+    %        acceleration         acceleration of spaceship in [km/s^2];
+    %        angularVelocity      angular velocity of spaceship in [rad/sec];
+    %        tEpoch               time Epoch;
+    %        sampleTime           sample time required only if equation used in batch mode (batch mode used in imitator only) [sec];
+    %        startTime            the start time of the solving of the whole
+    %                               problem as a whole. required only if equation used in batch mode (batch mode used in imitator only) [sec]'.
+    %
     %   OUTPUT
-    %        dy - increment (diff) of state space vector of spaceship (distance in [km], velocity in [km/s], quaternion);
+    %        dy   increment (diff) of state space vector of spaceship (distance in [km], velocity in [km/s], quaternion).
     %
     EarthRadius = 6378.136; % [km] - Earth's equatorial radius
     MuE = 398600.4418;      % [km^3/s^2] - Earth gravity const

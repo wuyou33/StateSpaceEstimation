@@ -1,4 +1,5 @@
 classdef InertialNavigationSystem < handle
+    % InertialNavigationSystem. Inertial navigation system. Allow to estimate trajectory of spacecraft in full spacecraft phase space.
     
     properties (Access = private)
         imu;
@@ -114,4 +115,5 @@ classdef InertialNavigationSystem < handle
             state(7:10) = quaternionNormalize(state(7:10));
         end
     end
+    
 end

@@ -1,4 +1,5 @@
 classdef GyroParam < handle
+    % GyroParam. Descrive gyro params.
     
     properties (Access = private)
         gyroGSensitiveBias;
@@ -54,4 +55,5 @@ classdef GyroParam < handle
             val = this.gyroNoiseVar;
         end
     end
+    
 end

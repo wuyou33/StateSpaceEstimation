@@ -1,6 +1,6 @@
 classdef IntegratedInsXRayNS < BaseIntegratedIns
-    % INTEGRATEDINSXRAYNS - integrated inertial navigation system (INS) and X-Ray navigation system (navigation system by signal of X-Ray sources: Pulsar & Quasar)
-    % provides method to solve navigation problem via INS and X-Ray nav system
+    % IntegratedInsXRayNS. integrated inertial navigation system (INS) and X-Ray navigation system (navigation system by signal of X-Ray sources).
+    % Provides method to solve navigation problem via INS and X-Ray nav system.
     
     properties(Access = private)
         xRayNav;
@@ -12,16 +12,17 @@ classdef IntegratedInsXRayNS < BaseIntegratedIns
     end
     
     methods (Access = public)
-        function obj = IntegratedInsXRayNS(ins, xRayNav, timeData, initArgs, xRayTimeData, initialXRayState, intialXRayCov, xRayEstimator)
+        function obj = IntegratedInsXRayNS(ins, xRayNav, timeData, initArgs, xRayTimeData, initialXRayState, intialXRayCov, xRayEstimator, reconciliationTime)
             obj.ins = ins;
-            obj.xRayNav = xRayNav;
-            obj.timeData = timeData;
-            obj.initArgs = initArgs;
-            obj.initialXRayState = initialXRayState;
-            obj.intialXRayCov = intialXRayCov;
-            obj.xRayEstimator = xRayEstimator;
-            obj.xRayTimeData = xRayTimeData;
-            obj.xRayState = [];
+            obj.xRayNav             = xRayNav;
+            obj.timeData            = timeData;
+            obj.initArgs            = initArgs;
+            obj.initialXRayState    = initialXRayState;
+            obj.intialXRayCov       = intialXRayCov;
+            obj.xRayEstimator       = xRayEstimator;
+            obj.xRayTimeData        = xRayTimeData;
+            obj.xRayState           = [];
+            obj.reconciliationTime  = reconciliationTime;
         end
     end
     

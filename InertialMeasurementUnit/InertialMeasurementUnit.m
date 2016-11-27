@@ -1,7 +1,8 @@
 classdef InertialMeasurementUnit < handle
-    % provides a measurement of acceleration (m / s^2) from three body axes accelerometer in body fixed frame
+    % InertialMeasurementUnit. Describe inertial measurement unit (accelerometer and gyro).
+    % Provides a measurement of acceleration (m / s^2) from three body axes accelerometer in body fixed frame
     % and measurement of angular velocity (redian per second) from three body axes gyro in body fixed frame
-        
+    
     properties( Access = private)
         accelerometerParams;
         accelerationInBodyFrame;
@@ -11,25 +12,25 @@ classdef InertialMeasurementUnit < handle
         acceleration;
         angularVelocity;
     end
-        
+    
     properties (Constant)
         g = 9.780327e-3; % [km / sec^2]
     end
-        
+    
     properties (Dependent)
         AngularVelocity;
         Acceleration;
         AccelerometerBias;
         GyroBias;
     end
-        
+    
     methods
         
         function obj = InertialMeasurementUnit(accelerometerParams, ...
-                                               gyroParams, ...
-                                               accelerationInBodyFrame, ...
-                                               angularVelocityInBodyFrame, ...
-                                               timeData)
+                gyroParams, ...
+                accelerationInBodyFrame, ...
+                angularVelocityInBodyFrame, ...
+                timeData)
             if ~isa(accelerometerParams, 'AccelerometerParam'); error('accelerometerParams should be instance of the AccelerometerParam'); end
             
             if ~isa(gyroParams, 'GyroParam'); error('gyroParams should be instance of the GyroParam'); end
@@ -92,13 +93,13 @@ classdef InertialMeasurementUnit < handle
         function initializeAcceleration(this)
             n = this.timeData.SimulationNumber;
             
-            la_angAcc = cvecrep(cross(this.accelerometerParams.LevelArm, this.accelerometerParams.AngularAccelerationinBodyFrame), n);            
+            la_angAcc = cvecrep(cross(this.accelerometerParams.LevelArm, this.accelerometerParams.AngularAccelerationinBodyFrame), n);
             
             w_w_la = cross(this.angularVelocityInBodyFrame.Velocity, ...
                 cross(this.angularVelocityInBodyFrame.Velocity, ...
                 cvecrep(this.accelerometerParams.LevelArm, n)) ...
-            );
-        
+                );
+            
             a  = this.accelerationInBodyFrame.Acceleration;
             sa = this.accelerometerParams.AccelerometerScale;
             ba = this.accelerometerParams.Bias;
@@ -110,7 +111,7 @@ classdef InertialMeasurementUnit < handle
         function initializeAngularVelocity(this)
             n  = this.timeData.SimulationNumber;
             w  = this.angularVelocityInBodyFrame.Velocity;
-            a  = this.accelerationInBodyFrame.Acceleration;            
+            a  = this.accelerationInBodyFrame.Acceleration;
             ga = this.gyroParams.GyroGSensitiveBias * a / this.g;
             sw = this.gyroParams.GyroScaleFactor;
             bw = this.gyroParams.GyroBias;
@@ -119,4 +120,5 @@ classdef InertialMeasurementUnit < handle
             this.angularVelocity = ga + sw*w +  bw + nw;
         end
     end
+    
 end

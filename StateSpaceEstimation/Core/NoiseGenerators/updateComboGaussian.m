@@ -1,15 +1,21 @@
-function [ noise ] = updateComboGaussian( noise )
-% Updates a 'combination Gaussian' noise source which has N Gaussian sub noise sources. The global mean and covariance
-% is updated externally and then this function is called to update the internal sub-noise source structure.%
-
-    idxArr = noise.idxArr;
-
-    for j=1:noise.N,
-        ind1 = idxArr(j,1);
-        ind2 = idxArr(j,2);
-        idxRange = ind1:ind2;
+function [ noiseDataSet ] = updateComboGaussian( noiseDataSet )
+    % updateComboGaussian. Updates a 'combination of Gaussian' stochastic processes, which has N Gaussian sub noise sources.
+    % The global mean and covariance is updated externally and then this function is called to update the internal sub-noise source structure.
+    %
+    %   [ noiseDataSet ] = updateComboGaussian( noiseDataSet )
+    %
+    %   INPUT
+    %       noiseDataSet    structure, which fully describe stochastic process (is a combination of Gaussian noises).
+    %
+    %   OUTPUT
+    %       noiseDataSet    updated structure, which fully describe stochastic process (is a combination of Gaussian noises).
+    
+    idxArr = noiseDataSet.idxArr;
+    
+    for j = 1:noiseDataSet.N
+        idxRange = idxArr(j, 1) : idxArr(j, 2);
         
-        noise.noiseSources{j}.mean = noise.mean(idxRange, 1);
-        noise.noiseSources{j}.covariance = noise.covariance(idxRange, idxRange);
+        noiseDataSet.noiseSources{j}.mean = noiseDataSet.mean(idxRange, 1);
+        noiseDataSet.noiseSources{j}.covariance = noiseDataSet.covariance(idxRange, idxRange);
     end
 end

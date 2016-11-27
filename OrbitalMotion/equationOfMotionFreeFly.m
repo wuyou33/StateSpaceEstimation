@@ -1,11 +1,15 @@
 function [ dy ] = equationOfMotionFreeFly( ~, state, tEpoch )
-    % EquationOfMotion - solve state dynamic equation for spaceship
+    % equationOfMotionFreeFly. Solve state dynamic equation for spaceship.
+    %
+    %   [ dy ] = equationOfMotionFreeFly( ~, state, tEpoch )
+    %
     %   INPUT
-    %        time               - time in [sec];
-    %        state              - state space vector of spaceship (distance in [km], velocity in [km/s], quaternion);
-    %        tEpoch             - time Epoch;
+    %        time       time in [sec];
+    %        state      state space vector of spaceship (distance in [km], velocity in [km/s], quaternion);
+    %        tEpoch     time Epoch.
+    %
     %   OUTPUT
-    %        dy - increment (diff) of state space vector of spaceship (distance in [km], velocity in [km/s]);
+    %        dy     increment (diff) of state space vector of spaceship (distance in [km], velocity in [km/s]).
     %
     EarthRadius = 6378.136; % [km] - Earth's equatorial radius
     MuE = 398600.4418;      % [km^3/s^2] - Earth gravity const

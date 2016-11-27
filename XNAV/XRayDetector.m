@@ -6,7 +6,7 @@ classdef XRayDetector < handle
         xRaySources;
         detectorArea;
         timeBucket;
-        backgroundPhotnRate;        
+        backgroundPhotnRate;
         earthEphemeris;
         sunEphemeris;
         timeData;
@@ -29,7 +29,7 @@ classdef XRayDetector < handle
             %   backgroundPhotnRate  - is the background rate (including detector noise, the diffuse X-ray background,
             %               un-cancelled cosmic ray events and steady emission from the pulsar, bc) (photons/cm^2/sec);
             %   earthEphemeris - Earth ephemeris;
-            %   sunEphemeris   - Sun ephemeris;            
+            %   sunEphemeris   - Sun ephemeris;
             %   spaceshipState - state (trajectory and velocity of spaceship during simulation);
             %
             narginchk(1, 1);
@@ -75,7 +75,7 @@ classdef XRayDetector < handle
             % calculate time of arrival (toa)
             narginchk(2, 2);
             
-            diffToa = calculateDiffToa(this.xRaySources, this.earthEphemeris, this.sunEphemeris, this.spaceshipState(1:3, :));
+            diffToa = calculateDiffToa(this.xRaySources, this.earthEphemeris, this.sunEphemeris, this.spaceshipState(1:3, :)); % calculateDiffToa2
             phase = diffToa2phase(this.getInvPeriods(), diffToa);
             this.signal = phase + this.generateNoise(size(phase, 2));
             
@@ -109,4 +109,5 @@ classdef XRayDetector < handle
             legend(legends);
         end
     end
+    
 end

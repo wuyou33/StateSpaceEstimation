@@ -1,5 +1,6 @@
 function [ points, weights ] = generateSingleDimPoint( order, pointSI, manner )
-    % generateSingleDimPoint
+    % generateSingleDimPoint.
+    %
     %   [ points, weights ] = generateSingleDimPoint( order, pointSI, manner )
     %
     %   INPUT
@@ -10,7 +11,7 @@ function [ points, weights ] = generateSingleDimPoint( order, pointSI, manner )
     %   OUTPUT
     %       points  - generated points
     %       weights - generated weights for every point.
-    %%
+    %
     narginchk(3, 3);
     
     if pointSI ~= 1 || order == 0
@@ -27,6 +28,6 @@ function [ points, weights ] = generateSingleDimPoint( order, pointSI, manner )
         case 3
             [points, weights] = gaussHermiteRule(2^order-1);
         otherwise
-            error(' [ generateSingleDimPoint ] manner not supported. manner should be 1, 2 or 3');
+            error('[ generateSingleDimPoint::manner ] manner not supported. manner should be 1, 2 or 3');
     end
 end

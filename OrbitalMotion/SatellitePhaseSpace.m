@@ -1,4 +1,6 @@
 classdef SatellitePhaseSpace < handle
+    % SatellitePhaseSpace. Describe trajectory of spacecraft in spacecraft phase space (attitude, coordinates, velocity).
+    
     properties (Access = private)
         trajectory;
         velocity;
@@ -25,7 +27,7 @@ classdef SatellitePhaseSpace < handle
         FullState;
     end
     
-    methods 
+    methods
         function obj = SatellitePhaseSpace(phaseStateArray, capacity)
             obj.trajectory = zeros(3, capacity);
             obj.velocity = zeros(3, capacity);
@@ -104,19 +106,18 @@ classdef SatellitePhaseSpace < handle
         function val = GetPhaseState(this, index)
             val = [this.trajectory(:, index); this.velocity(:, index); this.rotation(:, index)];
         end
-                
+        
         function AddPhaseState(this, state, index)
             this.trajectory(:, index) = state(1:3);
             this.velocity(:, index) = state(4:6);
-            this.rotation(:, index) = state(7:10);            
+            this.rotation(:, index) = state(7:10);
         end
         
         function AddPhaseStateRange(this, stateMatrix, startIndex, endIndex)
             this.trajectory(:, startIndex : endIndex) = stateMatrix(1:3, :);
             this.velocity(:, startIndex : endIndex) = stateMatrix(4:6, :);
-            this.rotation(:, startIndex : endIndex) = stateMatrix(7:10, :);            
+            this.rotation(:, startIndex : endIndex) = stateMatrix(7:10, :);
         end
     end
     
 end
-

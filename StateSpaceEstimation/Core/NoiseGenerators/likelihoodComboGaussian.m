@@ -1,54 +1,68 @@
-function [ llh ] = likelihoodComboGaussian( noiseDataSet, noise, idxVec )
-% Calculates the likelihood of sample 'noise', given the noise model NoiseDS. If the optional index
-% vector 'idxVec' is specified, only those sub-noise sources are used. The 'noise' vector's dimension should
-% concur with the implied total dimensionality of 'idxVec'
-
-    if (nargin == 2)
-        idxVec = 1:noiseDataSet.N;
+function [ llh ] = likelihoodComboGaussian(noiseDataSet, noise, idxVec)
+    % likelihoodComboGaussian. Calculates the likelihood of sample 'noise', given the noise model noiseDataSet.
+    % If the optional index vector 'idxVec' is specified, only those sub-noise sources are used.
+    % The 'noise' vector's dimension should concur with the implied total dimensionality of 'idxVec'
+    %
+    %   [ llh ] = likelihoodComboGaussian(noiseDataSet, noise, idxVec)
+    %
+    %   INPUT
+    %       noiseDataSet    structure wich fully describe stochastic process;
+    %       noise           sample vector of stochastic process (concreate vector of stochastic process);
+    %       idxVec          <<optional>> specifies what sources should be used to calculate likelihood.
+    %
+    %   OUTPUT
+    %       llh    likelihood of sample 'noise'.
+    %
+    narginchk(2, 3);
+    
+    if nargin == 2
+        idxVec = 1 : noiseDataSet.N;
     end
-
-    numNS = length(idxVec);
-
-    [~, nov] = size(noise);
-
+    
+    count = length(idxVec);
+    nov = size(noise, 2);
+    
     idxArr = noiseDataSet.idxArr;
-
-    llh = ones(1,nov);
-
-    for j=1:numNS,
-
+    
+    llh = ones(1, nov);
+    
+    for j = 1:count
         idx1 = idxArr(idxVec(j),1);
         idx2 = idxArr(idxVec(j),2);
-
+        
         idxRange = idx1:idx2;
-
+        
         dim = idx2-idx1+1;
-
+        
         switch noiseDataSet.covarianceType
-
             case 'full'
-                D  = det(noiseDataSet.covariance(idxRange,idxRange));
-                iP = inv(noiseDataSet.covariance(idxRange,idxRange));
+                determinant  = det(noiseDataSet.covariance(idxRange, idxRange));
+                invertCov = inv(noiseDataSet.covariance(idxRange, idxRange));
             case 'diag'
-                D = prod(diag(noiseDataSet.covariance(idxRange,idxRange)));
-                iP = diag(1./diag(noiseDataSet.covariance(idxRange,idxRange)));
+                determinant = prod(diag(noiseDataSet.covariance(idxRange, idxRange)));
+                invertCov = diag(1./diag(noiseDataSet.covariance(idxRange, idxRange)));
             case 'sqrt'
-                D = det(noiseDataSet.covariance(idxRange,idxRange))^2;
-                iS = inv(noiseDataSet.covariance(idxRange,idxRange));
-                iP = iS'*iS;
+                determinant = det(noiseDataSet.covariance(idxRange, idxRange))^2;
+                invertSqrt = inv(noiseDataSet.covariance(idxRange, idxRange));
+                invertCov = invertSqrt'*invertSqrt;
+            case 'svd'
+                determinant = det(noiseDataSet.covariance(idxRange, idxRange))^2;
+                invertSqrt = inv(noiseDataSet.covariance(idxRange, idxRange));
+                invertCov = invertSqrt'*invertSqrt;
             case 'sqrt-diag'
-                D = prod(diag(noiseDataSet.covariance(idxRange,idxRange)))^2;
-                iP = diag(1./(diag(noiseDataSet.covariance(idxRange,idxRange)).^2));
+                determinant = prod(diag(noiseDataSet.covariance(idxRange, idxRange)))^2;
+                invertCov = diag(1./(diag(noiseDataSet.covariance(idxRange, idxRange)).^2));
             otherwise
-                error(' [ likelihoodComboGaussian ] unknown cov_type.');
+                error('[ likelihoodComboGaussian ] unknown covarianceType.');
         end
-
-        X = noise - cvecrep(noiseDataSet.mu(idxRange),nov);
-        q = 1/sqrt((2*pi)^dim * D);
-
-        llh = llh .* (q * exp(-0.5*diag(X'*iP*X)'));
-
+        
+        X = noise - cvecrep(noiseDataSet.mean(idxRange), nov);
+        q = 1/sqrt((2*pi)^dim * determinant);
+        
+        llh = llh .* (q * exp(-0.5*diag(X'*invertCov*X)'));
+        
     end
-
-    llh = llh + 1e-99; % needed to avoid 0 likelihood (cause ill conditioning)
+    
+    % needed to avoid 0 likelihood
+    llh = llh + 1e-99;
 end

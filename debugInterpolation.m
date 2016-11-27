@@ -1,5 +1,5 @@
-close all force; clc;
-clear all;
+close all force; clc; clear allvars;
+
 addpath(genpath('OrbitalMotion')); % include folder with orbital motion functions
 addpath(genpath('Statistics')); % include folder with Statistics functions
 addpath(genpath('TOAMeasurementUnit')); % include folder with Pulsar & Quasar navigation

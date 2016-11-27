@@ -1,22 +1,23 @@
 function inferenceDataStructure = inferenceDataGenerator( args )
-    % Generate inference data structure from a generalized state space model and user defined inference parameters.
-    % INPUT ARGUMENT DATA STRUCTURE:
-    % args.type               : (string)      Inference (estimation) type : 'state', 'parameter' or 'joint'
-    %     .tag                : (string)      Arbitrary user defined ID tag string
-    %     .model              : (gssm)        Generalized state space model descriptor
-    %     .updateType         : (string)      Update type : Time-and-Measurement Update is the default. Other options are : 
-    %                                            TU - time update only or MU - measurement update only.
+    % inferenceDataGenerator. Generate inference data structure from a generalized state space model and user defined inference parameters.
+    %
+    %   INPUT
+    %       args.type         Inference (estimation) type : 'state', 'parameter' or 'joint';
+    %           .tag          Arbitrary user defined ID tag string;
+    %           .model        Generalized state space model descriptor
+    %           .updateType   Update type : Time-and-Measurement Update is the default.
+    %
     %%
     if (nargin < 1)
-        error(' [ inferenceDataGenerator ] Not enough inputs.');
+        error('[ inferenceDataGenerator ] Not enough inputs.');
     end
     
     if ~isstruct(args)
-        error(' [ inferenceDataGenerator ] Input argument must be an argument data structure ArgDS.');
+        error('[ inferenceDataGenerator::args ] Input argument must be an argument data structure args.');
     end
     
     if ~ischar(args.type)
-        error(' [ inferenceDataGenerator ] ArgDS.type must be a string indicating the inference type, i.e. ''state'', ''parameter'' or ''joint''.');
+        error('[ inferenceDataGenerator::args ] args.type must be a string indicating the inference type, i.e. ''state'', ''parameter'' or ''joint''.');
     end
     
     %%
@@ -24,9 +25,10 @@ function inferenceDataStructure = inferenceDataGenerator( args )
     inferenceDataStructure.inferenceType    = args.type;
     inferenceDataStructure.model            = args.model;
     
-    if isfield(args,'tag'),
+    if isfield(args, 'tag')
         inferenceDataStructure.tag  = args.tag;
     else
+        warning('[inferenceDataGenerator::args] set empty tag by default. please specify tag');
         inferenceDataStructure.tag  = '';
     end
     
@@ -44,66 +46,93 @@ function inferenceDataStructure = inferenceDataGenerator( args )
             inferenceDataStructure.stateTransitionPriorFun    = @stateTransitionPriorFun;
             inferenceDataStructure.likelihoodStateFun         = @likelihoodStateFun;
             inferenceDataStructure.innovationModelFunc        = @innovationModelFunc;
+            inferenceDataStructure.linearize                  = @linearize;
             
             % Index vectors indicating the presence of angular components in the state and observation vectors
-            if isfield(args.model,'stateAngleCompIdxVec'),
+            if isfield(args.model, 'stateAngleCompIdxVec'),
                 inferenceDataStructure.stateAngleCompIdxVec = args.model.stateAngleCompIdxVec;
             else
                 inferenceDataStructure.stateAngleCompIdxVec = [];
             end
             
-            if isfield(args.model,'obsAngleCompIdxVec'),
+            if isfield(args.model, 'obsAngleCompIdxVec'),
                 inferenceDataStructure.obsAngleCompIdxVec = args.model.obsAngleCompIdxVec;
             else
                 inferenceDataStructure.obsAngleCompIdxVec = [];
             end
             
         case 'parameter'
-            error(' [ inferenceDataGenerator ] parameter estimation not implelemented');
+            error('[ inferenceDataGenerator::args::type ] parameter estimation not implelemented');
             
         case 'joint'
-            error(' [inferenceDataGenerator ] joint estimation not implelemented');
+            error('[inferenceDataGenerator::args::type ] joint estimation not implelemented');
             
         otherwise
-            error([' [ inferenceDataGenerator ] Inference type ''' args.type ''' not supported.']);
+            error(['[ inferenceDataGenerator::args::type ] Inference type ''' args.type ''' not supported.']);
     end
     
     inferenceDataStructure.updateType = 'TMU';
 end
-
-function newState = stateTransitionFun(inferenceDS, state, stateNoise, control)
+%%
+function newState = stateTransitionFun(inferenceDataModel, state, stateNoise, control)
     %  State transition function of meta system for state estimation
     
-    newState = inferenceDS.model.stateTransitionFun( inferenceDS.model, state, stateNoise, control);
+    newState = inferenceDataModel.model.stateTransitionFun( inferenceDataModel.model, state, stateNoise, control);
 end
-
-function observation = stateObservationFun(inferenceDS, state, observationNoise, control)
+%%
+function observation = stateObservationFun(inferenceDataModel, state, observationNoise, control)
     %  State observation function of meta system for state estimation
     
-    observation = inferenceDS.model.stateObservationFun( inferenceDS.model, state, observationNoise, control);
+    observation = inferenceDataModel.model.stateObservationFun( inferenceDataModel.model, state, observationNoise, control);
 end
-
-function tran_prior = stateTransitionPriorFun(inferenceDS, predictedState, state, control, processNoiseDataSet)
+%%
+function tranPrior = stateTransitionPriorFun(inferenceDataModel, predictedState, state, control, processNoiseDataSet)
     %  Calculates the transition prior probability P(x_k|x_(k-1))
     
-    tran_prior = inferenceDS.model.stateTransitionPriorFun( inferenceDS.model, predictedState, state, control, processNoiseDataSet);
+    tranPrior = inferenceDataModel.model.stateTransitionPriorFun( inferenceDataModel.model, predictedState, state, control, processNoiseDataSet);
 end
-
-function llh = likelihoodStateFun(inferenceDS, observation, state, control, observationNoiseDS)
+%%
+function llh = likelihoodStateFun(inferenceDataModel, observation, state, control, observationNoiseDS)
     % Calculates the likelood of a real-world observation obs given
     % a realization of the predicted observation for a given state,
-    % i.e. p(y|x) = p(obs|state)
+    % i.e. p(z|x) = p(observation|state)
     
-    llh = inferenceDS.model.observationLikelihoodFun( inferenceDS.model, observation, state, control, observationNoiseDS);
+    llh = inferenceDataModel.model.observationLikelihoodFun( inferenceDataModel.model, observation, state, control, observationNoiseDS);
 end
-
-function innov = innovationModelFunc(inferenceDS, observation, predictedObservation)
-    %  INNOVATION_STATE  Calculates the innovation signal (difference) between the
-    %   output of HFUN, i.e. predictedObservation (the predicted system observation) and an actual
+%%
+function innov = innovationModelFunc(inferenceDataModel, observation, predictedObservation)
+    %  innovationModelFunc. Calculates the innovation signal (difference) between the
+    %   output of stateObservationFun, i.e. predictedObservation (the predicted system observation) and an actual
     %   'real world' observation observation. This function might be as simple as
-    %   INNOV = observation - predictedObservation, which is the default case, but can also be more
+    %   innov = observation - predictedObservation, which is the default case, but can also be more
     %   complex for complex measurement processes where for example multiple (possibly false)
     %   observations can be observed for a given hidden ground truth.
     
-    innov = inferenceDS.model.innovationModelFunc( inferenceDS.model, observation, predictedObservation);
+    innov = inferenceDataModel.model.innovationModelFunc( inferenceDataModel.model, observation, predictedObservation);
 end
+%%
+function varargout = linearize(inferenceDataModel, state, stateNoise, observNoise, control1, control2, varargin)
+    %  linearize. Linearization function of meta system for state estimation.
+    %
+    %    out = linearize(inferenceDataModel, state, stateNoise, observNoise, control1, control2, varargin)
+    %
+    %    INPUT
+    %         inferenceDataModel    inference data structure;
+    %         state                 meta system state vector;
+    %         stateNoise            meta system process noise vector;
+    %         observNoise           meta system observation noise vector;
+    %         control1              meta system exogenous input 1;
+    %         control2              meta system exogenous input 2;
+    %         varargin              linearization terms wanted, e.g. 'A', 'B', 'G', ... .
+    %
+    %    OUTPUT
+    %         varargout     linearization terms corresponding with varargin strings.
+    
+    numRequestedTerm = length(varargin);
+    varargout = cell(numRequestedTerm, 1);
+    
+    for k = 1:numRequestedTerm,
+        varargout{k} = inferenceDataModel.model.linearize(inferenceDataModel.model, state, stateNoise, observNoise, control1, control2, varargin{k});
+    end
+end
+%%

@@ -1,6 +1,7 @@
 function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold, covarianceType, arbitraryWidth, evidenceWeights )
-    % GMMFIT Fit a Gaussian mixture model (GMM) with M components to dataset X
-    %   using an expectation maximization algorithm (EM).
+    % gaussMixtureModelFit. Fit a Gaussian mixture model (GMM) with M components to dataset (gmmSet)
+    % using an expectation maximization (EM) algorithm.
+    %
     %   For more details see
     %       http://stats.stackexchange.com/questions/72774/numerical-example-to-understand-expectation-maximization
     %       http://stackoverflow.com/questions/11808074/what-is-an-intuitive-explanation-of-expectation-maximization-technique
@@ -9,15 +10,15 @@ function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold,
     %   [ gmmSet ] = gaussMixtureModelFit( data, mixtureCount, terminationThreshold, covarianceType, evidenceWeights )
     %
     %   INPUT
-    %       data                 - Dataset of N samples (column vectors);
-    %       mixture              - Number of Gaussian mixture component densities OR a pre-initialized GMM data structure;
-    %       terminationThreshold - Termination threshold 0 < tt < 1 (if change in log likelihood falls below this value, the EM algorithm terminates.)
-    %                              OR if tt is a [1-by-2 vector] the first component is the termination threshold and the second component is the maximum
-    %                              number of iterations allowed for the EM, i.e. thresholdtt iterations];
-    %       covarianceType       - Covariance type 'full', 'diag', 'sqrt', 'sqrt-diag';
-    %       arbitraryWidth       - <optional>  Arbitrary width used if variance collapses to zero: make it 'large'
-    %                                          so that centre is responsible for a reasonable number of points.
-    %       evidenceWeights      - <optional> 1xN vector of sample weights used to do a weighted EM fit to the data.
+    %       data                 	Dataset of N samples (column vectors);
+    %       mixture              	Number of Gaussian mixture component densities OR a pre-initialized GMM data structure;
+    %       terminationThreshold 	Termination threshold 0 < tt < 1 (if change in log likelihood falls below this value, the EM algorithm terminates.)
+    %                                   OR if tt is a [1-by-2 vector] the first component is the termination threshold and the second component is the maximum
+    %                                   number of iterations allowed for the EM, i.e. thresholdtt iterations];
+    %       covarianceType       	Covariance type 'full', 'diag', 'sqrt', 'sqrt-diag', 'svd';
+    %       arbitraryWidth       	<optional>  Arbitrary width used if variance collapses to zero: make it 'large'
+    %                                          so that centre is responsible for a reasonable number of points;
+    %       evidenceWeights      	<optional> vector (1xN) of sample weights used to do a weighted EM fit to the data.
     %
     %   OUTPUT
     %       gmmSet              - Gaussian mixture model data structure with the following fields;
@@ -27,9 +28,9 @@ function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold,
     %           .weights        - Mixing priors (component weights);
     %           .mean           - Gaussian component means;
     %           .covariance     - Covariance matrices of Gaussian components (must comply with cov_type).
-    %%
+    %
     narginchk(4, 6);
-    %%
+    
     [dim, dataDim] = size(data);
     
     % number of EM iterations
@@ -94,7 +95,7 @@ function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold,
                     if min(svd(cov)) < eps
                         cov = initCovariance(:, :, j);
                     end
-                case {'sqrt','sqrt-diag'}
+                case {'sqrt', 'sqrt-diag', 'svd'}
                     centered = centered .* rvecrep((1/sqrt(paramEst(j))) * sqrt(posterior(j, :)), dim);
                     
                     [~, cov] = qr(centered', 0);
@@ -111,7 +112,7 @@ function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold,
                         cov = initCovariance(:, :, j);
                     end
                 otherwise
-                    error(['Unknown covariance type ', covarianceType]);
+                    error(['[ gaussMixtureModelFit ] Unknown covariance type ', covarianceType]);
             end
             
             gmmSet.covariance(:, :, j) = cov;

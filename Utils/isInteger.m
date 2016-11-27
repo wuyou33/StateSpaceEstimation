@@ -1,5 +1,14 @@
 function [ flag ] = isInteger( x )
-    % ISINTEGER Check that input data is integer number.
+    % isInteger. Check that input data is integer number.
+    %
+    %   [ flag ] = isInteger( x )
+    %
+    %   INPUT
+    %       x   input arg.
+    %
+    %   OUTPUT
+    %       flag    result of checking.
+    %
     if isempty(x)
         error('Input cannot be empty');
     elseif ~isnumeric(x)

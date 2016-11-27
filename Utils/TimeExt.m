@@ -1,5 +1,5 @@
 classdef TimeExt < handle
-    %TIMEEXT Summary of this class goes here
+    % TimeExt. Class which alllow to easy manipulate with date time variables.
     
     properties (Access = private)
         startTime;                      % 'HH:MM:SS.FFF'
@@ -60,6 +60,12 @@ classdef TimeExt < handle
             batchSize = this.SampleTime \ timeScale.SampleTime;
             range = 1 : batchSize : this.SimulationNumber;
         end
+        
+        function unixEpoch = timeStampToUnixEpoch(this, timeStampSec)
+            startOfUnixEpcoh = datenum('01-Jan-1970');
+            currentTime = datenum(this.GetDateArr()) + TimeExt.secToDate(timeStampSec);
+            unixEpoch = int32( floor((currentTime - startOfUnixEpcoh) * 86400) );
+        end
     end
     
     methods
@@ -112,13 +118,7 @@ classdef TimeExt < handle
         
         function val = get.JD(this)
             dateArr = this.GetDateArr();
-            % n4 - slot number by 4 years (leap between each) that contains the current date
-            n4 = fix( (dateArr(1)-this.referenceYear) / 4 ) + 1;
-            
-            % nt - number of days within a 4-year leap period
-            nt = datenum( dateArr(1:3) ) - datenum([this.referenceYear + (n4-1)*4 1 1])+1;
-            
-            val = 1461*(n4 - 1) + nt + 2450082.5;
+            val = juliandate(dateArr);
         end
         
         function val = get.RefreshSunMoonInfluenceTime(this)
@@ -133,11 +133,19 @@ classdef TimeExt < handle
             fieldsDate = fieldnames(this.date);
             for i = 1:size(fieldsDate, 1)
                 val(4-i)=this.date.( char( fieldsDate(i) ) );
-            end            
+            end
         end
         
         function val = tFun (~, x)
             val = x(1)*60*60 + x(2)*60 + x(3);
         end
     end
+    
+    methods (Access = private, Static)
+        function dayNum = secToDate(secNum)
+            % 1 day = 24 (hour) * 60 (minute) * 60 (sec)
+            dayNum = secNum / 24 / 60 / 60;
+        end
+    end
+    
 end

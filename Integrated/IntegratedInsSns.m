@@ -1,6 +1,6 @@
 classdef IntegratedInsSns < BaseIntegratedIns
-    % IntegratedInsSns - integrated inertial navigation system (INS) and satellity navigation system (SNS)
-    % provides method to solve navigation problem via INS and SNS (GPS)
+    % IntegratedInsSns. integrated inertial navigation system (INS) and satellity navigation system (SNS).
+    % Provides method to solve navigation problem via INS and SNS (GPS)
     
     properties(Access = private)
         sns;
@@ -8,12 +8,13 @@ classdef IntegratedInsSns < BaseIntegratedIns
     end
     
     methods (Access = public)
-        function obj = IntegratedInsSns(ins, sns, timeData, initArgs, snsTimeData)
-            obj.ins = ins;
-            obj.sns = sns;
-            obj.timeData = timeData;
-            obj.initArgs = initArgs;
-            obj.snsTimeData = snsTimeData;
+        function obj = IntegratedInsSns(ins, sns, timeData, initArgs, snsTimeData, reconciliationTime)
+            obj.ins                 = ins;
+            obj.sns                 = sns;
+            obj.timeData            = timeData;
+            obj.initArgs            = initArgs;
+            obj.snsTimeData         = snsTimeData;
+            obj.reconciliationTime  = reconciliationTime;
         end
     end
     
@@ -88,4 +89,5 @@ classdef IntegratedInsSns < BaseIntegratedIns
             description = 'State estimation for loosely coupled Ins & Sns integrated system';
         end
     end
+    
 end

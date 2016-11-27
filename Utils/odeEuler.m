@@ -1,23 +1,26 @@
 function [ x, y ] = odeEuler(odefun, xspan, seed, step)
-    % ODEEULER Euler ODE solver.
-    %   [ x, y ] = odeEuler(odefun, xspan, seed, step).
-    %    find details here: https://en.wikipedia.org/wiki/Euler_method
-    %    uses EULER'S method to integrate an ODE.
+    % odeEuler. Euler ODE solver.
     %
-    %   INPUT:
-    %       odefun  - pointer to ode function
-    %       tspan   - [ti,tf] where ti and tf = initial and final values of independent variables
-    %       y0      - initial value of dependent variable
-    %       h       - step size
-    %       p1, p2  - additional parameter used by dydt
+    %   [ x, y ] = odeEuler(odefun, xspan, seed, step)
     %
-    %   OUTPUT:
-    %       t - vector of independent variable
-    %       y - vector of solution for dependent variable
+    %   find details here: https://en.wikipedia.org/wiki/Euler_method
+    %
+    %   uses EULER'S method to integrate an ODE.
+    %
+    %   INPUT
+    %       odefun  	pointer to ode function;
+    %       tspan   	[ti,tf] where ti and tf = initial and final values of independent variables;
+    %       y0      	initial value of dependent variable;
+    %       h       	step size;
+    %       p1, p2  	additional parameter used by dydt.
+    %
+    %   OUTPUT
+    %       x 	vector of independent variable;
+    %       y 	vector of solution for dependent variable.
+    %
+    narginchk(4, 4);
     
-    if nargin<4; error('at least 4 input arguments required'); end
-    
-    ti = xspan(1); 
+    ti = xspan(1);
     tf = xspan(2);
     
     if ~ (tf > ti); error('upper limit must be greater than lower limit'); end
@@ -29,7 +32,7 @@ function [ x, y ] = odeEuler(odefun, xspan, seed, step)
     if x(n) < tf
         x(n+1) = tf;
         n = n+1;
-        x(n)=tf;
+        x(n) = tf;
     end
     
     y = cvecrep(seed, n);

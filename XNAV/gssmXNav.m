@@ -42,12 +42,12 @@ function model = init(initArgs)
     model.observationNoiseDimension  = 4;                              % observation noise dimension
     model.params                     = initArgs.initialParams;         % setup parameter vector buffer
     model                            = setparams(model, ...
-                                            initArgs.initialParams, ...
-                                            initArgs.xRaySources, ...
-                                            initArgs.earthEphemeris, ...
-                                            initArgs.sunEphemeris, ...
-                                            initArgs.invPeriods);
-
+        initArgs.initialParams, ...
+        initArgs.xRaySources, ...
+        initArgs.earthEphemeris, ...
+        initArgs.sunEphemeris, ...
+        initArgs.invPeriods);
+    
     % Setup process noise source
     processNoiseArg.type           = 'gaussian';
     processNoiseArg.covarianceType = 'full';
@@ -107,14 +107,14 @@ function newState = ffun(model, state, noise, stateControl)
     [rn, cn] = size(state);
     
     newState = zeros(rn, cn);
-    for i = 1:cn  
+    for i = 1:cn
         [~, tmp]       = odeEuler(odeFun, tSpan, state(:, i), model.sampleTime);
         newState(:, i) = tmp(:, end);
     end
     
     if ~isempty(noise); newState  = newState + noise; end
-            
-    if ~isempty(stateControl); newState = newState - cvecrep(stateControl, cn); end    
+    
+    if ~isempty(stateControl); newState = newState - cvecrep(stateControl, cn); end
 end
 
 function observ = hfun(model, state, noise, observationControl)
@@ -134,19 +134,19 @@ function observ = hfun(model, state, noise, observationControl)
         observ(:, i) = diffToa2phase(model.invPeriods, diffToa);
     end
     
-    if ~isempty(noise); observ = observ + noise; end    
+    if ~isempty(noise); observ = observ + noise; end
     if ~isempty(observationControl); observ = observ + observationControl; end
 end
 
 function tranprior = prior(model, predictedState, state, stateControl, processNoiseDataSet)
     %   Calculates P(nextstate|state).
-    x = predictedState - ffun(model, state, [], stateControl);    
+    x = predictedState - ffun(model, state, [], stateControl);
     tranprior = processNoiseDataSet.likelihood( processNoiseDataSet, x);
 end
 
 function llh = likelihood(model, observation, state, observationControl, observationNoiseDataSet)
     %   Observation likelihood function
-    z = observation - hfun(model, state, [], observationControl);    
+    z = observation - hfun(model, state, [], observationControl);
     llh = observationNoiseDataSet.likelihood( observationNoiseDataSet, z);
 end
 

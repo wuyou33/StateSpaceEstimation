@@ -1,13 +1,16 @@
 function [ indices ] = generateIndices( order, dimension )
     % generateIndices. Generate indices for sparse Gauss-Hermite rule.
+    %
     %   [ indices ] = generateIndices( order, dimension )
     %
-    %   INPUT:
-    %       order     - order of Gauss-Hermite polynomial;
-    %       dimension - dimension;
-    %   OUTPUT:
-    %       indices - generated indeces.
-    %%
+    %   INPUT
+    %       order     	order of Gauss-Hermite polynomial;
+    %       dimension 	dimension;
+    %
+    %   OUTPUT
+    %       indices 	generated indeces.
+    %
+    narginchk(2, 2);
     
     nextIndex = generateNextIndices(order, ones(dimension, 1), []);
     nnIndex = [ones(dimension, 1) nextIndex];
@@ -22,7 +25,7 @@ function [ indices ] = generateIndices( order, dimension )
         if isempty(tmpIndex) == 1
             break;
         end
-    
+        
         nextIndex = nnIndex;
     end
     

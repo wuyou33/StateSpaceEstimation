@@ -1,6 +1,6 @@
 classdef XRayDopplerIntegrated < handle
-    %XRAYDOPPLERINTEGRATED Integrated X-Ray navigation system and Doppler navigation system.
-    %   More information see in IET Radar Sonar Navig., 2011, Vol. 5, Iss. 9, pp. 1010-1017.
+    % XRayDopplerIntegrated. Integrated X-Ray navigation system and Doppler navigation system.
+    % More information see in IET Radar Sonar Navig., 2011, Vol. 5, Iss. 9, pp. 1010-1017.
     
     properties (Access = private)
         timeData;
@@ -26,7 +26,7 @@ classdef XRayDopplerIntegrated < handle
             stateMatrix(:, 1) = dopplerInitState;
             
             dState = dopplerInitState;
-            dCov = dopplerInitCov;            
+            dCov = dopplerInitCov;
             this.dopplerNavSystem.init(dopplerEstimatorType);
             dDecCov = this.dopplerNavSystem.updateFilterParams(dCov, dopplerEstimatorType);
             dSet = this.dopplerNavSystem.initParticleSet(dopplerEstimatorType, dState, dCov, dDecCov);
@@ -59,7 +59,7 @@ classdef XRayDopplerIntegrated < handle
                     
                     [dState, dCov, dDecCov, dSet] = this.dopplerNavSystem.estimate(dState, dCov, dDecCov, dopplerEstimatorType, dSet, k, tEpoch);
                     [rState, rCov, rDecCov, rSet, ~] = this.xRayNavSystem.estimate(rState, rCov, rDecCov, xRayEstimatorType, rSet, k, tEpoch);
-                                        
+                    
                     [state, ~, dState, dCov, rState, rCov] = federatedFilter(dState, dCov, rState, rCov);
                     stateMatrix(:, i) = state;
                     

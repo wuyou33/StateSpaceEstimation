@@ -1,17 +1,20 @@
 function [ points, weights ] = generateSparsePoints( order, indices, pointSI, manner)
     % generateSparsePoints. Generate subset of point for sparse Gauss-Hermite algorithm.
+    %
     %   [ points, weights ] = generateSparsePoints( order, indices, pointSI, manner)
     %
     %   INPUT
-    %       order     - order of Gauss-Hermite polynomial;
-    %       indices   - indeces, for which points and weights should be generated;
-    %       pointSI   - set of point which determine that point must be generated or not;
-    %       manner    - increase manner, L, 2L-1, or something else.
+    %       order     	order of Gauss-Hermite polynomial;
+    %       indices   	indeces, for which points and weights should be generated;
+    %       pointSI   	set of point which determine that point must be generated or not;
+    %       manner    	increase manner, L, 2L-1, or something else.
     %
     %   OUTPUT
-    %       points  - generated points
-    %       weights - generated weights for every point.
-    %%
+    %       points  	generated points;
+    %       weights 	generated weights for every point.
+    %
+    narginchk(4, 4);
+    
     dim = numel(indices);
     nq = sum(indices) - dim;
     

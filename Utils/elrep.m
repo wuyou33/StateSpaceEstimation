@@ -1,15 +1,19 @@
 function [ matrix ] = elrep( v, m, n )
-    % elrep Replicate every element of input vector x-by-y times.
+    % elrep. Replicate every element of input vector x-by-y times.
+    %
     %   Where x = m is number of replication by row and y = n / dimension(v) is a number of replication by column
     %   Detailed explanation goes here
-    %   matrix = elrep(v, m, n)
+    %
+    %   [ matrix ] = elrep( v, m, n )
+    %
     %   INPUT
-    %       v - vector Nx1 dimension;
-    %       m - number of row replication;
-    %       n - number of column replication.
+    %       v 	vector Nx1 dimension;
+    %       m 	number of row replication;
+    %       n 	number of column replication.
+    %
     %   OUPUT
-    %   matrix - matrix dimension (m x N)-by-n
-    %%
+    %       matrix 	matrix dimension (m x N)-by-n.
+    %
     if isempty(v)
         matrix = zeros(m, n);
     else
