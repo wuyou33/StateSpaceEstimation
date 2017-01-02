@@ -1,4 +1,4 @@
-function [ matrix ] = quaternion2BMatrix( q )
+    function [ matrix ] = quaternion2BMatrix( q )
     % quaternion2BMatrix. Convert quaternion to special matrix representation.
     %
     %   Convert quaternion q to special B matrix (required for INS SNS integrated system). Allow to change quaternion multiplication of 3D vector and quaternion

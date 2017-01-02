@@ -31,12 +31,13 @@ initialOrbit = loadInitialOrbit();
 tStart = '00:00:00.000';
 tEnd = '00:05:00.000';
 
-timeData = TimeExt(tStart, tEnd, 1e-1, date, 1e5); % time data for integrated navigation system 
-timeDataSubSystem  = TimeExt(tStart, tEnd, 1e-1, date, 1e5); % time data for inertial navigation system & satellite navigation system
+timeData = TimeExt(tStart, tEnd, 1e-1, date, 1e9); % time data for integrated navigation system 
+timeDataSubSystem  = TimeExt(tStart, tEnd, 1e-1, date, 1e9); % time data for inertial navigation system & satellite navigation system
 
 logLastError                = 1;
 iterationNumber             = 1;
-esitimatedParams            = 5;
+isOneLaunch                 = iterationNumber == 1;
+esitimatedParams            = 6;
 accBiasMu                   = zeros(3, 1);      % [km / sec^2]
 accBiasSigma                = 5e-8*ones(3, 1);  % [km / sec^2]
 accNoiseVar                 = 1e-6*ones(3, 1);  % [km / sec^2]
@@ -55,7 +56,7 @@ accelerationSigma           = 2e-5*ones(3, 1);      % [km/sec^2]
 angularVelocitySigma        = 1e-4*ones(3, 1);      % [rad/sec]
 insTrajInitErrorKm          = 3e-2*ones(3, 1);      % [km]
 insVelInitErrorKmSec        = 5e-5*ones(3, 1);      % [km/sec]
-insQuaternionInitError      = 5e-5*ones(4, 1);      % [-] error converted to angle approx equal 3-5 grad.
+insQuaternionInitError      = 1e-3*ones(4, 1);      % [-]
 accScaleFactorInitError     = 1e-5*ones(3, 1);      % [-]
 gyroScaleFactorInitError    = 1e-5*ones(3, 1);      % [-]
 gyroBiasSigmaInitError      = 1e-2*gyroBiasSigma;   % [rad / sec]
@@ -69,7 +70,7 @@ accelerationInBodyFrame     = AccelerationInBodyFrame(timeDataSubSystem, initial
 angularVelocityInBodyFrame  = AngularVelocityInBodyFrame(timeDataSubSystem, initialAngularVelocity, angularVelocitySigma);
 
 simulator = TrajectoryPhaseSpaceSatelliteSimulator(initialOrbit, accelerationInBodyFrame, angularVelocityInBodyFrame, timeDataSubSystem);
-starshipTrueState = simulator.simulate();
+starshipTrueState = simulator.simulate(isOneLaunch);
 
 insInitArgs.accBiasMu                    = accBiasMu;
 insInitArgs.accBiasSigma                 = accBiasSigma;
@@ -155,9 +156,9 @@ for l = 1:length(filterTypes)
     insSnsInitArgs.initialParams(10:12)         = gyroBiasSigma;
     insSnsInitArgs.initialParams(13:15)         = initialAcceleration;
     insSnsInitArgs.initialParams(16:18)         = initialAngularVelocity;
-    insSnsInitArgs.initialParams(19:22)         = initialQuaternion;
-    insSnsInitArgs.initialParams(23)            = timeData.SampleTime;
-    insSnsInitArgs.initialParams(24)            = timeData.StartSecond;
+    insSnsInitArgs.initialParams(19:28)         = insInitialState;
+    insSnsInitArgs.initialParams(29)            = timeData.SampleTime;
+    insSnsInitArgs.initialParams(30)            = timeData.StartSecond;
     insSnsInitArgs.processNoiseMean             = zeros(22, 1);
     insSnsInitArgs.processNoiseMean(11:16)      = [accBiasMu; gyroBiasMu];
     insSnsInitArgs.processNoiseCovariance       = insSnsProcCov;
@@ -174,8 +175,7 @@ for l = 1:length(filterTypes)
     trueVelocity   = starshipTrueState.Velocity;
     
     for j = 1:iterationNumber
-        insSnsInitState = [[0; 0; 0]; [0; 0; 0]; [1; 0; 0; 0]; [0; 0; 0]; [0; 0; 0]; 5e-5*ones(3, 1); 5e-5*ones(3, 1)];
-        isOneLaunch = iterationNumber == 1;
+        insSnsInitState = [[0; 0; 0]; [0; 0; 0]; [1; 0; 0; 0]; [0; 0; 0]; [0; 0; 0]; 5e-5*ones(3, 1); 5e-5*ones(3, 1)];        
         
         % gaussian | markov1 | wiener | exp | realImitator
         sns = SnsImitator(snsState, snsSigmaTrajectory, snsMeanTrajectory, snsSigmaVelocity, snsMeanVelocity, 'gaussian');
@@ -184,11 +184,11 @@ for l = 1:length(filterTypes)
         insSns = IntegratedInsSns(ins, sns, timeData, insSnsInitArgs, timeDataSubSystem, reconciliationTime);
         insSnsState = insSns.evaluate(insSnsInitState, initialConditionStabilityCoeff*initCov, insInitialState, estimatorType, isOneLaunch, isOneLaunch);
         
-        angErr = angleErrorsFromQuaternion(insSnsState.Rotation, trueRotation);
+        quatErr = trueRotation - insSnsState.Rotation;
         errTraj = vectNormError(trueTrajectory, insSnsState.Trajectory, 1e3);
         errVel  = vectNormError(trueVelocity, insSnsState.Velocity, 1e3);
         
-        iterations(j, :, :) = [errTraj; errVel; angErr];
+        iterations(j, :, :) = [errTraj; errVel; quatErr];
         
         if isOneLaunch
             figure();
@@ -206,7 +206,7 @@ for l = 1:length(filterTypes)
             plot2(realTime, errVel, 'velocity errors in SNS and SNS & INS', estimatorType, 'velocity error, meter / sec');
             
             figure()
-            plot2(realTime, angErr, 'angle rotation error', {'yaw', 'pitch', 'roll'}, 'angle error, rad');
+            plot2(realTime, quatErr, 'angle rotation error', {'q0', 'q1', 'q2', 'q3'}, 'quaternion error');
         end
         
         fprintf('iteration of %d: completed\n', j);
@@ -245,10 +245,12 @@ if iterationNumber > 1
     plot2(realTime, vErrors, 'velocity errors in SNS & INS', legends, 'velocity error, meter / sec');
     
     figure();
-    subplot(3, 1, 1);
-    plot2(realTime, squeeze(errors(:, 3, :)), 'angle error in SNS & INS', filterTypes, 'yaw error, rad');
-    subplot(3, 1, 2);
-    plot2(realTime, squeeze(errors(:, 4, :)), 'angle error in SNS & INS', filterTypes, 'pitch error, rad');
-    subplot(3, 1, 3);
-    plot2(realTime, squeeze(errors(:, 5, :)), 'angle error in SNS & INS', filterTypes, 'roll error, rad');
+    subplot(4, 1, 1);
+    plot2(realTime, squeeze(errors(:, 3, :)), 'quaternion error in SNS & INS', filterTypes, 'q0 error');
+    subplot(4, 1, 2);
+    plot2(realTime, squeeze(errors(:, 4, :)), 'quaternion error in SNS & INS', filterTypes, 'q1 error');
+    subplot(4, 1, 3);
+    plot2(realTime, squeeze(errors(:, 5, :)), 'quaternion error in SNS & INS', filterTypes, 'q2 error');
+    subplot(4, 1, 4);
+    plot2(realTime, squeeze(errors(:, 6, :)), 'quaternion error in SNS & INS', filterTypes, 'q3 error');
 end

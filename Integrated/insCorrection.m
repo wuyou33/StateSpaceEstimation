@@ -21,5 +21,13 @@ function [ corrected ] = insCorrection( insMeasurement, correctionParams)
     %
     corrected(1:3, 1)  = insMeasurement(1:3) - correctionParams(1:3);
     corrected(4:6, 1)  = insMeasurement(4:6) - correctionParams(4:6);
-    corrected(7:10, 1) = quaternionMultiply(insMeasurement(7:10), quatconj(correctionParams(7:10)')');
+    
+    % Quaternion corrections
+    % Crassidis. Eq. 7.34 and A.174a.
+    insQuat = insMeasurement(7:10);
+    antm = [0 insQuat(3) -insQuat(2); -insQuat(3) 0 insQuat(1); insQuat(2) -insQuat(1) 0];
+    quat = insQuat + 0.5 .* [insQuat(4)*eye(3) + antm; -1.*[insQuat(1) insQuat(2) insQuat(3)]] * quaternion2Euler(correctionParams(7:10));
+    % Brute-force normalization
+    corrected(7:10, 1) = quaternionNormalize(quat);
+    %     corrected(7:10, 1) =  quaternionMultiply(insMeasurement(7:10), quatconj(correctionParams(7:10)')');
 end

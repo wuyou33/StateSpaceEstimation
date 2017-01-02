@@ -1,8 +1,8 @@
-function [ dState ] = SinsDynamicEquation( ~, state, acceleration, angularVelocity, quaternion)
+function [ dState ] = SinsDynamicEquation( ~, state, acceleration, angularVelocity, insState)
     % SinsDynamicEquation. State transition function for integrated inertial navigation system (INS) and
     %   satellity navigation system (SNS). Describe ins dynamic error.
     %
-    %   [ dState ] = SinsDynamicEquation( ~, state, acceleration, angularVelocity, quaternion).
+    %   [ dState ] = SinsDynamicEquation( ~, state, acceleration, angularVelocity, insState).
     %
     %   state(1:3)      - position error
     %   state(4:6)      - velocity error
@@ -35,6 +35,10 @@ function [ dState ] = SinsDynamicEquation( ~, state, acceleration, angularVeloci
     %       B   - matrix from quaternion Qpc. (0.5*[-q1 -q2 -q3; q0 -q3 q2; q3 q0 -q1; -q2 q1 q0])
     %
     %
+    quaternion = insState(7:10);
+    vel = insState(3:6);
+    pos = insState(1:3);
+    
     dState(1:3, 1) = state(4:6);
     
     % rotation matrix from body frame to platform frame
@@ -44,7 +48,7 @@ function [ dState ] = SinsDynamicEquation( ~, state, acceleration, angularVeloci
     plat2Comp = quaternion2RotationMatrix(state(7:10));
     
     dState(4:6, 1) = (eye(3) - plat2Comp)*(body2Plat*acceleration) + body2Plat*(state(17:19).*acceleration + state(11:13));
-    dState(7:10, 1) = -quaternion2BMatrix(state(7:10))*( state(20:22).*angularVelocity + state(14:16) );
+    dState(7:10, 1) = quaternion2BMatrix(state(7:10)) * ([ -vel(2)/pos(2); vel(1)/pos(1); 0 ]  - state(20:22).*angularVelocity - state(14:16) );
     
     dState(11:13, 1) = [0; 0; 0];
     dState(14:16, 1) = [0; 0; 0];

@@ -57,7 +57,7 @@ classdef BaseIntegratedIns < handle
                     sample = j + startBlock - 1;
                     
                     if any(reconciliationIndexes == sample)
-                        state(11:end)   = initalState(11:end);
+                        state(10:end)   = initalState(10:end);
                         cov             = initialCov;
                         decompCov       = this.updateFilterParams(cov, estimatorType);
                         particleSet     = this.buildParticles(estimatorType, state, cov, decompCov);
@@ -71,7 +71,7 @@ classdef BaseIntegratedIns < handle
                     timeEnd = time(sample);
                     
                     initialSubSysState = insState;
-                    this.updateModelParams(state, time(sample), sample, initialSubSysState(7:10));
+                    this.updateModelParams(state, time(sample), sample, initialSubSysState);
                     
                     insStateMatrix = this.ins.evaluate(initialSubSysState, timeStart, timeEnd);
                     insState = insStateMatrix(:, end);
@@ -198,16 +198,16 @@ classdef BaseIntegratedIns < handle
             end
         end
         
-        function updateModelParams(this, state, time, sample, quaternion)
+        function updateModelParams(this, state, time, sample, insState)
             modelParams(1:3)    = this.inferenceModel.model.params(1:3);            % accelerationBiasMu
             modelParams(4:6)    = this.inferenceModel.model.params(4:6);            % accelerationBiasSigma
             modelParams(7:9)    = this.inferenceModel.model.params(7:9);            % gyroBiasMu
             modelParams(10:12)  = this.inferenceModel.model.params(10:12);          % gyroBiasSigma
             modelParams(13:15)  = this.getCorrectedAcceleration(sample, state);     % corrected acceleration
             modelParams(16:18)  = this.getCorrectedAngularVelocity(sample, state);  % corrected angular velocity
-            modelParams(19:22)  = quaternion;                                       % quaternion
-            modelParams(23)     = this.timeData.SampleTime;                         % sampleTime
-            modelParams(24)     = time;
+            modelParams(19:28)  = insState;                                         % attitude, velocity, quaternion of INS
+            modelParams(29)     = this.timeData.SampleTime;                         % sampleTime
+            modelParams(30)     = time;
             
             updModel = this.inferenceModel.model.setParams(this.inferenceModel.model, modelParams);
             this.inferenceModel.model = updModel;

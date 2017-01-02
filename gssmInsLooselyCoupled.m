@@ -94,18 +94,18 @@ function model = setparams(model, params, idxVector)
     model.gyroBiasSigma(1:3, 1)             = model.params(10:12);
     model.acceleration(1:3, 1)              = model.params(13:15);
     model.angularVelocity(1:3, 1)           = model.params(16:18);
-    model.quaternion(1:4, 1)                = model.params(19:22);
-    model.sampleTime                        = model.params(23);
-    model.time                              = model.params(24);
+    model.insState(1:10, 1)                 = model.params(19:28);
+    model.sampleTime                        = model.params(29);
+    model.time                              = model.params(30);
 end
 
 function newState = ffun(model, state, noise, stateControl)
     % State transition function (system dynamics).
     a = model.acceleration;
     w = model.angularVelocity;
-    q = model.quaternion;
+    x = model.insState;
     tSpan = [model.time - model.sampleTime; model.time];
-    odeFun = @(t, y) SinsDynamicEquation(t, y, a, w, q);
+    odeFun = @(t, y) SinsDynamicEquation(t, y, a, w, x);
     [rn, cn] = size(state);
     
     newState = zeros(rn, cn);

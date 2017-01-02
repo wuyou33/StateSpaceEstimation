@@ -70,5 +70,6 @@ function dy = EquationOfMotion(time, state, acceleration, angularVelocity, tEpoc
         + rotatedAccelearation(3) ...
         + sunInfluence(3) ...
         + moonInfluence(3);
-    dy(7:10, 1) = 0.5 * quaternionMultiply(quaternion, [0; w]);
+    
+    dy(7:10, 1) = -0.5 * quaternionMultiply(quaternion, [0; w]);
 end
