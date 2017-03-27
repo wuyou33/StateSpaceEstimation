@@ -26,4 +26,5 @@ interpError = ((inter.x(2) - inter.x(1)) / (sampleTime)) - inter.vx(2);
 display(interpError)
 
 interpErrorEnd = ((inter.x(simulationNumber) - inter.x(simulationNumber-1)) / (sampleTime)) - inter.vx(simulationNumber);
-display(interpErrorEnd)
+
+display(interpErrorEnd);
