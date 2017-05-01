@@ -6,8 +6,8 @@ date.day  = 17;
 date.mon  = 11;
 date.year = 2015;
 timeStart = '00:00:00.000';
-timeEnd = '00:00:00.500';
-timeDataXRay  = TimeExt(timeStart, timeEnd, 1e-3, date, 1);
+timeEnd = '05:00:00.000';
+timeDataXRay  = TimeExt(timeStart, timeEnd, 1e1, date, 1e5); % change refreshSunMoonInfluenceTime to real number 
 iterationNumber    = 1;
 secondInOneMinute  = 60;
 esitimatedParams   = 2;
@@ -15,14 +15,14 @@ logLastErrors      = 1;
 
 % sigma points family
 % filterTypes  = {'srukf', 'srcdkf', 'ckf', 'cdkf', 'ukf'};
-filterTypes  = {'ckf'};
+filterTypes  = {'srukf'};
 
 %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'gspf', 'gmsppf', 'ghqf', 'sghqf'};
 % filterTypes = {'ghqf'};
 
 xRaySourceCount      = 4;
 backgroundPhotnRate  = 5.9e4;
-timeBucket           = 1e5; % 1e5 sec
+timeBucket           = 1e4; % 1e5 sec
 detectorArea         = 1; % m^2
 
 earthEphemeris = loadEphemeris('earth', timeDataXRay.SimulationNumber, secondInOneMinute/timeDataXRay.SampleTime);
