@@ -3,6 +3,9 @@
 
 # User-specific files
 *.suo
+*.DS_Store
+*.ds_Store
+*.ds_store
 *.user
 *.userosscache
 *.sln.docstates
@@ -12,5 +15,5 @@ Main.m~
 *.m~
 exclude/
 Res/
-
+.DS_Store
 *.m~

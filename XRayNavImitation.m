@@ -1,4 +1,4 @@
-close all; clc; clearvars;
+close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
 addpath(genpath('./'));
 
@@ -6,16 +6,16 @@ date.day  = 17;
 date.mon  = 11;
 date.year = 2015;
 timeStart = '00:00:00.000';
-timeEnd = '05:00:00.000';
-timeDataXRay  = TimeExt(timeStart, timeEnd, 1e1, date, 1e5); % change refreshSunMoonInfluenceTime to real number 
+timeEnd   = '00:30:00.000';
+timeDataXRay  = TimeExt(timeStart, timeEnd, 1e1, date, 1e5); % change refreshSunMoonInfluenceTime to real number
 iterationNumber    = 1;
 secondInOneMinute  = 60;
 esitimatedParams   = 2;
 logLastErrors      = 1;
 
 % sigma points family
-% filterTypes  = {'srukf', 'srcdkf', 'ckf', 'cdkf', 'ukf'};
-filterTypes  = {'sckf'};
+% filterTypes  = {'sckf, 'ghqf', 'sghqf', 'srukf', 'srcdkf', 'ckf', 'cdkf', 'ukf'};
+filterTypes  = {'ghqf'};
 
 %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'gspf', 'gmsppf', 'ghqf', 'sghqf'};
 % filterTypes = {'ghqf'};
@@ -60,10 +60,8 @@ for l = 1:length(filterTypes)
     initArgsXRay.observationNoiseCovariance = xRayToaCovariance(xRaySources, detectorArea, timeBucket, backgroundPhotnRate);
     initArgsXRay.stateNoiseMean = [zeros(3, 1); zeros(3, 1)];
     
-    if stringmatch(estimatorType, {'ukf', 'cdkf', 'srukf', 'srcdkf', 'ckf', 'sckf'})
+    if stringmatch(estimatorType, {'ukf', 'cdkf', 'srukf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'sghqf', 'ghqf'})
         initArgsXRay.stateNoiseCovariance = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (1e-5*eye(3)).^2];
-    elseif stringmatch(estimatorType, {'fdckf', 'cqkf', 'sghqf', 'ghqf'})
-        initArgsXRay.stateNoiseCovariance = [(7.25e-2*eye(3)).^2 zeros(3); zeros(3) (2.5e-4*eye(3)).^2];
     elseif stringmatch(estimatorType, {'pf', 'sppf'})
         initArgsXRay.stateNoiseCovariance = [(3.75e-1*eye(3)).^2 zeros(3); zeros(3) (4.5e-4*eye(3)).^2];
     end

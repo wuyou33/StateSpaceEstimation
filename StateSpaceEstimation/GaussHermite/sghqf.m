@@ -83,10 +83,10 @@ function [stateNew, stateCovNew, stateNoise, observNoise, internal ] = sghqf(sta
         control2 = [];
     end
     
-    [set, weights] = sparseGaussHermiteRule(order, stateDim, manner);
-    weights = weights / sum(abs(weights));
-    weights1 = rvecrep(weights, stateDim);
-    weights2 = rvecrep(weights, obsDim);
+    generatesPoint = memoize(@generateSparseGaussHermitePoints);
+    [set, weights] = generatesPoint(order, stateDim, manner);
+    w_x = rvecrep(weights, stateDim);
+    w_z = rvecrep(weights, obsDim);
     
     %% evaluate cubature points
     numPoints = size(set, 2);
@@ -95,32 +95,32 @@ function [stateNew, stateCovNew, stateNoise, observNoise, internal ] = sghqf(sta
     %% propagate quadrature points through process model
     predictedState = model.stateTransitionFun(model, pointSet, cvecrep(stateNoise.mean, numPoints), control1);
     
-    predictedStateMean = sum(predictedState.*weights1, 2);
-    sqrtPredictedStateCov = (predictedState - cvecrep(predictedStateMean, numPoints)).*weights1;
-    predictedStateCov = sqrtPredictedStateCov*sqrtPredictedStateCov' + stateNoise.covariance;
+    predictedStateMean = sum(predictedState.*w_x, 2);
+    sqrtPredictedStateCov = (predictedState - cvecrep(predictedStateMean, numPoints));
+    predictedStateCov = w_x.*sqrtPredictedStateCov*sqrtPredictedStateCov' + stateNoise.covariance;
     
     %% evaluate cubature points for measurement
     pointSet2 = cvecrep(predictedStateMean, numPoints) + chol(predictedStateCov, 'lower')*set;
     
     %% propagate through observation model
     predictObs = model.stateObservationFun(model, pointSet2, cvecrep(observNoise.mean, numPoints), control2);
-    predictObsMean = sum(predictObs.*weights2, 2);
+    predictObsMean = sum(predictObs.*w_z, 2);
     
     %% measurement update
-    x = (pointSet2 - cvecrep(predictedStateMean, numPoints)).*weights1;
-    z = (predictObs - cvecrep(predictObsMean, numPoints)).*weights2;
+    x = (pointSet2 - cvecrep(predictedStateMean, numPoints));
+    z = (predictObs - cvecrep(predictObsMean, numPoints));
     
-    innovationCov = z*z'+ observNoise.covariance;
-    crossCov = x*z';
-    filterGain = crossCov / innovationCov;
+    innovationCov = w_z.*z*z'+ observNoise.covariance;
+    crossCov = w_x.*x*z';
+    filterGain = crossCov*pinv(innovationCov);
     
     if isempty(model.innovationModelFunc)
         inov = observation - predictObsMean;
     else
-        inov = model.innovationModelFunc(model, observation, predictObsMean);
+        inov = model.innovationModelFunc( model, observation, predictObsMean);
     end
     
-    stateNew = predictedStateMean + filterGain*inov;
+    stateNew    = predictedStateMean + filterGain*inov;
     stateCovNew = predictedStateCov - filterGain*innovationCov*filterGain';
     
     %% build additional ouptut param (required for debug)

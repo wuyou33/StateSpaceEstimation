@@ -1,4 +1,4 @@
-close all force; clc; clearvars;
+close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
 addpath(genpath('OrbitalMotion')); % include folder with orbital motion functions
 addpath(genpath('InertialMeasurementUnit')); % include folder with inertial measurement functions

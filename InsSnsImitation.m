@@ -1,4 +1,4 @@
-close all force; clc; clearvars;
+close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 addpath(genpath('./'));
 
 % ghqf not working due to dimension, too number of points :(

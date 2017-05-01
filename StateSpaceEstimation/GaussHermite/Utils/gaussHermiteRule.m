@@ -44,6 +44,8 @@ function [ points, weights ] = gaussHermiteRule( order, dim )
         points = cartesianProduct(replRoots)';
         
         replWeights(1:dim) = {weights};
-        weights = cartesianProduct(replWeights)';
+        tmpWeights = cartesianProduct(replWeights)';
+        weightLenght = size(tmpWeights, 2);
+        weights(1:weightLenght) = prod(tmpWeights(:, 1:weightLenght));
     end
 end

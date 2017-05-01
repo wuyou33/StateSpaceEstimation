@@ -1,4 +1,4 @@
-close all force; clc; clear allvars;
+close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
 addpath(genpath('OrbitalMotion')); % include folder with orbital motion functions
 addpath(genpath('Statistics')); % include folder with Statistics functions

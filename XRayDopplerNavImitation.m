@@ -1,4 +1,4 @@
-close all; clc; clearvars;
+close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
 addpath(genpath('/Users/aleksey.konakov/Documents/Projects/StateSpaceEstimation'));
 

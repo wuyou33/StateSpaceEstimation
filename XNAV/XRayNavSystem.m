@@ -154,7 +154,7 @@ classdef XRayNavSystem < handle
             decompCov = [];
             
             alpha = 0.075;   % scale factor (UKF parameter) 1e-3
-            beta  = 2.75;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
+            beta  = 2.75;    % 2 is a optimal setting for Gaussian priors (UKF parameter)
             kappa = 0.1;     % 0 is optimal for state dimension = 2 (UKF parameter)
             
             switch estimatorType{1}
@@ -192,9 +192,9 @@ classdef XRayNavSystem < handle
                 case 'cqkf'
                     this.inferenceModel.cqkfParams = 9; % order of laguerre polynomial
                 case 'ghqf'
-                    this.inferenceModel.ghkfParams = 3; % order of gauss-hermite polynomial
+                    this.inferenceModel.ghkfParams = 4; % order of gauss-hermite polynomial
                 case 'sghqf'
-                    this.inferenceModel.sghkfParams = [5 3]; % order of gauss-hermite polynomial & manner
+                    this.inferenceModel.sghkfParams = [3 3]; % order of gauss-hermite polynomial & manner
                 otherwise
                     % do nothing by default
             end

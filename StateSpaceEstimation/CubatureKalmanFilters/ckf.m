@@ -67,14 +67,14 @@ function [newState, newCovState, stateNoise, observNoise, internal ] = ckf(state
     
     %% calculate cubature points
     offsetPrediction = svdDecomposition(covState);
-    cubatureSet  = cvecrep(state, numCubPointSet) + offsetPrediction*(sqrt(numCubPointSet/2)*[eye(stateDim) -eye(stateDim)]);
+    cubatureSet  = cvecrep(state, numCubPointSet) + offsetPrediction*(sqrt(numCubPointSet / 2)*[eye(stateDim) -eye(stateDim)]);
     
     %% propagate cubature-points through process model
     predictedState = model.stateTransitionFun(model, cubatureSet, cvecrep(stateNoise.mean, numCubPointSet), control1);
     
     predictedStateMean = sum(predictedState, 2) / numCubPointSet;
     squareRootPredictedStateCov = (predictedState - cvecrep(predictedStateMean, numCubPointSet)) / sqrt(numCubPointSet);
-    predictedStateCov = squareRootPredictedStateCov*squareRootPredictedStateCov'  + stateNoise.covariance;
+    predictedStateCov = squareRootPredictedStateCov*squareRootPredictedStateCov' + stateNoise.covariance;
     
     %% calculate cubature points for measurement
     offsetObs = svdDecomposition(predictedStateCov);
