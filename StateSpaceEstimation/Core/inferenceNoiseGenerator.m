@@ -76,13 +76,9 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                     observationNoise = generateNoiseDataSet(observNoiseArg);
                 end
                 
-                if stringmatch(estimatorType, {'srukf', 'srcdkf'})
+                if stringmatch(estimatorType, {'srukf', 'srcdkf', 'sckf', 'fdckf'})
                     processNoise = convertGassianNoise(processNoise, 'sqrt');
                     observationNoise = convertGassianNoise(observationNoise, 'sqrt');
-                end
-                if stringmatch(estimatorType, {'sckf', 'fdckf'})
-                    processNoise = convertGassianNoise(processNoise, 'svd');
-                    observationNoise = convertGassianNoise(observationNoise, 'svd');
                 end
             end
             

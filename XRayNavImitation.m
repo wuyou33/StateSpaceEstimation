@@ -15,7 +15,7 @@ logLastErrors      = 1;
 
 % sigma points family
 % filterTypes  = {'srukf', 'srcdkf', 'ckf', 'cdkf', 'ukf'};
-filterTypes  = {'srukf'};
+filterTypes  = {'sckf'};
 
 %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'gspf', 'gmsppf', 'ghqf', 'sghqf'};
 % filterTypes = {'ghqf'};
