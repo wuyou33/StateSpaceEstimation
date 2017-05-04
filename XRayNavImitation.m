@@ -6,7 +6,7 @@ date.day  = 17;
 date.mon  = 11;
 date.year = 2015;
 timeStart = '00:00:00.000';
-timeEnd   = '00:30:00.000';
+timeEnd   = '24:00:00.000';
 timeDataXRay  = TimeExt(timeStart, timeEnd, 1e1, date, 1e5); % change refreshSunMoonInfluenceTime to real number
 iterationNumber    = 1;
 secondInOneMinute  = 60;
@@ -15,7 +15,7 @@ logLastErrors      = 1;
 
 % sigma points family
 % filterTypes  = {'sckf, 'ghqf', 'sghqf', 'srukf', 'srcdkf', 'ckf', 'cdkf', 'ukf'};
-filterTypes  = {'ghqf'};
+filterTypes  = {'sckf'};
 
 %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'gspf', 'gmsppf', 'ghqf', 'sghqf'};
 % filterTypes = {'ghqf'};
