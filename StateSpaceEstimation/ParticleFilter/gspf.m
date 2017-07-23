@@ -121,10 +121,10 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gspf( dataSet, stateNo
     end
     
     weightNorm = 0;
-    % calculate updated state mixture means, covariances, weights
+    % calculate updated state mixture means, covariance matrices, weights
     for i = 1:mixtureCount
         weight2 = importanceWeights(i, :);
-        % proabably weightFoo / sum(weightFoo)
+        % probably weightFoo / sum(weightFoo)
         impWeightNorm = sum(weight2);
         stateMeanPredict(:, i) = sum( rvecrep(weight2, stateDim) .* sampleBuf2(:, :, i), 2) / impWeightNorm;
         
@@ -147,9 +147,9 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gspf( dataSet, stateNo
     end
     
     %% resample
-    resampleIdx = residualResample(1:mixtureCount, mixtureWeights);
+    resampleIdx = residualResample(1 : mixtureCount, mixtureWeights);
     [~, idx] = sort(rand(1, mixtureCount));
-    idx = idx(1:stateGMM.mixtureCount);
+    idx = idx(1 : stateGMM.mixtureCount);
     idx = resampleIdx(idx);
     
     dataSet.stateGMM.mean = stateMeanPredict(:, idx);

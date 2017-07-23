@@ -13,7 +13,7 @@ function [ points, weights ] = generateSparseGaussHermitePoints(accuracyLevel, d
     %       weights     - vecoter of generated weights.
     %
     
-    indexSet = generateIndexOfSparseGaussHermiteRule(accuracyLevel,dimension);
+    indexSet = generateIndexOfSparseGaussHermiteRule(accuracyLevel, dimension);
     
     points  = [];
     weights = [];

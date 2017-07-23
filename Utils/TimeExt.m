@@ -7,6 +7,8 @@ classdef TimeExt < handle
         sampleTime;                     % [sec]
         date;                           % day-month-year
         refreshSunMoonInfluenceTime;    % [sec]
+        startSecond;                    % [sec]
+        endSecond;                      % [sec]
     end
     
     properties (Access = private, Constant)
@@ -45,6 +47,13 @@ classdef TimeExt < handle
             obj.sampleTime                  = sampleTime;
             obj.date                        = date;
             obj.refreshSunMoonInfluenceTime = refreshSunMoonInfluenceTime;
+            
+            dateArr = getDateArr(startTime, TimeExt.timeFormat,  date);
+            obj.startSecond = TimeExt.tFun( dateArr(4:6) );
+            
+            deltaDateTime = datevec(duration, TimeExt.timeFormat);
+            dayAdd = deltaDateTime(3) - 1;
+            obj.endSecond = dayAdd * 3600 * 24 + TimeExt.tFun(deltaDateTime(4:6));
         end
         
         function sample = evalSampleFromTime(this, t)
@@ -106,14 +115,11 @@ classdef TimeExt < handle
         end
         
         function val = get.StartSecond(this)
-            dateArr = this.GetDateArr();
-            val = this.tFun( dateArr(4:6) );
+            val = this.startSecond;
         end
         
         function val = get.EndSecond(this)
-            deltaDateTime = datevec(this.duration, this.timeFormat);
-            dayAdd = deltaDateTime(3) - 1;
-            val = dayAdd * 3600 * 24 + this.tFun(deltaDateTime(4:6));
+            val = this.endSecond;
         end
         
         function val = get.JD(this)
@@ -128,16 +134,7 @@ classdef TimeExt < handle
     
     methods (Access = private)
         function val = GetDateArr(this)
-            val = datevec(this.startTime, this.timeFormat);
-            
-            fieldsDate = fieldnames(this.date);
-            for i = 1:size(fieldsDate, 1)
-                val(4-i)=this.date.( char( fieldsDate(i) ) );
-            end
-        end
-        
-        function val = tFun (~, x)
-            val = x(1)*60*60 + x(2)*60 + x(3);
+            val = getDateArr(this.startTime, this.timeFormat,  this.date);
         end
     end
     
@@ -145,6 +142,10 @@ classdef TimeExt < handle
         function dayNum = secToDate(secNum)
             % 1 day = 24 (hour) * 60 (minute) * 60 (sec)
             dayNum = secNum / 24 / 60 / 60;
+        end
+        
+        function val = tFun (x)
+            val = x(1)*60*60 + x(2)*60 + x(3);
         end
     end
     

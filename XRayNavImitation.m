@@ -15,10 +15,10 @@ logLastErrors      = 1;
 
 % sigma points family
 % filterTypes  = {'sckf, 'ghqf', 'sghqf', 'srukf', 'srcdkf', 'ckf', 'cdkf', 'ukf'};
-filterTypes  = {'sckf'};
+% filterTypes  = {'sppf'};
 
 %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'gspf', 'gmsppf', 'ghqf', 'sghqf'};
-% filterTypes = {'ghqf'};
+filterTypes = {'sckf'};
 
 xRaySourceCount      = 4;
 backgroundPhotnRate  = 5.9e4;
@@ -59,21 +59,24 @@ for l = 1:length(filterTypes)
     initArgsXRay.observationNoiseMean = zeros(xRaySourceCount, 1);
     initArgsXRay.observationNoiseCovariance = xRayToaCovariance(xRaySources, detectorArea, timeBucket, backgroundPhotnRate);
     initArgsXRay.stateNoiseMean = [zeros(3, 1); zeros(3, 1)];
-    
-    if stringmatch(estimatorType, {'ukf', 'cdkf', 'srukf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'sghqf', 'ghqf'})
-        initArgsXRay.stateNoiseCovariance = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (1e-5*eye(3)).^2];
-    elseif stringmatch(estimatorType, {'pf', 'sppf'})
-        initArgsXRay.stateNoiseCovariance = [(3.75e-1*eye(3)).^2 zeros(3); zeros(3) (4.5e-4*eye(3)).^2];
-    end
-    
+%     
+%     if stringmatch(estimatorType, {'ukf', 'cdkf', 'srukf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'sghqf', 'ghqf', 'gmsppf'})
+%         initArgsXRay.stateNoiseCovariance = [(3.75e-1*eye(3)).^2 zeros(3); zeros(3) (4.5e-4*eye(3)).^2];
+%     elseif stringmatch(estimatorType, {'pf', 'sppf', 'gspf'})
+%         initArgsXRay.stateNoiseCovariance = [(3.75e-1*eye(3)).^2 zeros(3); zeros(3) (4.5e-5*eye(3)).^2];
+%     elseif stringmatch(estimatorType, {'gmsppf'})
+%         initArgsXRay.stateNoiseCovariance = [(3.75e-2*eye(3)).^2 zeros(3); zeros(3) (4.5e-4*eye(3)).^2];
+%     end
+    initArgsXRay.stateNoiseCovariance = [(3.75e-3*eye(3)).^2 zeros(3); zeros(3) (4.5e-5*eye(3)).^2];
+
     iterations = zeros(iterationNumber, 2, timeDataXRay.SimulationNumber);
     
     fprintf('estimator: %s\n', estimatorType{1});
     for j = 1:iterationNumber
         % for j = 1:iterationNumber
-        initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (1e-2)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
+        initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (5e-2)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
         %initialXRayCov = [(30)^2*eye(3), zeros(3, 3); zeros(3, 3), (1e-5)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
-        initialXRayState = initialXRay + initialConditionStabilityKoeff*svdDecomposition(initialXRayCov)*randn(6, 1);
+        initialXRayState = initialXRay + initialConditionStabilityKoeff*chol(initialXRayCov, 'lower')*randn(6, 1);
         
         trueState = spaceshipTrueState;
         xRayDetector  = XRayDetector(xRayDetectorArgs);

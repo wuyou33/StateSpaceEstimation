@@ -6,6 +6,7 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
         accelerationInBodyFrame;
         angularVelocityInBodyFrame;
         timeData;
+        mass;
         dimension = 10;
     end
     
@@ -13,7 +14,10 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
         function obj = TrajectoryPhaseSpaceSatelliteSimulator(initialState, ...
                 accelerationInBodyFrame, ...
                 angularVelocityInBodyFrame, ...
-                timeData)
+                timeData, ...
+                mass)
+            
+            narginchk(5, 5);
             
             if ~isa(accelerationInBodyFrame, 'AccelerationInBodyFrame')
                 error('accelerationInBodyFrame should be instance of AccelerationInBodyFrame');
@@ -31,6 +35,7 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
             obj.accelerationInBodyFrame = accelerationInBodyFrame;
             obj.angularVelocityInBodyFrame = angularVelocityInBodyFrame;
             obj.timeData = timeData;
+            obj.mass = mass;
         end
         
         function signal = simulate(this, visualize)
@@ -40,6 +45,9 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
             
             num = ceil(this.timeData.TotalSeconds / this.timeData.RefreshSunMoonInfluenceTime);
             blockSize = ceil(this.timeData.SimulationNumber / num);
+            
+            m_fitSolarSystemGravityModel = memoize(@fitSolarSystemGravityModel);                        
+            gravModel = m_fitSolarSystemGravityModel(this.timeData.SampleTime, this.timeData.SimulationNumber);
             
             for i = 1:num
                 startBlock = (i-1)*blockSize + 1*(i == 1);
@@ -53,7 +61,7 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
                 dt = this.timeData.SampleTime;
                 t0 = this.timeData.StartSecond;
                 
-                odeFun = @(t, y) EquationOfMotion(t, y, a, w, tEpoch, dt, t0);
+                odeFun = @(t, y) EquationOfMotion(t, y, a, w, tEpoch, dt, t0, gravModel, this.mass);
                 [~, tmp] = ode45(odeFun, time, initial, odeset('MaxStep', dt));
                 
                 stateVector(:, startBlock:endBlock) = tmp';

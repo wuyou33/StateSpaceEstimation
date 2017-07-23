@@ -37,7 +37,7 @@ function [ points, weights ] = evalFifthDegreeCubatureRule(n)
             count = count + 1;
             points(i, count) = sqrt(n/4 + 1/2);
             points(j, count) = -sqrt(n/4 + 1/2);
-            weights(count) = 1/((n+2)^2);
+            weights(count) = 1 / ( (n+2)^2 );
             
             count = count + 1;
             points(i, count) = -sqrt(n/4 + 1/2);
