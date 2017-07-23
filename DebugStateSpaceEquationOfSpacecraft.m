@@ -23,8 +23,8 @@ visualize                   = 1;
 initialOrbit = loadInitialOrbit();
 
 % debug free fly solver
-% simulator          = TrajectoryPhaseSpaceSatelliteSimulatorFree(timeData, mass);
-% state = simulator.simulate(initialOrbit(1:6), visualize);
+simulator          = TrajectoryPhaseSpaceSatelliteSimulatorFree(timeData, mass);
+state = simulator.simulate(initialOrbit(1:6), visualize);
 
 % debug controlled fly solver
 simulator2 = TrajectoryPhaseSpaceSatelliteSimulator(initialOrbit, accelerationInBodyFrame, angularVelocityInBodyFrame, timeData, mass);
