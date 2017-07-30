@@ -1,11 +1,11 @@
 function [ diffToa ] = calculateDiffToa2( xRaySources, earthEphemeris, sunEphemeris, spaceshipTrajectory )
-    % CalculateDiffToa: calculate difference between
+    % calculateDiffToa2. Calculate difference between. DO NOT USE. Please use calculateDiffToa instead of this function.
     %   - time of arrrival to spacecraft
     %   and
     %   - time of arrival to ssb (solar system baricenter)
     %   for every x-ray source.
     %
-    % Calculated by following expression:
+    %   Calculated by following expression:
     %     dToa = (n*(r + re))/c + tRel
     %
     %   [ diffToa ] = calculateDiffToa2( xRaySources, earthEphemeris, sunEphemeris, spaceshipTrajectory )
@@ -20,9 +20,9 @@ function [ diffToa ] = calculateDiffToa2( xRaySources, earthEphemeris, sunEpheme
     %       diffToa		array of differences between toa on spaceship and toa on ssb.
     %
     narginchk(4, 4);
-    %
+    
     c          = 299792.458; % speed of light [km/sec]
-    earthR     = [earthEphemeris.x earthEphemeris.y earthEphemeris.z]';
+    earthR     = [earthEphemeris.x; earthEphemeris.y; earthEphemeris.z];
     dimension  = length(xRaySources);
     capacity   = size(spaceshipTrajectory, 2);
     tRel       = toaRelativeEffects(xRaySources, earthEphemeris, sunEphemeris, spaceshipTrajectory);
@@ -31,7 +31,9 @@ function [ diffToa ] = calculateDiffToa2( xRaySources, earthEphemeris, sunEpheme
     for i = 1:dimension
         x = xRaySources(i);
         xNorm = cvecrep(x.Normal' + 1e-11*randn(size(x.Normal')), capacity);
-        % 2*earthR - it's easy way to convert spaceshipTrajectory from eci to icrf
-        diffToa(i, :) = 1/c*(dotProduct(xNorm, 2*earthR + spaceshipTrajectory, 1)) + tRel(i, :);
+        
+        % spaceshipTrajectory - position SC relative to Earth. Hence need to convert to ICRF (with center in SSB).
+        % To convert need to: r_sc_to_ssb = r_earth_to_ssb + r_sc_to_earth
+        diffToa(i, :) = 1/c*(dotProduct(xNorm, earthR + spaceshipTrajectory, 1)) + tRel(i, :);
     end
 end

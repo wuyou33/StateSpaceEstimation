@@ -69,10 +69,10 @@ function [ bound ] = crlb( state, observation, initCovState, stateNoise, observN
         [c, h] = model.linearize(model, predictState, stateNoise.mean, observNoise.mean, control1, control2, 'C', 'H');
         
         predictObservCov    = c * predictStateCov * c' + h * observNoise.covariance * h';
-        gain                = predictStateCov * c' / predictObservCov;        
+        gain                = predictStateCov * c' / predictObservCov;
         covState            = predictStateCov - gain * predictObservCov * gain';
         
-        boundBucket(:, i) = diag(stateCov);
+        boundBucket(:, i) = diag(covState);
     end
     
     bound = mean(boundBucket, 2).^0.5;

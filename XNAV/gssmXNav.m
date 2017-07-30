@@ -33,6 +33,8 @@ function model = init(initArgs)
     % of the observation function (hfun) and the actual 'real-world' measurement/observation of that signal,
     % is a requirement for particle filter
     
+    model.linearize                  = @linearize;                     % Function-handle to the linearization function that calculates Jacobians e.t.c.
+    
     model.stateDimension             = 6;
     model.observationDimension       = 4;
     model.paramDimension             = 0;                              % param
@@ -46,7 +48,10 @@ function model = init(initArgs)
         initArgs.xRaySources, ...
         initArgs.earthEphemeris, ...
         initArgs.sunEphemeris, ...
-        initArgs.invPeriods);
+        initArgs.invPeriods, ...
+        initArgs.mass, ...
+        initArgs.gravityModel, ...
+        initArgs.startTime);
     
     % Setup process noise source
     processNoiseArg.type           = 'gaussian';
@@ -70,7 +75,7 @@ function model = init(initArgs)
     model.observationNoise = generateNoiseDataSet(observationNoiseArg);
 end
 %%
-function updatedModel = setparams(model, params, xRaySources, earthEphemeris, sunEphemeris, invPeriods)
+function updatedModel = setparams(model, params, xRaySources, earthEphemeris, sunEphemeris, invPeriods, mass, gravityModel, startTime)
     % Function to unpack a column vector containing system parameters into specific forms
     % needed by FFUN, HFUN and possibly defined sub-functional objects. Both the vectorized (packed)
     % form of the parameters as well as the unpacked forms are stored within the model data structure.
@@ -88,33 +93,31 @@ function updatedModel = setparams(model, params, xRaySources, earthEphemeris, su
     updatedModel.sunEphemerisY          = sunEphemeris(2);
     updatedModel.sunEphemerisZ          = sunEphemeris(3);
     updatedModel.invPeriods             = invPeriods;
+    updatedModel.mass                   = mass;
+    updatedModel.gravityModel           = gravityModel;
+    updatedModel.startTime              = startTime;
 end
 
 function newState = ffun(model, state, noise, stateControl)
     % State transition function (system dynamics).
-    %     [~, tmp] = ode45( @(t,y) EquationOfMotion(t, ...
-    %             y, ...
-    %             model.acceleration, ...
-    %             model.angularVelocity, ...
-    %             model.timeTillCurrentEpoch, ...
-    %             model.sampleTime ), ...
-    %         [model.time - model.sampleTime, model.time], ...
-    %         state ...
-    %     );
-    %     newState = tmp(end, :);
     tSpan = [model.time - model.sampleTime; model.time];
-    odeFun = @(t,y) equationOfMotionFreeFly(t, y, model.timeTillCurrentEpoch);
-    [rn, cn] = size(state);
+    odeFun = @(t,y) equationOfMotionFreeFly(t, y, model.timeTillCurrentEpoch, model.gravityModel, model.mass, model.sampleTime, model.startTime);
     
+    [rn, cn] = size(state);
     newState = zeros(rn, cn);
+    
     for i = 1:cn
-        [~, tmp]       = odeEuler(odeFun, tSpan, state(:, i), model.sampleTime);
-        newState(:, i) = tmp(:, end);
+        [~, tmp]       = ode45(odeFun, tSpan, state(:, i), odeset('MaxStep', model.sampleTime));
+        newState(:, i) = tmp(end, :)';
     end
     
-    if ~isempty(noise); newState  = newState + noise; end
+    if ~isempty(noise)
+        newState  = newState + noise;
+    end
     
-    if ~isempty(stateControl); newState = newState - cvecrep(stateControl, cn); end
+    if ~isempty(stateControl)
+        newState = newState - cvecrep(stateControl, cn);
+    end
 end
 
 function observ = hfun(model, state, noise, observationControl)
@@ -129,13 +132,18 @@ function observ = hfun(model, state, noise, observationControl)
     
     cn = size(state, 2);
     observ = zeros(model.observationDimension, cn);
+    
     for i = 1:cn
-        diffToa = calculateDiffToa(model.xRaySources, earthEphemeris, sunEphemeris, state(1:3, i));
-        observ(:, i) = diffToa2phase(model.invPeriods, diffToa);
+        observ(:, i) = calculateDiffToa(model.xRaySources, earthEphemeris, sunEphemeris, state(1:3, i));
     end
     
-    if ~isempty(noise); observ = observ + noise; end
-    if ~isempty(observationControl); observ = observ + observationControl; end
+    if ~isempty(noise)
+        observ = observ + noise;
+    end
+    
+    if ~isempty(observationControl)
+        observ = observ + observationControl;
+    end
 end
 
 function tranprior = prior(model, predictedState, state, stateControl, processNoiseDataSet)
@@ -154,4 +162,48 @@ function innov = innovation(~, observation, predictedObservation) % first argume
     %   Calculates the innovation signal (difference) between the
     %   output of hfun, i.e. observ (the predicted system observation) and an actual 'real world' observation.
     innov = observation - predictedObservation;
+end
+
+function out = linearize(model, state, ~, ~, ~, ~, term, ~)
+    % (model, state, stateNoise, observNoise, control1, control2, term, index_vector)
+    narginchk(7, 8);
+    
+    switch (term)
+        case 'F'
+            % A = df / dstate
+            tSpan = [model.time - model.sampleTime; model.time];
+            func = @(y) equationOfMotionFreeFly(tSpan(2), y, model.timeTillCurrentEpoch, model.gravityModel, model.mass, model.sampleTime, model.startTime);
+            [ out, ~ ] = jacobianest(func, state);
+        case 'B'
+            % B = df / du1, where u1 - control1
+            out = zeros(model.stateDimension);
+        case 'C'
+            % C = dh / dx
+            earthEphemeris.x = model.earthEphemerisX;
+            earthEphemeris.y = model.earthEphemerisY;
+            earthEphemeris.z = model.earthEphemerisZ;
+            
+            sunEphemeris.x = model.sunEphemerisX;
+            sunEphemeris.y = model.sunEphemerisY;
+            sunEphemeris.z = model.sunEphemerisZ;
+            func = @(y) calculateDiffToa(model.xRaySources, earthEphemeris, sunEphemeris, y);
+            [ out, ~ ] = jacobianest(func, state);
+        case 'D'
+            % D = dh / du2, where u2 - control2
+            out = zeros(model.observationDimension);
+        case 'G'
+            % G = df / dv
+            out = eye(model.stateDimension);
+        case 'H'
+            % H = dh / dn
+            out = eye(model.observationDimension);
+        case 'JFW'
+            % dffun / dparameters
+            out = [];
+        case 'JHW'
+            % dhfun/dparameters
+            out = [];
+        otherwise
+            error('[ linearize::term ] Invalid model term requested!');
+    end
 end

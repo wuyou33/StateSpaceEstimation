@@ -37,6 +37,6 @@ function plot2( x, y, titleText, legendText, yLabelText, xLabelText )
         xlabel(xLabelText);
         ylabel(yLabelText);
     else
-        error('plot2: y must be vector or matrix');
+        error(' [plot2::y] must be vector or matrix');
     end
 end
