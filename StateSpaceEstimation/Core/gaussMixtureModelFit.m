@@ -1,4 +1,4 @@
-function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold, covarianceType, arbitraryWidth, evidenceWeights )
+function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold, covarianceType, arbitraryWidth, evidenceWeights, visualize )
     % gaussMixtureModelFit. Fit a Gaussian mixture model (GMM) with M components to dataset (gmmSet)
     % using an expectation maximization (EM) algorithm.
     %
@@ -18,7 +18,8 @@ function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold,
     %       covarianceType       	Covariance type 'full', 'diag', 'sqrt', 'sqrt-diag', 'svd';
     %       arbitraryWidth       	<optional>  Arbitrary width used if variance collapses to zero: make it 'large'
     %                                          so that centre is responsible for a reasonable number of points;
-    %       evidenceWeights      	<optional> vector (1xN) of sample weights used to do a weighted EM fit to the data.
+    %       evidenceWeights      	<optional> vector (1xN) of sample weights used to do a weighted EM fit to the data;
+    %       visualize               <optional> boolean value, if true then the function will log error, otherwise will not.
     %
     %   OUTPUT
     %       gmmSet              - Gaussian mixture model data structure with the following fields;
@@ -29,7 +30,7 @@ function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold,
     %           .mean           - Gaussian component means;
     %           .covariance     - Covariance matrices of Gaussian components (must comply with cov_type).
     %
-    narginchk(4, 6);
+    narginchk(4, 7);
     
     [dim, dataDim] = size(data);
     
@@ -63,13 +64,18 @@ function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold,
     prevErr = -Inf;
     
     for i = 1 : iterationCount
-        if nargin == 6
+        if nargin >= 6
             [~, ~, evidence, posterior] = gmmProbability(gmmSet, data, evidenceWeights);
         else
             [~, ~, evidence, posterior] = gmmProbability(gmmSet, data);
         end
         
         err = sum(log(evidence));
+        
+        if (nargin == 7 && visualize)
+            % error value is negative log likelihood of data evidence
+            fprintf(1, '[gaussMixtureModelFit:: Cycle %4d  Evidence %11.6f\n]', n, err);
+        end
         
         if (i > 1 && abs((err - prevErr) / prevErr) < terminationThreshold(1))
             return;
