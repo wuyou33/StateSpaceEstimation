@@ -15,46 +15,44 @@ function [ outIndex ] = residualResample( inIndex, weights )
     %   OUTPUT
     %       outIndex  - resampled indices.
     %
+    %%
     narginchk(2, 2);
     
-    partilcesNum = length(weights);
-    outIndex = zeros(1, partilcesNum);
+    %%
+    particlesNum = length(weights);
+    outIndex = zeros(1, particlesNum);
     
-    % residual resampling
-    weightsRes = partilcesNum * weights;
-    nKind = fix(weightsRes);
+    weightsRes = particlesNum*weights;
+    fix_kind = fix(weightsRes);
     
     % residual number of particles to sample
-    nRes = partilcesNum - sum(nKind);
+    numToSample = particlesNum - sum(fix_kind);
     
-    if nRes
-        cumDist = cumsum((weightsRes - nKind) / nRes);
+    if numToSample
+        weightsRes = (weightsRes - fix_kind) / numToSample;
+        cumDist = cumsum(weightsRes);
         
-        % generate n result ordered random variables uniformly distributed in [0, 1]
-        u = fliplr( cumprod(rand(1, nRes).^(1./(nRes : -1 : 1))) );
+        u = fliplr(cumprod(rand(1, numToSample) .^ (1 ./ (numToSample:-1:1))));
         
         j = 1;
-        for i = 1:nRes
+        for i = 1:numToSample
             while u(1, i) > cumDist(1, j)
                 j = j + 1;
             end
             
-            nKind(1, j) = nKind(1, j) + 1;
+            fix_kind(1, j) = fix_kind(1,j)+1;
         end
     end
     
-    % copy resampled trajectories
     index = 1;
     
-    for i = 1 : partilcesNum
-        if nKind(1, i) > 0
-            endIndex = index + nKind(1, i) - 1;
-            for j = index : endIndex
+    for i = 1 : particlesNum
+        if fix_kind(1, i) > 0
+            for j = index : index + fix_kind(1, i) -1
                 outIndex(j) = inIndex(i);
             end
         end
         
-        index = index + nKind(1, i);
+        index = index + fix_kind(1, i);
     end
-    
 end

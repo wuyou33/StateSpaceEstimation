@@ -171,8 +171,7 @@ function out = linearize(model, state, ~, ~, ~, ~, term, ~)
     switch (term)
         case 'F'
             % A = df / dstate
-            tSpan = [model.time - model.sampleTime; model.time];
-            func = @(y) equationOfMotionFreeFly(tSpan(2), y, model.timeTillCurrentEpoch, model.gravityModel, model.mass, model.sampleTime, model.startTime);
+            func = @(y) equationOfMotionFreeFly(model.time, y, model.timeTillCurrentEpoch, model.gravityModel, model.mass, model.sampleTime, model.startTime);
             [ out, ~ ] = jacobianest(func, state);
         case 'B'
             % B = df / du1, where u1 - control1

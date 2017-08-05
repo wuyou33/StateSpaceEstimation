@@ -68,7 +68,7 @@ function [stateNew, stateCovNew, stateNoise, observNoise, internal] = ekf(state,
     end
     
     %% time update (prediction)
-    % linearize state transition matrix    
+    % linearize state transition matrix
     [f, g] = model.linearize(model, state, stateNoise.mean, observNoise.mean, control1, control2, 'F', 'G');
     
     predictState     = model.stateTransitionFun( model, state, stateNoise.mean, control1);

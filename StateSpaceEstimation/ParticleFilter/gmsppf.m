@@ -198,7 +198,7 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
     %% resample
     %     outIndex  = residualResample(1:num, sampleW);
     %     xSampleBuf = xSampleBuf(:, outIndex);
-    sampleW = rvecrep(1 / num, num);
+    %     sampleW = rvecrep(1 / num, num);
     
     %% recover GMM representation of posterior distribution using EM
     dataSet.particles = xSampleBuf;

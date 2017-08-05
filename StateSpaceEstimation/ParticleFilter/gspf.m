@@ -63,7 +63,7 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gspf( dataSet, stateNo
     end
     
     if strcmp(dataSet.stateGMM.covarianceType, {'full', 'diag'})
-        error('[ gspf ] state GMMs should have full or diag covariance types.');
+        error('[ gspf ] state GMMs should have sqrt covariance type.');
     end
     %%
     stateDim        = model.stateDimension;
@@ -151,8 +151,11 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gspf( dataSet, stateNo
     [~, idx] = sort(rand(1, mixtureCount));
     idx = idx(1 : stateGMM.mixtureCount);
     idx = resampleIdx(idx);
-    
     dataSet.stateGMM.mean = stateMeanPredict(:, idx);
     dataSet.stateGMM.covariance = stateCovPredict(:, :, idx);
+    
+    %     xSampleBuf = gmmSample(dataSet.stateGMM, num);
+    %     dataSet.stateGMM = gaussMixtureModelFit(xSampleBuf, stateGMM, [1e-5 1000], stateGMM.covarianceType, 1e-20);
+    
     dataSet.stateGMM.weights = (1 / stateGMM.mixtureCount) * ones(1, stateGMM.mixtureCount);
 end
