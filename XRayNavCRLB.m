@@ -8,16 +8,16 @@ date.day            = 17;
 date.mon            = 11;
 date.year           = 2017;
 timeStart           = '00:00:00.000';
-timeEnd             = '00:00:10.000';
-timeDataXRay        = TimeExt(timeStart, timeEnd, 1e-2, date, 1e7); % change refreshSunMoonInfluenceTime to real number
-iterationNumber     = 1;
+timeEnd             = '00:20:00.000';
+timeDataXRay        = TimeExt(timeStart, timeEnd, 1e1, date, 1e7); % change refreshSunMoonInfluenceTime to real number
+iterationNumber     = 4;
 secondInOneMinute   = 60;
 esitimatedParams    = 2;
 logLastErrors       = 1;
 mass                = 200; % [kg]
 errorBudget         = 10; % [%]
 
-b_det   = 0.1; % Detector Background Rate. [photon*sec^-1]
+b_det   = 0.1; % Detector Background Rate. [photon*cm^2*sec^-1]
 b_diff  = 0.1; % Diffuse X-ray Background. [photon*cm^2*sec^-1]
 b_cosm  = 5; % Net Cosmic Ray Background. [photon*cm^2*sec^-1]
 xRaySourceCount      = 4;
@@ -63,6 +63,7 @@ initArgsXRay.mass = mass;
 initArgsXRay.startTime = timeDataXRay.StartSecond;
 initArgsXRay.gravityModel = m_fitSolarSystemGravityModel(timeDataXRay.SampleTime, timeDataXRay.SimulationNumber);
 initArgsXRay.stateNoiseCovariance = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (1e-4*eye(3)).^2];
+% initArgsXRay.stateNoiseCovariance = [(9.5e-2*eye(3)).^2 zeros(3); zeros(3) (5e-4*eye(3)).^2];
 
 iterations = zeros(iterationNumber, 2, timeDataXRay.SimulationNumber - 1);
 
@@ -78,7 +79,8 @@ tEpoch = currentEpoch(timeDataXRay.JD, timeDataXRay.StartSecond);
 for j = 1:iterationNumber
     initialXRayState = initialXRay + initialConditionStabilityKoeff*chol(initialXRayCov, 'lower') * randn(6, 1);
     xRayDetector  = XRayDetector(xRayDetectorArgs);
-    dtoa = xRayDetector.toa(iterationNumber == 1); % test, show X-Ray source signals
+    dtoa = xRayDetector.toa(0); % test, show X-Ray source signals
+    crlb_predict = initialXRayCov;
     
     for i = 2:timeDataXRay.SimulationNumber
         modelParams(1) = tEpoch;
@@ -98,8 +100,7 @@ for j = 1:iterationNumber
             inferenceModel.model.gravityModel, ...
             inferenceModel.model.startTime);
         inferenceModel.model = updModel;
-        
-        bound(:, i - 1) = crlb(trueState(:, i), dtoa(:, i), initialXRayCov, stateNoise, observNoise, inferenceModel);
+        [bound(:, i - 1), crlb_predict] = crlb(crlb_predict, trueState(:, i), dtoa(:, i), stateNoise, observNoise, inferenceModel);
     end
     
     errTraj = sum( (bound(1:3, :) * 1e3).^2, 1 ).^0.5;
@@ -109,26 +110,26 @@ for j = 1:iterationNumber
     if iterationNumber == 1
         figure();
         subplot(2, 1, 1);
-        plot2(timeDataXRay.TimeInHour(2:end), bound(1:3, :) * 1e3, 'trajectory error', {'x', 'y', 'z'}, 'CRLB trajectory error, m', 'time, hours');
+        plot2(timeDataXRay.TimeInHour(2:end), bound(1:3, :) * 1e3, 'Position error', {'x', 'y', 'z'}, 'CRLB position error, m', 'time, hours');
         subplot(2, 1, 2);
-        plot2(timeDataXRay.TimeInHour(2:end), bound(4:6, :) * 1e3, 'velocity error', {'x', 'y', 'z'}, 'CRLB velocity error, m/sec', 'time, hours');
+        plot2(timeDataXRay.TimeInHour(2:end), bound(4:6, :) * 1e3, 'Velocity error', {'x', 'y', 'z'}, 'CRLB velocity error, m/sec', 'time, hours');
     end
     
     fprintf('iteration of %d: completed\n', j );
 end
 
 if iterationNumber > 1
-    for i = 1:timeDataXRay.SimulationNumber
-        errors(:, i) = ( sum( ( squeeze(iterations(:, :, i))' ).^2, 2) / iterationNumber ).^0.5;
+    for i = 1:timeDataXRay.SimulationNumber-1
+        errors(:, i+1) = ( sum( ( squeeze(iterations(:, :, i))' ).^2, 2) / iterationNumber ).^0.5;
     end
+    errors(1, 1) = 1e3*norm([initialXRayCov(1, 1)^.5 initialXRayCov(2, 2)^.5 initialXRayCov(3, 3)^.5]);
+    errors(2, 1) = 1e3*norm([initialXRayCov(4, 4)^.5 initialXRayCov(5, 5)^.5 initialXRayCov(6, 6)^.5]);
 end
 
 if iterationNumber > 1
-    %     save('errors_xray_sp_family.mat', 'errors');
-    
     figure();
     subplot(2, 1, 1);
-    plot2(timeDataXRay.TimeInHour(2:end), squeeze(errors(1, :)), 'CRLB trajectory errors in X-Ray', {'rms_r'}, 'CRLB trajectory error, meter', 'time, hours');
+    plot2(timeDataXRay.TimeInHour, squeeze(errors(1, :)), 'CRLB position error in X-Ray', {'CRLB_r'}, 'CRLB trajectory error, meter', 'time, hours');
     subplot(2, 1, 2);
-    plot2(timeDataXRay.TimeInHour(2:end), squeeze(errors(2, :)), 'CRLB velocity errors in X-Ray', {'rms_v'}, 'CRLB velocity error, meter / sec', 'time, hours');
+    plot2(timeDataXRay.TimeInHour, squeeze(errors(2, :)), 'CRLB velocity error in X-Ray', {'CRLB_v'}, 'CRLB velocity error, meter / sec', 'time, hours');
 end
