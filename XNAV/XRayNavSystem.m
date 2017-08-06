@@ -122,7 +122,7 @@ classdef XRayNavSystem < handle
             narginchk(5, 5);
             
             if strcmp(estimatorType{1}, 'pf')
-                numParticles = 1e4;
+                numParticles = 2e3;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 particleSet.weights             = ones(1, numParticles) / numParticles;
@@ -178,9 +178,9 @@ classdef XRayNavSystem < handle
                     this.inferenceModel.spkfParams = sqrt(7); % scale factor (CDKF parameter h) default sqrt(3)
                     decompCov = chol(cov, 'lower');
                 case {'sckf', 'fdckf'}
-                    decompCov = svdDecomposition(cov); % chol(cov, 'lower');
+                    decompCov = chol(cov, 'lower');
                 case 'pf'
-                    this.inferenceModel.resampleThreshold   = 1;
+                    this.inferenceModel.resampleThreshold   = 0.5;
                     this.inferenceModel.estimateType        = 'mean';
                 case 'gspf'
                     this.inferenceModel.estimateType = 'mean';

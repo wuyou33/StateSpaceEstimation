@@ -10,15 +10,15 @@ date.year           = 2017;
 timeStart           = '00:00:00.000';
 timeEnd             = '02:00:00.000';
 timeDataXRay        = TimeExt(timeStart, timeEnd, 1e1, date, 1e7); % change refreshSunMoonInfluenceTime to real number
-iterationNumber     = 22;
+iterationNumber     = 25;
 secondInOneMinute   = 60;
 esitimatedParams    = 2;
 logLastErrors       = 1;
 mass                = 200; % [kg]
 errorBudget         = 20; % [%]
 
-%{'ukf', 'srukf', 'cdkf', 'srcdkf', 'ckf', 'sckf', 'sghqf', 'ghqf', 'ekf', 'gmsppf', 'gspf', 'sppf', 'cqkf', 'fdckf', 'pf'};
-filterTypes = {'gmsppf'};
+%{'ukf', 'srukf', 'cdkf', 'srcdkf', 'ckf', 'sckf', 'sghqf', 'ghqf', 'ekf', 'gmsppf', 'pf', 'gspf', 'sppf', 'cqkf', 'fdckf'};
+filterTypes = {'pf'};
 
 b_det   = 0.1; % Detector Background Rate. [photon*cm^2*sec^-1]
 b_diff  = 0.1; % Diffuse X-ray Background. [photon*cm^2*sec^-1]
@@ -36,7 +36,7 @@ initialXRay = loadInitialOrbit();
 initialXRay = initialXRay(1:6);
 
 % simulate real trajectory of spaceship
-simulator          = TrajectoryPhaseSpaceSatelliteSimulatorFree(timeDataXRay, mass);
+simulator = TrajectoryPhaseSpaceSatelliteSimulatorFree(timeDataXRay, mass);
 trueState = simulator.simulate(initialXRay, iterationNumber == 1);
 
 errors = zeros(length(filterTypes), esitimatedParams, timeDataXRay.SimulationNumber);
@@ -71,8 +71,8 @@ for l = 1:length(filterTypes)
     initArgsXRay.startTime = timeDataXRay.StartSecond;
     initArgsXRay.gravityModel = m_fitSolarSystemGravityModel(timeDataXRay.SampleTime, timeDataXRay.SimulationNumber);
     
-    initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
-    %     initialXRayCov = [(0.5)^2*eye(3), zeros(3, 3); zeros(3, 3), (0.05e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
+    %     initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
+    initialXRayCov = [(0.5)^2*eye(3), zeros(3, 3); zeros(3, 3), (0.5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
     
     %
     %     if stringmatch(estimatorType, {'ukf', 'cdkf', 'srukf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'sghqf', 'ghqf', 'gmsppf'})
@@ -85,8 +85,8 @@ for l = 1:length(filterTypes)
     
     if stringmatch(estimatorType, {'ekf'})
         initArgsXRay.stateNoiseCovariance = [(9.5e-1*eye(3)).^2 zeros(3); zeros(3) (5e-2*eye(3)).^2];
-    elseif stringmatch(estimatorType, {'pf111'})
-        initArgsXRay.stateNoiseCovariance = [(9.5e-4*eye(3)).^2 zeros(3); zeros(3) (7.5e-5*eye(3)).^2];
+        %     elseif stringmatch(estimatorType, {'pf'})
+        %         initArgsXRay.stateNoiseCovariance = [(9.5e-4*eye(3)).^2 zeros(3); zeros(3) (7.5e-5*eye(3)).^2];
     elseif stringmatch(estimatorType, {'sppf1'})
         initArgsXRay.stateNoiseCovariance = [(3.75e-5*eye(3)).^2 zeros(3); zeros(3) (4.5e-7*eye(3)).^2];
     else
