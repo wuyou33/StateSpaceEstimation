@@ -8,9 +8,9 @@ date.day            = 17;
 date.mon            = 11;
 date.year           = 2017;
 timeStart           = '00:00:00.000';
-timeEnd             = '24:00:00.000';
+timeEnd             = '02:00:00.000';
 timeDataXRay        = TimeExt(timeStart, timeEnd, 1e1, date, 1e7); % change refreshSunMoonInfluenceTime to real number
-iterationNumber     = 50;
+iterationNumber     = 22;
 secondInOneMinute   = 60;
 esitimatedParams    = 2;
 logLastErrors       = 1;
@@ -18,7 +18,7 @@ mass                = 200; % [kg]
 errorBudget         = 20; % [%]
 
 %{'ukf', 'srukf', 'cdkf', 'srcdkf', 'ckf', 'sckf', 'sghqf', 'ghqf', 'ekf', 'gmsppf', 'gspf', 'sppf', 'cqkf', 'fdckf', 'pf'};
-filterTypes = {'ekf'};
+filterTypes = {'gmsppf'};
 
 b_det   = 0.1; % Detector Background Rate. [photon*cm^2*sec^-1]
 b_diff  = 0.1; % Diffuse X-ray Background. [photon*cm^2*sec^-1]

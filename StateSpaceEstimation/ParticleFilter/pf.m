@@ -55,7 +55,7 @@ function [ estimate, dataSet, stateNoise, observNoise ] = pf( dataSet, stateNois
     particles   = dataSet.particles;
     weights     = dataSet.weights;
     threshold   = round(model.resampleThreshold * num);
-    normWeights = cvecrep(1/num, num);
+    normWeights = cvecrep(1 / num, num);
     
     if (model.controlInputDimension == 0)
         control1 = [];

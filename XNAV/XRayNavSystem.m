@@ -133,7 +133,7 @@ classdef XRayNavSystem < handle
                 % fit a N component GMM to initial state distribution
                 particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 5, [eps 1e5], 'sqrt', 1e-20);
             elseif strcmp(estimatorType{1}, 'gmsppf')
-                numParticles = 1e3;
+                numParticles = 3e3;
                 particleSet.particlesNum = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
