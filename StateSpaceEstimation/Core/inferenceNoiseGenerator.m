@@ -76,7 +76,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                     observationNoise = generateNoiseDataSet(observNoiseArg);
                 end
                 
-                if stringmatch(estimatorType, {'srukf', 'srcdkf', 'sckf', 'fdckf', 'sppf'})
+                if stringmatch(estimatorType, {'srukf', 'srcdkf', 'sckf', 'sppf'})
                     processNoise = convertGassianNoise(processNoise, 'sqrt');
                     observationNoise = convertGassianNoise(observationNoise, 'sqrt');
                 end
@@ -100,7 +100,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                     end
                     
                     switch covarianceType
-                        case {'sqrt', 'sqrt-diag', 'svd'}
+                        case {'sqrt', 'sqrt-diag'}
                             processNoiseArg.covariance(:, :, 1) = processNoise.covariance;
                         case {'full', 'diag'}
                             processNoiseArg.covariance(:, :, 1) = chol(processNoise.covariance, 'lower');
@@ -139,7 +139,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                     end
                     
                     switch covarianceType
-                        case {'sqrt', 'sqrt-diag', 'svd'}
+                        case {'sqrt', 'sqrt-diag'}
                             processNoiseArg.covariance(:, :, 1) = processNoise.covariance;
                         case {'full', 'diag'}
                             processNoiseArg.covariance(:, :, 1) = chol(processNoise.covariance, 'lower');
@@ -174,7 +174,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                     end
                     
                     switch covarianceType
-                        case {'sqrt', 'sqrt-diag', 'svd'}
+                        case {'sqrt', 'sqrt-diag'}
                             observNoiseArg.covariance(:, :, 1) = observationNoise.covariance;
                         case {'full', 'diag'}
                             observNoiseArg.covariance(:, :, 1) = chol(observationNoise.covariance, 'lower');

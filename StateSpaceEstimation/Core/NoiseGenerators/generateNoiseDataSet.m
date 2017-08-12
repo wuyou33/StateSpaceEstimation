@@ -98,7 +98,7 @@ function noiseDataSet = generateNoiseDataSet( args )
             
         case 'gaussian'
             if isfield(args, 'covarianceType')
-                if (ischar(args.covarianceType) && stringmatch(args.covarianceType, {'full', 'diag', 'sqrt', 'sqrt-diag', 'svd'}))
+                if (ischar(args.covarianceType) && stringmatch(args.covarianceType, {'full', 'diag', 'sqrt', 'sqrt-diag'}))
                     noiseDataSet.covarianceType = args.covarianceType;
                 else
                     error('[ generateNoiseDataSet::gaussian ] Noise source covarianceType not recognized or not a string.');
@@ -171,7 +171,7 @@ function noiseDataSet = generateNoiseDataSet( args )
             noiseType = args.noiseSources{1}.noiseSorceType;
             covarianceType = args.noiseSources{1}.covarianceType;
             
-            if ~(stringmatch(noiseType,{'gaussian', 'combo-gaussian'}) && stringmatch(covarianceType,{'full', 'diag', 'sqrt', 'sqrt-diag', 'svd'}))
+            if ~(stringmatch(noiseType,{'gaussian', 'combo-gaussian'}) && stringmatch(covarianceType,{'full', 'diag', 'sqrt', 'sqrt-diag'}))
                 error('[ generateNoiseDataSet::combo-gaussian ] A combination Gaussian noise source can only have Gaussian sub noise sources.');
             end
             
@@ -305,7 +305,7 @@ function noiseDataSet = generateNoiseDataSet( args )
             end
             
             switch (noise.covarianceType)
-                case {'full', 'diag', 'sqrt', 'sqrt-diag', 'svd'}
+                case {'full', 'diag', 'sqrt', 'sqrt-diag',}
                     if ((noise.mixtureCount == 1) && isequal(size(args.covariance), [noise.dimension noise.dimension]) ||...
                             ((noise.M  > 1) && isequal(size(args.covariance), [noise.dimension noise.dimension noise.mixtureCount])))
                         noise.covariance = args.covariance;

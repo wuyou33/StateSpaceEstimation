@@ -52,7 +52,8 @@ classdef TrajectoryPhaseSpaceSatelliteSimulatorFree
             narginchk(5, 5);
             
             odeFun = @(t, y) equationOfMotionFreeFly(t, y, tEpoch, gravModel, this.mass, this.timeData.SampleTime, this.timeData.StartSecond);
-            [~, tmp] = ode45(odeFun, time, initial, odeset('MaxStep', this.timeData.SampleTime));
+            % [~, tmp1] = ode45(odeFun, time, initial, odeset('MaxStep', this.timeData.SampleTime));
+            [~, tmp] = odeEuler(odeFun, time, initial, this.timeData.SampleTime);
             
             if size(time, 2) == 2
                 signal = tmp(end, :)';

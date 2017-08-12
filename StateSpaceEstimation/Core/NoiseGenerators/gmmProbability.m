@@ -69,4 +69,6 @@ function [ prior, likelihood, evidence, posterior ] = gmmProbability( gmmSet, da
     
     posterior = likelihood ./ ( (1 ./ prior) * evidence ) + 1e-99;
     posterior = posterior ./ rvecrep(sum(posterior, 1), gmmSet.mixtureCount);
+    
+%     lll = likelihoodGaussian(gmmSet, dataSet, 0);
 end

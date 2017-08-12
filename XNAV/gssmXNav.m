@@ -107,7 +107,7 @@ function newState = ffun(model, state, noise, stateControl)
     newState = zeros(rn, cn);
     
     for i = 1:cn
-        [~, tmp]       = ode45(odeFun, tSpan, state(:, i), odeset('MaxStep', model.sampleTime));
+        [~, tmp]       = odeEuler(odeFun, tSpan, state(:, i), model.sampleTime);
         newState(:, i) = tmp(end, :)';
     end
     
@@ -122,20 +122,16 @@ end
 
 function observ = hfun(model, state, noise, observationControl)
     % State observation function.
-    earthEphemeris.x = model.earthEphemerisX;
-    earthEphemeris.y = model.earthEphemerisY;
-    earthEphemeris.z = model.earthEphemerisZ;
-    
-    sunEphemeris.x = model.sunEphemerisX;
-    sunEphemeris.y = model.sunEphemerisY;
-    sunEphemeris.z = model.sunEphemerisZ;
-    
     cn = size(state, 2);
-    observ = zeros(model.observationDimension, cn);
+    earthEphemeris.x = rvecrep(model.earthEphemerisX, cn);
+    earthEphemeris.y = rvecrep(model.earthEphemerisY, cn);
+    earthEphemeris.z = rvecrep(model.earthEphemerisZ, cn);
     
-    for i = 1:cn
-        observ(:, i) = calculateDiffToa(model.xRaySources, earthEphemeris, sunEphemeris, state(1:3, i));
-    end
+    sunEphemeris.x = rvecrep(model.sunEphemerisX, cn);
+    sunEphemeris.y = rvecrep(model.sunEphemerisY, cn);
+    sunEphemeris.z = rvecrep(model.sunEphemerisZ, cn);
+    
+    observ = calculateDiffToa(model.xRaySources, earthEphemeris, sunEphemeris, state(1:3, :));
     
     if ~isempty(noise)
         observ = observ + noise;

@@ -87,9 +87,9 @@ function [stateNew, stateCovNew, stateNoise, observNoise, internal ] = ghqf(stat
     %% propagate quadrature points through process model
     predictedState = model.stateTransitionFun(model, pointSet, cvecrep(stateNoise.mean, numPoints), control1);
     
-    predictedStateMean = sum(predictedState.*w_x, 2);
+    predictedStateMean    = sum(predictedState.*w_x, 2);
     sqrtPredictedStateCov = (predictedState - cvecrep(predictedStateMean, numPoints));
-    predictedStateCov = w_x.*sqrtPredictedStateCov*sqrtPredictedStateCov' + stateNoise.covariance;
+    predictedStateCov     = w_x.*sqrtPredictedStateCov*sqrtPredictedStateCov' + stateNoise.covariance;
     
     %% evaluate cubature points for measurement
     pointSet2 = cvecrep(predictedStateMean, numPoints) + chol(predictedStateCov, 'lower')*set;
