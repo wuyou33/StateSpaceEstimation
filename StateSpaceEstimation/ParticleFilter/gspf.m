@@ -67,35 +67,25 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gspf( dataSet, stateNo
     end
     %%
     x_dim  = model.stateDimension;
-    v_dim  = model.processNoiseDimension;                                % extract process noise dimension
-    
     num = dataSet.particlesNum;
-    stateGMM = dataSet.stateGMM;
     
-    G    = stateGMM.mixtureCount;      % number of components in state GMM
-    K    = stateNoise.mixtureCount;        % number of components in process noise GMM
+    xMixcompsCnt        = dataSet.stateGMM.mixtureCount;
+    xNoiseMixcompsCnt   = stateNoise.mixtureCount;
+    mixcompsCnt         = xMixcompsCnt*xNoiseMixcompsCnt;
     
-    GK  = G*K;
+    % sample buffer : (sample dimension) X (number of samples) X (number of mixcomps)
+    xBuf1 = zeros(x_dim, num, xMixcompsCnt);
+    xBuf2 = zeros(x_dim, num, mixcompsCnt);
+    xBuf3 = zeros(x_dim, num, mixcompsCnt);
     
-    sampleBuf1 = zeros(x_dim,num,G);     % sample buffer : (sample dimension) X (number of samples) X (number of mixcomps)
-    sampleBuf2 = zeros(x_dim,num,GK);
-    stateWNew = zeros(1,GK);
+    xWeigthsNew = zeros(1, mixcompsCnt);
+    importanceW = zeros(mixcompsCnt, num);
+    stateMuNew  = zeros(x_dim, mixcompsCnt);
+    stateCovNew = zeros(x_dim, x_dim, mixcompsCnt);
     
-    sampleBuf3 = zeros(x_dim,num,GK);
-    impWeights = zeros(GK,num);
+    ones_num = ones(num, 1);
+    ones_xdim = ones(1, x_dim);
     
-    stateMu  = stateGMM.mean;
-    stateCov = stateGMM.covariance;
-    stateW   = stateGMM.weights;
-    
-    stateMuNew  = zeros(x_dim,GK);
-    stateCovNew = zeros(x_dim,x_dim,GK);
-    
-    pNoiseW = stateNoise.weights;
-    
-    ones_numP = ones(num, 1);
-    ones_Xdim = ones(1, x_dim);
-            
     if (model.controlInputDimension == 0)
         control1 = [];
     end
@@ -104,102 +94,69 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gspf( dataSet, stateNo
         control2 = [];
     end
     
-    
-    OBS = observation(:,ones_numP);
-    
-    %% TIME UPDATE
-    % draw M samples from each state GMM component
-    for g=1:G
-        temp_mu = stateMu(:, g);
-        % It is assumed that the covariances are Cholesky factors
-        sampleBuf1(:,:,g) = stateCov(:,:,g) * randn(x_dim,num) + temp_mu(:,ones_numP);
+    obs = observation(:, ones_num);
+    %% Time update
+    for g = 1 : xMixcompsCnt
+        mean = dataSet.stateGMM.mean(:, g);
+        xBuf1(:, :, g) = dataSet.stateGMM.covariance(:, :, g) * randn(x_dim, num) + mean(:, ones_num);
     end
     
-    % get process noise GMM component covariance
-    for k=1:K
-        cS  = stateNoise.covariance(:, :, k);
-        cMu = stateNoise.mean(:, k);
-        cMuBuf = cMu(:, ones_numP);
-        for g=1:G
-            gk = g + (k-1)*G;
-            pNoiseBuf = cS * randn(v_dim,num) + cMuBuf;
-            sampleBuf2(:,:,gk) = model.stateTransitionFun( model, sampleBuf1(:,:,g), pNoiseBuf, control1);
-            stateWNew(1,gk) = stateW(1,g) * pNoiseW(1,k);
+    for k = 1 : xNoiseMixcompsCnt
+        meanMixcomps = stateNoise.mean(:, k);
+        for g = 1 : xMixcompsCnt
+            gk = g + (k-1)*xMixcompsCnt;
+            xNoiseBuf = (stateNoise.covariance(:, :, k)) * randn(model.processNoiseDimension, num) + meanMixcomps(:, ones_num);
+            xBuf2(:, :, gk) = model.stateTransitionFun(model, xBuf1(:,:,g), xNoiseBuf, control1);
+            xWeigthsNew(1, gk) = dataSet.stateGMM.weights(1, g) * stateNoise.weights(1, k);
         end
     end
     
-    stateWNew = stateWNew / sum(stateWNew);
+    xWeigthsNew = xWeigthsNew / sum(xWeigthsNew);
     
-    % inline sample mean and covariance
-    for gk=1:GK
-        muFoo = sum(sampleBuf2(:,:,gk),2)/num;
-        stateMuNew(:,gk) = muFoo;
-        muFoo = muFoo(:,ones_numP);
-        Xfoo = sampleBuf2(:,:,gk) - muFoo;
-        [~, covFoo] = qr(Xfoo',0);
-        stateCovNew(:,:,gk) = covFoo'/sqrt(num-1);
+    for g = 1 : mixcompsCnt
+        mu1 = sum(xBuf2(:,:,g),2)/num;
+        stateMuNew(:,g) = mu1;
+        mu1 = mu1(:, ones_num);
+        [~, covFoo] = qr( (xBuf2(:,:,g) - mu1)', 0 );
+        stateCovNew(:, :, g) = covFoo' / sqrt(num - 1);
     end
     
-    
     %% MEASUREMENT UPDATE
-    % Calculate observed samples and importance weights
-    for gk=1:GK,
-        temp_mu = stateMuNew(:,gk);
-        sampleBuf3(:,:,gk) = stateCovNew(:,:,gk) * randn(x_dim,num) + temp_mu(:,ones_numP);
-        impWeights(gk,:) = model.likelihoodStateFun( model, OBS, sampleBuf3(:,:,gk), control2, observNoise) + 1e-99;
+    for g = 1 : mixcompsCnt,
+        mean = stateMuNew(:, g);
+        xBuf3(:, :, g) = stateCovNew(:, :, g) * randn(x_dim, num) + mean(:, ones_num);
+        importanceW(g, :) = model.likelihoodStateFun(model, obs, xBuf3(:, :, g), control2, observNoise) + 1e-99;
     end
     
     weightNorm = 0;
-    
-    % Calculate updated state mixcomp means, covariances and weights
-    for gk=1:GK
+    for g = 1 : mixcompsCnt
+        tmp_w = importanceW(g, :);
+        impWeightNorm = sum(tmp_w);
+        mu2 = sum( tmp_w(ones_xdim,:) .* xBuf3(:, :, g), 2) / impWeightNorm;
+        stateMuNew(:, g) = mu2;
         
-        weightFoo = impWeights(gk,:);
-        impWeightM = weightFoo(ones_Xdim,:);   % inline rvecrep
-        impWeightNorm = sum(weightFoo);
-        muFoo2 = sum(impWeightM.*sampleBuf3(:,:,gk),2) / impWeightNorm;
-        stateMuNew(:,gk) = muFoo2;
+        w = sqrt(tmp_w);
+        [~, covFoo] = qr( ( w(ones_xdim, :) .* (xBuf3(:, :, g) - mu2(:, ones_num)) )', 0 );
+        stateCovNew(:, :, g) = covFoo' / sqrt(impWeightNorm);
         
-        xdel = sampleBuf3(:,:,gk) - muFoo2(:,ones_numP); % inline cvecrep
-        weightSFoo = sqrt(weightFoo);
-        impWeightSM = weightSFoo(ones_Xdim,:);
-        
-        Xfoo = impWeightSM.*xdel;
-        
-        [~,covFoo] = qr(Xfoo',0);
-        stateCovNew(:,:,gk) = covFoo'/sqrt(impWeightNorm);
-        
-        stateWNew(:,gk) = stateWNew(:,gk)*impWeightNorm;   % part 1 of equation (11)
+        xWeigthsNew(:, g) = xWeigthsNew(:, g)*impWeightNorm;
         weightNorm = weightNorm + impWeightNorm;
     end
     
-    % Calculate updated and normalized mixcomp weights
-    stateWNew = stateWNew / weightNorm;                   % part 2 of equation (11)
-    stateWNew = stateWNew / sum(stateWNew);               % normalize
+    xWeigthsNew = xWeigthsNew / weightNorm;
+    xWeigthsNew = xWeigthsNew / sum(xWeigthsNew);
     
-    %-----------------------------------------------------------------------
-    % CALCULATE ESTIMATE
-    
-    %% calculate estimate
+    %%
     if strcmp(model.estimateType, 'mean')
-        estimate = sum(stateWNew(ones_Xdim,:).*stateMuNew,2);
+        estimate = sum(xWeigthsNew(ones_xdim, :) .* stateMuNew, 2);
     else
         error('[ gmsppf::model::estimateType ] Unknown estimate type.');
     end
     
+    %% Resample mixture components
+    idx  = resampleMixtureComponents(xNoiseMixcompsCnt, xMixcompsCnt, xWeigthsNew);
     
-    %% RESAMPLE MIXTURE COMPONENTS
-    resampleIdx = residualResample(1:GK,stateWNew);
-    [~, rIdx] = sort(rand(1,GK));
-    rIdx=rIdx(1:G);
-    
-    idx = resampleIdx(rIdx);
-    stateMu = stateMuNew(:,idx);
-    stateCov = stateCovNew(:,:,idx);
-    
-    stateW = (1/G) * ones(1,G);
-    
-    dataSet.stateGMM.covariance = stateCov;
-    dataSet.stateGMM.mean       = stateMu;
-    dataSet.stateGMM.weights    = stateW;
+    dataSet.stateGMM.covariance = stateCovNew(:, :, idx);
+    dataSet.stateGMM.mean       = stateMuNew(:, idx);
+    dataSet.stateGMM.weights    = ones(1, xMixcompsCnt) / xMixcompsCnt;
 end
