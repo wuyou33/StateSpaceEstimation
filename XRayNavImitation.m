@@ -17,8 +17,8 @@ logLastErrors       = 1;
 mass                = 200; % [kg]
 errorBudget         = 40; % [%]
 
-%{'ukf', 'srukf', 'cdkf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'sghqf', 'ghqf', 'ekf', 'gmsppf', 'pf', 'gspf', 'sppf'};
-filterTypes = {'gspf'};%gspf gmsppf
+%{'ukf', 'srukf', 'cdkf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'sghqf', 'ghqf', 'ekf', 'gmsppf', 'gspf', 'pf', 'sppf'};
+filterTypes = {'sppf'};
 
 b_det   = 0.1; % Detector Background Rate. [photon*cm^2*sec^-1]
 b_diff  = 0.1; % Diffuse X-ray Background. [photon*cm^2*sec^-1]
@@ -85,10 +85,6 @@ for l = 1:length(filterTypes)
     
     if stringmatch(estimatorType, {'ekf'})
         initArgsXRay.stateNoiseCovariance = [(9.5e-1*eye(3)).^2 zeros(3); zeros(3) (5e-2*eye(3)).^2];
-        %     elseif stringmatch(estimatorType, {'pf'})
-        %         initArgsXRay.stateNoiseCovariance = [(9.5e-4*eye(3)).^2 zeros(3); zeros(3) (7.5e-5*eye(3)).^2];
-        %     elseif stringmatch(estimatorType, {'gspf'})
-        %         initArgsXRay.stateNoiseCovariance = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (1e-4*eye(3)).^2];
     else
         initArgsXRay.stateNoiseCovariance = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (1e-4*eye(3)).^2];
     end

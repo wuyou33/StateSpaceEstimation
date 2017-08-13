@@ -30,6 +30,7 @@ function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold,
     %           .mean           - Gaussian component means;
     %           .covariance     - Covariance matrices of Gaussian components (must comply with cov_type).
     %
+    %%
     narginchk(4, 7);
     
     [dim, dataDim] = size(data);
@@ -101,7 +102,7 @@ function [ gmmSet ] = gaussMixtureModelFit( data, mixture, terminationThreshold,
                     if min(svd(cov)) < eps
                         cov = initCovariance(:, :, j);
                     end
-                case {'sqrt', 'sqrt-diag', 'svd'}
+                case {'sqrt', 'sqrt-diag'}
                     centered = centered .* rvecrep((1/sqrt(paramEst(j))) * sqrt(posterior(j, :)), dim);
                     
                     [~, cov] = qr(centered', 0);
