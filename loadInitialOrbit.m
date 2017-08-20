@@ -34,9 +34,9 @@ function [ initialVal ] = loadInitialOrbit()
     %   in June 2008 and the first extended mission, called the Cassini Equinox
     %   Mission, in September 2010. Now, the healthy spacecraft is seeking to make
     %   new discoveries in a second extended mission called the Cassini Solstice Mission.
-    %     cassiniVal = [-1.399767642745123E+09;1.766502941397156E+08;5.247962097637110E+07;-2.700522693098836E+0;-1.232520425357014E+01;-5.835621719452897E-01];
-    %     earthVal = [7.369709234880982E+07;-1.321099866538639E+08;1.402988581433892E+03;2.552144377327780E+01;1.442284436089276E+01;1.002596942654144E-03];
-    %     initialVal = [cassiniVal(1:3) - earthVal(1:3); cassiniVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
+    cassiniVal = [-1.399767642745123E+09;1.766502941397156E+08;5.247962097637110E+07;-2.700522693098836E+0;-1.232520425357014E+01;-5.835621719452897E-01];
+    earthVal = [7.369709234880982E+07;-1.321099866538639E+08;1.402988581433892E+03;2.552144377327780E+01;1.442284436089276E+01;1.002596942654144E-03];
+    initialVal = [cassiniVal(1:3) - earthVal(1:3); cassiniVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
     %
     %%  ExoMars TGO (Start=2016-07-22, Stop=2016-08-21)
     %       ExoMars Mission objective is to search for evidence of methane and other trace
@@ -48,9 +48,9 @@ function [ initialVal ] = loadInitialOrbit()
     %     initialVal = [exoMarsVal(1:3) - earthVal(1:3); exoMarsVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
     %
     %% NAVSTAR-68 (Start=2016-07-22, Stop=2016-08-21)
-    navStarVal = [7.517195636922367E+07;-1.319756848263827E+08;-2.623423162838817E+04;2.343915251306972E+01;1.663284558568122E+01;2.559157449971319E+00];
-    earthVal = [7.515763759387881E+07;-1.319970004198263E+08;-1.984076868406683E+04;2.545848216543012E+01;1.451279398144172E+01;4.671180059201419E-04];
-    initialVal = [navStarVal(1:3) - earthVal(1:3); navStarVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
-%     initialVal = [navStarVal(1:3) - earthVal(1:3); -2.57597028572808; 1.30278948238825; 0; 1; 0; 0; 0];
+    %     navStarVal = [7.517195636922367E+07;-1.319756848263827E+08;-2.623423162838817E+04;2.343915251306972E+01;1.663284558568122E+01;2.559157449971319E+00];
+    %     earthVal = [7.515763759387881E+07;-1.319970004198263E+08;-1.984076868406683E+04;2.545848216543012E+01;1.451279398144172E+01;4.671180059201419E-04];
+    %     initialVal = [navStarVal(1:3) - earthVal(1:3); navStarVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
+    %     initialVal = [navStarVal(1:3) - earthVal(1:3); -2.57597028572808; 1.30278948238825; 0; 1; 0; 0; 0];
     
 end

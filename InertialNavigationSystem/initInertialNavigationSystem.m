@@ -37,7 +37,7 @@ function ins = init(initArgs)
         initArgs.timeData ...
         );
     
-    ins = InertialNavigationSystem(inertialMeasurementUnit, initArgs.timeData);
+    ins = InertialNavigationSystem(inertialMeasurementUnit, initArgs.timeData, initArgs.gravityModel, initArgs.mass);
     
     if (initArgs.visualize)
         figure();

@@ -5,6 +5,8 @@ classdef InertialNavigationSystem < handle
         imu;
         timeData;
         dimension = 10;
+        mass;
+        gravityModel;
     end
     
     properties (Dependent)
@@ -12,13 +14,17 @@ classdef InertialNavigationSystem < handle
     end
     
     methods
-        function obj = InertialNavigationSystem(imu, timeData)
+        function obj = InertialNavigationSystem(imu, timeData, gravityModel, mass)
+            narginchk(4, 4);
+            
             if ~isa(imu, 'InertialMeasurementUnit')
                 error('imu should be instance of the InertialMeasurementUnit');
             end
             
-            obj.imu         = imu;
-            obj.timeData    = timeData;
+            obj.imu             = imu;
+            obj.mass            = mass; % [kg]
+            obj.timeData        = timeData;
+            obj.gravityModel    = gravityModel;
         end
         
         function state = simulate(this, initial, sample, tEpoch)
@@ -104,13 +110,15 @@ classdef InertialNavigationSystem < handle
         function state = resolve(this, initial, sample, tEpoch)
             a  = this.imu.getAcceleartion(sample);
             w  = this.imu.getAngularVelocity(sample);
+            m  = this.mass;
             dt = this.timeData.SampleTime;
+            t0 = this.timeData.StartSecond;
             
             tEnd = this.timeData.Time(sample);
             timeSpan = [tEnd-dt, tEnd];
             
-            odeFun = @(t,y) EquationOfMotion(t, y, a, w, tEpoch);
-            [~, tmp] = ode45(odeFun, timeSpan, initial);
+            odeFun = @(t,y) EquationOfMotion(t, y, a, w, tEpoch, dt, t0, this.gravityModel, m);
+            [~, tmp] = odeEuler(odeFun, timeSpan, initial, dt);
             state = tmp(end, :)';
             state(7:10) = quaternionNormalize(state(7:10));
         end

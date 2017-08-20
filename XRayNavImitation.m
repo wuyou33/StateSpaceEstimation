@@ -8,7 +8,7 @@ date.day            = 17;
 date.mon            = 11;
 date.year           = 2017;
 timeStart           = '00:00:00.000';
-timeEnd             = '02:00:00.000';
+timeEnd             = '05:00:00.000';
 timeDataXRay        = TimeExt(timeStart, timeEnd, 10, date, 1e7); % change refreshSunMoonInfluenceTime to real number
 iterationNumber     = 1;
 secondInOneMinute   = 60;
@@ -18,7 +18,7 @@ mass                = 200; % [kg]
 errorBudget         = 40; % [%]
 
 %{'ukf', 'srukf', 'cdkf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'sghqf', 'ghqf', 'ekf', 'gmsppf', 'gspf', 'pf', 'sppf'};
-filterTypes = {'sppf'};
+filterTypes = {'srukf'};
 
 b_det   = 0.1; % Detector Background Rate. [photon*cm^2*sec^-1]
 b_diff  = 0.1; % Diffuse X-ray Background. [photon*cm^2*sec^-1]
@@ -71,8 +71,8 @@ for l = 1:length(filterTypes)
     initArgsXRay.startTime = timeDataXRay.StartSecond;
     initArgsXRay.gravityModel = m_fitSolarSystemGravityModel(timeDataXRay.SampleTime, timeDataXRay.SimulationNumber);
     
-    % initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
-    initialXRayCov = [(0.5)^2*eye(3), zeros(3, 3); zeros(3, 3), (0.5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
+    initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
+%     initialXRayCov = [(0.5)^2*eye(3), zeros(3, 3); zeros(3, 3), (0.5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
     
     %
     %     if stringmatch(estimatorType, {'ukf', 'cdkf', 'srukf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'sghqf', 'ghqf', 'gmsppf'})
@@ -86,7 +86,7 @@ for l = 1:length(filterTypes)
     if stringmatch(estimatorType, {'ekf'})
         initArgsXRay.stateNoiseCovariance = [(9.5e-1*eye(3)).^2 zeros(3); zeros(3) (5e-2*eye(3)).^2];
     else
-        initArgsXRay.stateNoiseCovariance = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (1e-4*eye(3)).^2];
+        initArgsXRay.stateNoiseCovariance = [(1e-2*eye(3)).^2 zeros(3); zeros(3) (5e-4*eye(3)).^2];
     end
     
     iterations = zeros(iterationNumber, 2, timeDataXRay.SimulationNumber);

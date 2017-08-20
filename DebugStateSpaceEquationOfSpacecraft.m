@@ -6,7 +6,7 @@ date.day  = 17;
 date.mon  = 11;
 date.year = 2015;
 timeStart = '00:00:00.000';
-timeEnd   = '72:00:00.000';
+timeEnd   = '05:00:00.000';
 timeData  = TimeExt(timeStart, timeEnd, 1e1, date, 1e5);
 
 mass                        = 200;
