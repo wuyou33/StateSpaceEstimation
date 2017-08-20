@@ -2,11 +2,10 @@ function pdfEvolutionPlot2(iterations, trueState, legend, legend_mu, timeData)
     figure();
     
     dim = size(iterations, 2);
-    num = size(iterations, 1);
     
     for i = 1 : dim
         for j = 1 : timeData.SimulationNumber
-            pts = squeeze(iterations(:, i, j)) - rvecrep(trueState(i, j), num);
+            pts = squeeze(iterations(:, i, j)) - trueState(:, i, j);
             [x_pdf, x_i] = ksdensity(pts, 'function', 'pdf', 'Kernel', 'box');
             t = timeData.TimeInHour(j) * ones(size(x_i));
             

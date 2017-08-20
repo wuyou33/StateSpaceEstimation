@@ -2,10 +2,9 @@ function pdfPlot2(iterations, trueState, legend)
     figure();
     
     dim = size(iterations, 2);
-    num = size(iterations, 1);
     
     for i = 1 : dim
-        pts = squeeze(iterations(:, i, end)) - rvecrep(trueState(i, end), num);
+        pts = squeeze(iterations(:, i, end)) - trueState(:, i, end);
         [x_pdf, x_i] = ksdensity(pts, 'function', 'pdf', 'Kernel', 'box');
         [x_pdf_norm, ~] = ksdensity(pts, 'function', 'pdf', 'Kernel', 'normal');
         

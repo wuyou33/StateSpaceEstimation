@@ -9,7 +9,7 @@ date.year = 2017;
 m_fitSolarSystemGravityModel = memoize(@fitSolarSystemGravityModel);
 
 timeData = TimeExt('00:00:00.000', '05:00:00.000', 1, date, 1e9);
-iterationNumber             = 10000;
+iterationNumber             = 100;
 mass                        = 200; % [kg]
 accBiasMu                   = zeros(3, 1);      % [km / sec^2]
 accBiasSigma                = 5e-8*ones(3, 1);  % [km / sec^2]
@@ -52,9 +52,9 @@ insInitArgs.mass                         = mass;
 
 iterations      = zeros(iterationNumber, 10, timeData.SimulationNumber);
 iterationsErr   = zeros(iterationNumber, 6, timeData.SimulationNumber);
+trueStateMatrix = zeros(iterationNumber, 10, timeData.SimulationNumber);
 
 figure();
-% parfor i = 1:iterationNumber
 for i = 1:iterationNumber
     initialOrbit = loadInitialOrbit();
     initialOrbit(1:3) = initialOrbit(1:3) + 1e-1*randn(3, 1);
@@ -71,6 +71,7 @@ for i = 1:iterationNumber
     ins = initInertialNavigationSystem('init', insInitArgs);
     estimations = ins.simulate(insInitialState);
     iterations(i, :, :) = estimations;
+    trueStateMatrix(i, :, :) = trueState.FullState;
     
     errTraj = vectNormError(trueState.Trajectory, estimations(1:3, :), 1e3);
     errVel  = vectNormError(trueState.Velocity, estimations(4:6, :), 1e3);
@@ -121,19 +122,19 @@ if iterationNumber > 1
     plot2(timeData.TimeInHour, squeeze(errors(6, :)), 'RMS quaternion error', {'INS'}, 'q_3');
 end
 
-pdfEvolutionPlot2(iterations(:, 1, :), trueState.FullState(1, :), {'r_X'}, {', m'}, timeData);
-pdfEvolutionPlot2(iterations(:, 2, :), trueState.FullState(2, :), {'r_Y'}, {', m'}, timeData);
-pdfEvolutionPlot2(iterations(:, 3, :), trueState.FullState(3, :), {'r_Z'}, {', m'}, timeData);
+pdfEvolutionPlot2(iterations(:, 1, :), trueStateMatrix(:, 1, :), {'r_X'}, {', m'}, timeData);
+pdfEvolutionPlot2(iterations(:, 2, :), trueStateMatrix(:, 2, :), {'r_Y'}, {', m'}, timeData);
+pdfEvolutionPlot2(iterations(:, 3, :), trueStateMatrix(:, 3, :), {'r_Z'}, {', m'}, timeData);
 
-pdfEvolutionPlot2(iterations(:, 4, :), trueState.FullState(4, :), {'v_X'}, {', m / s'}, timeData);
-pdfEvolutionPlot2(iterations(:, 5, :), trueState.FullState(5, :), {'v_Y'}, {', m / s'}, timeData);
-pdfEvolutionPlot2(iterations(:, 6, :), trueState.FullState(6, :), {'v_Z'}, {', m / s'}, timeData);
+pdfEvolutionPlot2(iterations(:, 4, :), trueStateMatrix(:, 4, :), {'v_X'}, {', m / s'}, timeData);
+pdfEvolutionPlot2(iterations(:, 5, :), trueStateMatrix(:, 5, :), {'v_Y'}, {', m / s'}, timeData);
+pdfEvolutionPlot2(iterations(:, 6, :), trueStateMatrix(:, 6, :), {'v_Z'}, {', m / s'}, timeData);
 
-pdfEvolutionPlot2(iterations(:, 7, :), trueState.FullState(7, :), {'q_0'}, {''}, timeData);
-pdfEvolutionPlot2(iterations(:, 8, :), trueState.FullState(8, :), {'q_1'}, {''}, timeData);
-pdfEvolutionPlot2(iterations(:, 9, :), trueState.FullState(9, :), {'q_2'}, {''}, timeData);
-pdfEvolutionPlot2(iterations(:, 10, :), trueState.FullState(10, :), {'q_3'}, {''}, timeData);
+pdfEvolutionPlot2(iterations(:, 7, :), trueStateMatrix(:, 7, :), {'q_0'}, {''}, timeData);
+pdfEvolutionPlot2(iterations(:, 8, :), trueStateMatrix(:, 8, :), {'q_1'}, {''}, timeData);
+pdfEvolutionPlot2(iterations(:, 9, :), trueStateMatrix(:, 9, :), {'q_2'}, {''}, timeData);
+pdfEvolutionPlot2(iterations(:, 10, :), trueStateMatrix(:, 10, :), {'q_3'}, {''}, timeData);
 
-pdfPlot2(iterations(:, 1:3, :), trueState.FullState(1:3, :), {'r_X', 'r_Y', 'r_Z'});
-pdfPlot2(iterations(:, 4:6, :), trueState.FullState(4:6, :), {'v_X', 'v_Y', 'v_Z'});
-pdfPlot2(iterations(:, 7:10, :), trueState.FullState(7:10, :), {'q_0', 'q_1', 'q_2', 'q_2'});
+pdfPlot2(iterations(:, 1:3, :), trueStateMatrix(:, 1:3, :), {'r_X', 'r_Y', 'r_Z'});
+pdfPlot2(iterations(:, 4:6, :), trueStateMatrix(:, 4:6, :), {'v_X', 'v_Y', 'v_Z'});
+pdfPlot2(iterations(:, 7:10, :), trueStateMatrix(:, 7:10, :), {'q_0', 'q_1', 'q_2', 'q_2'});
