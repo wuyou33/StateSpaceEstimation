@@ -8,16 +8,43 @@ date.year = 2017;
 
 m_fitSolarSystemGravityModel = memoize(@fitSolarSystemGravityModel);
 
-timeData = TimeExt('00:00:00.000', '05:00:00.000', 1, date, 1e9);
-iterationNumber             = 100;
+timeData = TimeExt('00:00:00.000', '01:00:00.000', 1, date, 1e9);
+iterationNumber             = 1000;
 mass                        = 200; % [kg]
+
+% large angular errors
+%{
+accBiasMu                   = zeros(3, 1);      % [km / sec^2]
+accBiasSigma                = 5e-7*ones(3, 1);  % [km / sec^2]
+accNoiseVar                 = 1e-4*ones(3, 1);  % [km / sec^2]
+accScale                    = 5e-5*eye(3);      % [-]
+gyroBiasMu                  = zeros(3, 1);      % [rad / sec]
+gyroBiasSigma               = 5e-3*ones(3, 1);  % [rad / sec]
+gyroNoiseVar                = 1e-2*ones(3, 1);  % [rad / sec]
+gyroScale                   = 5e-3*eye(3);      % [-]
+levelArm                    = zeros(3, 1);
+angularAccelerBodyFrame     = zeros(3, 1);
+gyroGSensitiveBias          = zeros(3);
+initialAcceleration         = zeros(3, 1);          % [km/sec^2]
+initialAngularVelocity      = zeros(3, 1);          % [rad/sec]
+accelerationSigma           = 2e-5*ones(3, 1);      % [km/sec^2]
+angularVelocitySigma        = 1e-2*ones(3, 1);      % [rad/sec]
+insTrajInitErrorKm          = 3e-2*ones(3, 1);      % [km]
+insVelInitErrorKmSec        = 5e-5*ones(3, 1);      % [km/sec]
+insQuaternionInitError      = 1e-3*ones(4, 1);      % [-]
+accelerationInBodyFrame     = AccelerationInBodyFrame(timeData, initialAcceleration, accelerationSigma);
+angularVelocityInBodyFrame  = AngularVelocityInBodyFrame(timeData, initialAngularVelocity, angularVelocitySigma);
+%}
+
+% small angular errors
+% %{
 accBiasMu                   = zeros(3, 1);      % [km / sec^2]
 accBiasSigma                = 5e-8*ones(3, 1);  % [km / sec^2]
-accNoiseVar                 = 1e-6*ones(3, 1);  % [km / sec^2]
+accNoiseVar                 = 1e-5*ones(3, 1);  % [km / sec^2]
 accScale                    = 5e-5*eye(3);      % [-]
 gyroBiasMu                  = zeros(3, 1);      % [rad / sec]
 gyroBiasSigma               = 5e-6*ones(3, 1);  % [rad / sec]
-gyroNoiseVar                = 1e-5*ones(3, 1);  % [rad / sec]
+gyroNoiseVar                = 1e-4*ones(3, 1);  % [rad / sec]
 gyroScale                   = 5e-5*eye(3);      % [-]
 levelArm                    = zeros(3, 1);
 angularAccelerBodyFrame     = zeros(3, 1);
@@ -31,6 +58,7 @@ insVelInitErrorKmSec        = 5e-5*ones(3, 1);      % [km/sec]
 insQuaternionInitError      = 1e-3*ones(4, 1);      % [-]
 accelerationInBodyFrame     = AccelerationInBodyFrame(timeData, initialAcceleration, accelerationSigma);
 angularVelocityInBodyFrame  = AngularVelocityInBodyFrame(timeData, initialAngularVelocity, angularVelocitySigma);
+%}
 
 insInitArgs.accBiasMu                    = accBiasMu;
 insInitArgs.accBiasSigma                 = accBiasSigma;

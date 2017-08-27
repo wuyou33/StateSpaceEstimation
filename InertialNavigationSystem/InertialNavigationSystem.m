@@ -119,6 +119,7 @@ classdef InertialNavigationSystem < handle
             
             odeFun = @(t,y) EquationOfMotion(t, y, a, w, tEpoch, dt, t0, this.gravityModel, m);
             [~, tmp] = odeEuler(odeFun, timeSpan, initial, dt);
+            % [~, tmp] = ode45(odeFun, timeSpan, initial, odeset('MaxStep', dt));
             state = tmp(end, :)';
             state(7:10) = quaternionNormalize(state(7:10));
         end
