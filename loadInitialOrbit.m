@@ -29,28 +29,26 @@ function [ initialVal ] = loadInitialOrbit()
     % todo: defined in ICRF-j2000, need to convert. ICRF-j2000 has a center as Solar System baricenter.
     % Hence require to move to the center of Coordinate syten to the center of Eath.
     
-    %%   Cassini (Start=2009-07-22, Stop=2009-08-21)
-    %       Cassini completed its initial four-year mission to explore the Saturn System
-    %   in June 2008 and the first extended mission, called the Cassini Equinox
-    %   Mission, in September 2010. Now, the healthy spacecraft is seeking to make
-    %   new discoveries in a second extended mission called the Cassini Solstice Mission.
-    cassiniVal = [-1.399767642745123E+09;1.766502941397156E+08;5.247962097637110E+07;-2.700522693098836E+0;-1.232520425357014E+01;-5.835621719452897E-01];
-    earthVal = [7.369709234880982E+07;-1.321099866538639E+08;1.402988581433892E+03;2.552144377327780E+01;1.442284436089276E+01;1.002596942654144E-03];
-    initialVal = [cassiniVal(1:3) - earthVal(1:3); cassiniVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
+    %% Deep Impact Flyby/EPOXI Spacecraft (DI) (Start=2010-08-19, Stop=2010-09-18)
+    % Deep Impact Flyby/EPOXI Spacecraft (DI). The EPOXI mission flyby reveals that comet Hartley 2's rocky ends spew out tons of
+    % golf-ball to basketball-size fluffy ice particles, while the smooth middle area is more like what was observed on comet
+    % Tempel 1 with water evaporating below the surface and percolating out through the dust.
     %
+    epoxiVal = [1.263992563405297E+08; -7.120149330454805E+07; -6.710445880653515E+06; 1.561401205555831E+01; 2.767115733787828E+01; -1.009836672338032E+00];
+    earthVal = [1.245753369794310E+08; -8.490915173563674E+07; 3.958015387110412E+03; 1.625451518298891E+01; 2.451202313450900E+01; -1.613990348628747E-03];
+    initialVal = [epoxiVal(1:3) - earthVal(1:3); epoxiVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
+    
     %%  ExoMars TGO (Start=2016-07-22, Stop=2016-08-21)
-    %       ExoMars Mission objective is to search for evidence of methane and other trace
-    %   atmospheric gases that could be signatures of active biological or geological
-    %   processes, and to test technologies for future ESA contributions to Mars
-    %   missions.
-    %     exoMarsVal = [2.944743436025662E+07;-1.932504435404160E+08;-1.260832133814412E+07;2.439494954830838E+01;4.676046384236798E-01;1.985076097147882E-01];
-    %     earthVal = [7.515763759387881E+07;-1.319970004198263E+08;-1.984076868406683E+04;2.545848216543012E+01;1.451279398144172E+01;4.671180059201419E-04];
-    %     initialVal = [exoMarsVal(1:3) - earthVal(1:3); exoMarsVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
-    %
+    % ExoMars Mission objective is to search for evidence of methane and other trace
+    % atmospheric gases that could be signatures of active biological or geological
+    % processes, and to test technologies for future ESA contributions to Mars missions.
+    % exoMarsVal = [2.944743436025662E+07;-1.932504435404160E+08;-1.260832133814412E+07;2.439494954830838E+01;4.676046384236798E-01;1.985076097147882E-01];
+    % earthVal = [7.515763759387881E+07;-1.319970004198263E+08;-1.984076868406683E+04;2.545848216543012E+01;1.451279398144172E+01;4.671180059201419E-04];
+    % initialVal = [exoMarsVal(1:3) - earthVal(1:3); exoMarsVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
+    
     %% NAVSTAR-68 (Start=2016-07-22, Stop=2016-08-21)
     %     navStarVal = [7.517195636922367E+07;-1.319756848263827E+08;-2.623423162838817E+04;2.343915251306972E+01;1.663284558568122E+01;2.559157449971319E+00];
     %     earthVal = [7.515763759387881E+07;-1.319970004198263E+08;-1.984076868406683E+04;2.545848216543012E+01;1.451279398144172E+01;4.671180059201419E-04];
     %     initialVal = [navStarVal(1:3) - earthVal(1:3); navStarVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
-    %     initialVal = [navStarVal(1:3) - earthVal(1:3); -2.57597028572808; 1.30278948238825; 0; 1; 0; 0; 0];
     
 end

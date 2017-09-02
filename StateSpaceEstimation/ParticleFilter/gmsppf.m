@@ -66,6 +66,10 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
         error('[ gmsppf ] Observation noise source must be of type : gmm (Gaussian Mixture Model)');
     end
     
+    if ~stringmatch(dataSet.stateGMM.covarianceType, {'sqrt', 'sqrt-diag'})
+        error('[ gmsppf ] GMSPPF algorithm only support state GMMs ''sqrt'' and ''sqrt-diag'' covariance types.');
+    end
+    
     %%
     stateDim  = model.stateDimension;
     num = dataSet.particlesNum;
@@ -91,10 +95,6 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
     observNoiseWeights  = observNoise.weights;
     
     covarianceType = stateGMM.covarianceType;
-    
-    if ~stringmatch(stateGMM.covarianceType, {'sqrt', 'svd'})
-        error('[ gmsppf ] GMSPPF algorithm only support state GMMs ''sqrt'' and ''svd'' covariance types.');
-    end
     
     if (model.controlInputDimension == 0)
         control1 = [];
@@ -203,5 +203,5 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
     %% recover GMM representation of posterior distribution using EM
     dataSet.particles = xSampleBuf;
     dataSet.weights = sampleW;
-    dataSet.stateGMM = gaussMixtureModelFit(xSampleBuf, stateGMM, [1e-5 1000], covarianceType, 1e-20);
+    dataSet.stateGMM = gaussMixtureModelFit(xSampleBuf, stateGMM, [eps 1000], covarianceType, 1e-20);
 end

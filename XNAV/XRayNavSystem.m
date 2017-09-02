@@ -122,27 +122,27 @@ classdef XRayNavSystem < handle
             narginchk(5, 5);
             
             if strcmp(estimatorType{1}, 'pf')
-                numParticles = 2e4;
+                numParticles = 1e3;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 particleSet.weights             = ones(1, numParticles) / numParticles;
             elseif strcmp(estimatorType{1}, 'gspf')
-                numParticles = 1e4;
+                numParticles = 1e3;
                 particleSet.particlesNum   = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
                 particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 5, [eps 1e5], 'sqrt', 1e-20);
             elseif strcmp(estimatorType{1}, 'gmsppf')
-                numParticles = 5e2;%3e3;
+                numParticles = 8e2;%3e3;
                 particleSet.particlesNum = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
                 particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 3, [eps 1e5], 'sqrt', 1e-20);
             elseif strcmp(estimatorType{1}, 'sppf')
-                numParticles = 5e2;
+                numParticles = 50;
                 particleSet.particlesNum  = numParticles;
                 
-                particleSet.particles  =  chol(cov) * randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                particleSet.particles  =  chol(cov, 'lower') * randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 
                 particleSet.weights             = ones(1, numParticles) / numParticles;
                 particleSet.particlesCov        = repmat(decompCov, [1 1 numParticles]);
@@ -180,10 +180,10 @@ classdef XRayNavSystem < handle
                 case 'gspf'
                     this.inferenceModel.estimateType = 'mean';
                 case 'sppf'
-                    this.inferenceModel.spkfType    = 'srukf';
+                    this.inferenceModel.spkfType    = 'srcdkf';
                     decompCov                       = chol(cov, 'lower');
                     
-                    this.inferenceModel.spkfParams = [alpha beta kappa];
+                    this.inferenceModel.spkfParams = sqrt(7);%[alpha beta kappa];
                     this.inferenceModel.resampleThreshold   = 1;
                     this.inferenceModel.estimateType        = 'mean';
                 case 'gmsppf'
@@ -198,7 +198,7 @@ classdef XRayNavSystem < handle
                 case 'ghqf'
                     this.inferenceModel.ghkfParams = 4; % order of gauss-hermite polynomial
                 case 'sghqf'
-                    this.inferenceModel.sghkfParams = [5 3]; % order of gauss-hermite polynomial & manner
+                    this.inferenceModel.sghkfParams = [5 2]; % order of gauss-hermite polynomial & manner
                 otherwise
                     % do nothing by default
             end
