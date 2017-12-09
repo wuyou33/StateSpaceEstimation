@@ -48,7 +48,7 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
     %       	.mixtureCount       number of mixture components in GMM;
     %           .mean               buffer of mean vectors (centroids) of state GMM components (statedim-by-M);
     %           .covariance         buffer of covariance matrices of state GMM components (statedim-by-statedim-my-M);
-    %           .covarianceType     covariance matrix type ('full','sqrt','diag','swrt-diag', 'svd') 'sqrt' is preferre;
+    %           .covarianceType     covariance matrix type ('full','sqrt','diag','swrt-diag') 'sqrt' is preferre;
     %           .weights            state GMM component weights (priors) (1-by-M).
     %
     %   Required model fields:
@@ -84,9 +84,9 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
     stateCovPrior    = zeros(stateDim, stateDim, augmMixtCount);
     
     stateWeightNew = zeros(1, fullMixtureCount);
-    stateMeanNew   = zeros(stateDim, fullMixtureCount);
-    stateCovNew    = zeros(stateDim, stateDim, fullMixtureCount);
     
+    mu_x_new     = zeros(stateDim, fullMixtureCount);
+    cov_x_new    = zeros(stateDim, stateDim, fullMixtureCount);    
     stateMean    = stateGMM.mean;
     stateCov     = stateGMM.covariance;
     stateWeights = stateGMM.weights;
@@ -114,17 +114,6 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
     observNoiseSPKF.covariance  = zeros(model.observationNoiseDimension);
     observNoiseSPKF.adaptMethod = [];
     
-    switch model.spkfType
-        case 'srukf'
-            predict = @(x, s, xNoise, zNoise) srukf(x, s, xNoise, zNoise, observation, model, control1, control2);
-        case 'sckf'
-            predict = @(x, s, xNoise, zNoise) sckf(x, s, xNoise, zNoise, observation, model, control1, control2);
-        case 'srcdkf'
-            predict = @(x, s, xNoise, zNoise) srcdkf(x, s, xNoise, zNoise, observation, model, control1, control2);
-        otherwise
-            error('[ gmsppf::model::spkfType ] Unknown inner filter type.');
-    end
-    
     %% time update (prediction)
     for r = 1:observNoise.mixtureCount
         observNoiseSPKF.mean = observNoise.mean(:, r);
@@ -138,10 +127,22 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
                 a = g + (k-1) * stateGMM.mixtureCount;
                 j = a + (r-1) * augmMixtCount;
                 
-                [stateMeanNew(:, j), stateCovNew(:, :, j), stateNoiseSPKF, observNoiseSPKF, ds] = predict(stateMean(:, g), stateCov(:,:,g), stateNoiseSPKF, observNoiseSPKF);
+                switch model.spkfType
+                    case 'srukf'
+                        [mu_x_new(:, j), cov_x_new(:, :, j), stateNoiseSPKF, observNoiseSPKF, ds] = ...
+                            srukf(stateMean(:, g), stateCov(:,:,g), stateNoiseSPKF, observNoiseSPKF, observation, model, control1, control2);
+                    case 'sckf'
+                        [mu_x_new(:, j), cov_x_new(:, :, j), stateNoiseSPKF, observNoiseSPKF, ds] = ...
+                            sckf(stateMean(:, g), stateCov(:,:,g), stateNoiseSPKF, observNoiseSPKF, observation, model, control1, control2);
+                    case 'srcdkf'
+                        [mu_x_new(:, j), cov_x_new(:, :, j), stateNoiseSPKF, observNoiseSPKF, ds] = ...
+                            srcdkf(stateMean(:, g), stateCov(:,:,g), stateNoiseSPKF, observNoiseSPKF, observation, model, control1, control2);
+                    otherwise
+                        error('[ gmsppf::model::spkfType ] Unknown inner filter type.');
+                end
                 
                 stateMeanPrior(:, a)   = ds.meanPredictedState;
-                stateCovPrior(:, :, a) = chol(ds.predictedStateCov, 'lower');
+                stateCovPrior(:, :, a) = ds.s_cov_state;
                 
                 stateWeightPrior(1, a) = stateWeights(1, g)*sateNoiseWeights(1, k);
                 
@@ -166,8 +167,8 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
     priorStateGMM.mixtureCount = augmMixtCount;
     
     newStateGMM.covarianceType = stateGMM.covarianceType;
-    newStateGMM.mean = stateMeanNew;
-    newStateGMM.covariance = stateCovNew;
+    newStateGMM.mean = mu_x_new;
+    newStateGMM.covariance = cov_x_new;
     newStateGMM.weights = stateWeightNew;
     newStateGMM.dimension = stateDim;
     newStateGMM.mixtureCount = fullMixtureCount;
@@ -196,12 +197,13 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
     end
     
     %% resample
-    %     outIndex  = residualResample(1:num, sampleW);
-    %     xSampleBuf = xSampleBuf(:, outIndex);
-    sampleW = rvecrep(1 / num, num);
+    % xSampleBuf = xSampleBuf(:, residualResample(1:num, sampleW));
+    % xSampleBuf = multivariateSmoothResampling(xSampleBuf', sampleW')';
+    % xSampleBuf = residualResample2(xSampleBuf, sampleW, rand(size(sampleW)));
+    % sampleW = rvecrep(1 / num, num);
     
     %% recover GMM representation of posterior distribution using EM
     dataSet.particles = xSampleBuf;
     dataSet.weights = sampleW;
-    dataSet.stateGMM = gaussMixtureModelFit(xSampleBuf, stateGMM, [eps 1000], covarianceType, 1e-20);
+    dataSet.stateGMM = gmm_fit(xSampleBuf, stateGMM, [1e-2 1e6], covarianceType, 1, 0);
 end

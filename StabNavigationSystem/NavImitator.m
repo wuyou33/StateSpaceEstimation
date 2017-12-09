@@ -1,7 +1,12 @@
-classdef SnsImitator < handle
-    % SnsImitator. Imitator of satellity navigation system. If real SNS receiber is available, then the receiber will used, otherwise
-    % real state with additive white noise will used.
-    
+classdef NavImitator < handle
+    % NavImitator. Imitator of navigation system which provide information about velocity and position.
+    % Use real state with additive noise (noise model dependent from arguments) will used.
+    % Support following noise type:
+    %   a) gaussian;
+    %   b) exp;
+    %   c) wiener;
+    %   d) markov1 (1-st order markov process).
+    % 
     properties (Access = private)
         trajectory;         % [km]
         velocity;           % [km / sec]
@@ -17,7 +22,7 @@ classdef SnsImitator < handle
     end
     
     methods (Access = public)
-        function obj = SnsImitator(state, sigmaTrajectory, meanTrajectory, sigmaVelocity, meanVelocity, noiseType)
+        function obj = NavImitator(state, sigmaTrajectory, meanTrajectory, sigmaVelocity, meanVelocity, noiseType)
             num = length(state);
             
             switch noiseType
@@ -36,16 +41,9 @@ classdef SnsImitator < handle
                     noiseTraj = sqrt(sigmaTrajectory / 3)*noiseProc.simulate(num) + meanTrajectory / 3 * ones(3, num);
                     noiseVel  = sqrt(sigmaVelocity / 3)*noiseProc.simulate(num) + meanVelocity / 3 * ones(3, num);
                 case 'realImitator'
-                    gnssStateEstimated = load('exclude/GnssState.mat');
-                    obj.trajectory = gnssStateEstimated.GNSS_state2(1:3, :);
-                    obj.velocity   = gnssStateEstimated.GNSS_state2(4:6, :);
-                    
-                    gnssStateTrue = load('exclude/ScEphem.mat');
-                    obj.trueTrajectory = gnssStateTrue.SC2(1:3, :);
-                    obj.trueVelocity   = gnssStateTrue.SC2(4:6, :);
-                    return
+                    error('[ NavImitator ] not supported');
                 otherwise
-                    error('[ SnsImitator ] unknown noiseType');
+                    error('[ NavImitator ] unknown noiseType');
             end
             
             obj.trajectory = state(1:3, :) + noiseTraj;

@@ -45,10 +45,6 @@ function [ llh ] = likelihoodComboGaussian(noiseDataSet, noise, idxVec)
                 determinant = det(noiseDataSet.covariance(idxRange, idxRange))^2;
                 invertSqrt = inv(noiseDataSet.covariance(idxRange, idxRange));
                 invertCov = invertSqrt'*invertSqrt;
-            case 'svd'
-                determinant = det(noiseDataSet.covariance(idxRange, idxRange))^2;
-                invertSqrt = inv(noiseDataSet.covariance(idxRange, idxRange));
-                invertCov = invertSqrt'*invertSqrt;
             case 'sqrt-diag'
                 determinant = prod(diag(noiseDataSet.covariance(idxRange, idxRange)))^2;
                 invertCov = diag(1./(diag(noiseDataSet.covariance(idxRange, idxRange)).^2));

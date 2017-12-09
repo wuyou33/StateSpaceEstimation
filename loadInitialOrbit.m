@@ -2,10 +2,11 @@ function [ initialVal ] = loadInitialOrbit()
     % loadInitialOrbit. Load initial values of orbit.
     %
     %   OUTPUT
-    %       [position; velocity]
+    %       initialVal = [position; velocity; quaternion]
     %       where:
-    %           position - is a position in [km];
-    %           velocity - is a velocity in [km / sec].
+    %           position    - is a position in [km];
+    %           velocity    - is a velocity in [km / sec];
+    %           quaternion  - attitude quaternion.
     %
     
     % GEO dreyf
@@ -34,17 +35,17 @@ function [ initialVal ] = loadInitialOrbit()
     % golf-ball to basketball-size fluffy ice particles, while the smooth middle area is more like what was observed on comet
     % Tempel 1 with water evaporating below the surface and percolating out through the dust.
     %
-    epoxiVal = [1.263992563405297E+08; -7.120149330454805E+07; -6.710445880653515E+06; 1.561401205555831E+01; 2.767115733787828E+01; -1.009836672338032E+00];
-    earthVal = [1.245753369794310E+08; -8.490915173563674E+07; 3.958015387110412E+03; 1.625451518298891E+01; 2.451202313450900E+01; -1.613990348628747E-03];
-    initialVal = [epoxiVal(1:3) - earthVal(1:3); epoxiVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
+    %     epoxiVal = [1.263992563405297E+08; -7.120149330454805E+07; -6.710445880653515E+06; 1.561401205555831E+01; 2.767115733787828E+01; -1.009836672338032E+00];
+    %     earthVal = [1.245753369794310E+08; -8.490915173563674E+07; 3.958015387110412E+03; 1.625451518298891E+01; 2.451202313450900E+01; -1.613990348628747E-03];
+    %     initialVal = [epoxiVal(1:3) - earthVal(1:3); epoxiVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
     
     %%  ExoMars TGO (Start=2016-07-22, Stop=2016-08-21)
     % ExoMars Mission objective is to search for evidence of methane and other trace
     % atmospheric gases that could be signatures of active biological or geological
     % processes, and to test technologies for future ESA contributions to Mars missions.
-    % exoMarsVal = [2.944743436025662E+07;-1.932504435404160E+08;-1.260832133814412E+07;2.439494954830838E+01;4.676046384236798E-01;1.985076097147882E-01];
-    % earthVal = [7.515763759387881E+07;-1.319970004198263E+08;-1.984076868406683E+04;2.545848216543012E+01;1.451279398144172E+01;4.671180059201419E-04];
-    % initialVal = [exoMarsVal(1:3) - earthVal(1:3); exoMarsVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
+    exoMarsVal = [2.944743436025662E+07;-1.932504435404160E+08;-1.260832133814412E+07;2.439494954830838E+01;4.676046384236798E-01;1.985076097147882E-01];
+    earthVal = [7.515763759387881E+07;-1.319970004198263E+08;-1.984076868406683E+04;2.545848216543012E+01;1.451279398144172E+01;4.671180059201419E-04];
+    initialVal = [exoMarsVal(1:3) - earthVal(1:3); exoMarsVal(4:6) - earthVal(4:6); 1; 0; 0; 0];
     
     %% NAVSTAR-68 (Start=2016-07-22, Stop=2016-08-21)
     %     navStarVal = [7.517195636922367E+07;-1.319756848263827E+08;-2.623423162838817E+04;2.343915251306972E+01;1.663284558568122E+01;2.559157449971319E+00];

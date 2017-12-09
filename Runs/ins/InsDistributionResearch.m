@@ -1,6 +1,6 @@
 close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
-addpath(genpath('./'));
+addpath(genpath('../../'));
 
 date.day  = 17;
 date.mon  = 11;
@@ -9,11 +9,11 @@ date.year = 2017;
 m_fitSolarSystemGravityModel = memoize(@fitSolarSystemGravityModel);
 
 timeData = TimeExt('00:00:00.000', '01:00:00.000', 1, date, 1e9);
-iterationNumber             = 1000;
+iterationNumber             = 1;
 mass                        = 200; % [kg]
 
 % large angular errors
-%{
+%%{
 accBiasMu                   = zeros(3, 1);      % [km / sec^2]
 accBiasSigma                = 5e-7*ones(3, 1);  % [km / sec^2]
 accNoiseVar                 = 1e-4*ones(3, 1);  % [km / sec^2]
@@ -37,7 +37,7 @@ angularVelocityInBodyFrame  = AngularVelocityInBodyFrame(timeData, initialAngula
 %}
 
 % small angular errors
-% %{
+%{
 accBiasMu                   = zeros(3, 1);      % [km / sec^2]
 accBiasSigma                = 5e-8*ones(3, 1);  % [km / sec^2]
 accNoiseVar                 = 1e-5*ones(3, 1);  % [km / sec^2]
@@ -52,7 +52,7 @@ gyroGSensitiveBias          = zeros(3);
 initialAcceleration         = zeros(3, 1);          % [km/sec^2]
 initialAngularVelocity      = zeros(3, 1);          % [rad/sec]
 accelerationSigma           = 2e-5*ones(3, 1);      % [km/sec^2]
-angularVelocitySigma        = 1e-4*ones(3, 1);      % [rad/sec]
+angularVelocitySigma        = 1e-4*ones(3, 16);      % [rad/sec]
 insTrajInitErrorKm          = 3e-2*ones(3, 1);      % [km]
 insVelInitErrorKmSec        = 5e-5*ones(3, 1);      % [km/sec]
 insQuaternionInitError      = 1e-3*ones(4, 1);      % [-]
@@ -66,7 +66,7 @@ insInitArgs.gyroBiasMu                   = gyroBiasMu;
 insInitArgs.gyroBiasSigma                = gyroBiasSigma;
 insInitArgs.accelerationInBodyFrame      = accelerationInBodyFrame;
 insInitArgs.angularVelocityInBodyFrame   = angularVelocityInBodyFrame;
-insInitArgs.visualize                    = 0;
+insInitArgs.visualize                    = 1;
 insInitArgs.timeData                     = timeData;
 insInitArgs.accNoiseVar                  = accNoiseVar;
 insInitArgs.gyroNoiseVar                 = gyroNoiseVar;
@@ -97,7 +97,9 @@ for i = 1:iterationNumber
     insInitialState(7:10) = quaternionNormalize(insInitialState(7:10));
     
     ins = initInertialNavigationSystem('init', insInitArgs);
+    
     estimations = ins.simulate(insInitialState);
+    return
     iterations(i, :, :) = estimations;
     trueStateMatrix(i, :, :) = trueState.FullState;
     

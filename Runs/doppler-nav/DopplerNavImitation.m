@@ -1,6 +1,6 @@
 close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
-addpath(genpath('./'));
+addpath(genpath('../../'));
 
 date.day  = 17;
 date.mon  = 11;
@@ -67,7 +67,7 @@ for l = 1:length(filterTypes)
     parfor j = 1:iterationNumber
 %     for j = 1:iterationNumber
         initialDopplerCov = [(0.5)^2*eye(3), zeros(3, 3); zeros(3, 3), (1.5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
-        initialDopplerState = initialDopplerNavState + initialConditionStabilityKoeff*svdDecomposition(initialDopplerCov)*randn(6, 1);
+        initialDopplerState = initialDopplerNavState + initialConditionStabilityKoeff*chol(initialDopplerCov, 'lower')*randn(6, 1);
         
         trueState = state;
         k = 1e0; %1e2;

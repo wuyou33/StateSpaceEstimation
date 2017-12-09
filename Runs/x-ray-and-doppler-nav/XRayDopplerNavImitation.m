@@ -1,6 +1,6 @@
 close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
-addpath(genpath('/Users/aleksey.konakov/Documents/Projects/StateSpaceEstimation'));
+addpath(genpath('../../'));
 
 date.day  = 17;
 date.mon  = 11;
@@ -93,10 +93,10 @@ report = iterationNumber == 1;
 for j = 1:iterationNumber
     initXRayCov = [(0.5)^2*eye(3), zeros(3, 3); zeros(3, 3), (1.5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
     %initialXRayCov = [(30)^2*eye(3), zeros(3, 3); zeros(3, 3), (1e-5)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
-    initXRayState = initialXRayDopplerNavState + svdDecomposition(initXRayCov)*randn(6, 1);
+    initXRayState = initialXRayDopplerNavState + chol(initXRayCov, 'lower')*randn(6, 1);
     
     initDopplerCov = [(0.5)^2*eye(3), zeros(3, 3); zeros(3, 3), (1.5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
-    initDopplerState = initialXRayDopplerNavState + svdDecomposition(initDopplerCov)*randn(6, 1);
+    initDopplerState = initialXRayDopplerNavState + chol(initDopplerCov, 'lower')*randn(6, 1);
     
     trueState = state;
     

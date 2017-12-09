@@ -1,12 +1,6 @@
 close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
-addpath(genpath('OrbitalMotion')); % include folder with orbital motion functions
-addpath(genpath('Statistics')); % include folder with Statistics functions
-addpath(genpath('TOAMeasurementUnit')); % include folder with Pulsar & Quasar navigation
-addpath(genpath('StateSpaceEstimation')); % include folder with State Space Estimation algorithms
-addpath(genpath('Utils'));
-addpath(genpath('Ephemeris'));
-addpath(genpath('XNAV'));
+addpath(genpath('../../'));
 
 matrix = randn(2);
 qr(matrix, 0)

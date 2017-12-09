@@ -122,27 +122,26 @@ classdef XRayNavSystem < handle
             narginchk(5, 5);
             
             if strcmp(estimatorType{1}, 'pf')
-                numParticles = 1e3;
+                numParticles = 2e3;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 particleSet.weights             = ones(1, numParticles) / numParticles;
             elseif strcmp(estimatorType{1}, 'gspf')
-                numParticles = 1e3;
+                numParticles = 2e3;
                 particleSet.particlesNum   = numParticles;
-                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                init_particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 5, [eps 1e5], 'sqrt', 1e-20);
+                particleSet.stateGMM = gmm_fit(initialParticles, 5, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'gmsppf')
-                numParticles = 8e2;%3e3;
+                numParticles = 50000;%3e3;
                 particleSet.particlesNum = numParticles;
-                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                init_particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 3, [eps 1e5], 'sqrt', 1e-20);
+                particleSet.stateGMM = gmm_fit(init_particles, 5, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'sppf')
-                numParticles = 50;
-                particleSet.particlesNum  = numParticles;
-                
-                particleSet.particles  =  chol(cov, 'lower') * randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                numParticles = 100;
+                particleSet.particlesNum  = numParticles;                
+                particleSet.particles     =  chol(cov, 'lower') * randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 
                 particleSet.weights             = ones(1, numParticles) / numParticles;
                 particleSet.particlesCov        = repmat(decompCov, [1 1 numParticles]);

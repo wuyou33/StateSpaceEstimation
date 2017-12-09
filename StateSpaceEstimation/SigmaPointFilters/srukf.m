@@ -155,7 +155,7 @@ function [stateNew, stateSqrtCovNew, stateNoise, observNoise, internal] = srukf(
     covUpdate = filterGain*sqrtObservCov;
     
     for j = 1:observDim
-        sqrtCovState = cholupdate(sqrtCovState, covUpdate(:,j), '-');
+        sqrtCovState = cholupdate(sqrtCovState, covUpdate(:, j), '-');
     end
     
     stateSqrtCovNew = sqrtCovState';
@@ -164,6 +164,7 @@ function [stateNew, stateSqrtCovNew, stateNoise, observNoise, internal] = srukf(
     if nargout > 4
         internal.meanPredictedState    = meanPredictState;
         internal.predictedStateCov     = sqrtCovState*sqrtCovState';
+        internal.s_cov_state           = sqrtCovState;
         internal.predictedObservMean   = predictObsMean;
         internal.inov                  = inov;
         internal.predictedObservCov    = sqrtObservCov*sqrtObservCov';

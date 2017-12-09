@@ -16,24 +16,22 @@ function [ noise ] = sampleComboGaussian( noiseDataSet, count )
     idxArr = noiseDataSet.idxArr;
     
     for j = 1 : noiseDataSet.N
-        ind1 = idxArr(j,1);
-        ind2 = idxArr(j,2);
+        ind1 = idxArr(j, 1);
+        ind2 = idxArr(j, 2);
         
         switch noiseDataSet.covarianceType
             case 'full'
-                a = chol(noiseDataSet.covariance(ind1:ind2,ind1:ind2))';
+                sx = chol(noiseDataSet.covariance(ind1:ind2,ind1:ind2))';
             case 'diag'
-                a = diag(sqrt(diag(noiseDataSet.covariance(ind1:ind2, ind1:ind2))));
+                sx = diag(sqrt(diag(noiseDataSet.covariance(ind1:ind2, ind1:ind2))));
             case 'sqrt'
-                a = noiseDataSet.covariance(ind1:ind2, ind1:ind2);
-            case 'svd'
-                a = noiseDataSet.covariance(ind1:ind2, ind1:ind2);
+                sx = noiseDataSet.covariance(ind1:ind2, ind1:ind2);
             case 'sqrt-diag'
-                a = noiseDataSet.covariance(ind1:ind2, ind1:ind2);
+                sx = noiseDataSet.covariance(ind1:ind2, ind1:ind2);
             otherwise
                 error('[ sampleComboGaussian::noiseDataSet ] unknown covarianceType.');
         end
         
-        noise(ind1:ind2, :) = noise(ind1:ind2, :) + a * randn(ind2-ind1+1, count);
+        noise(ind1:ind2, :) = noise(ind1:ind2, :) + sx * randn(ind2-ind1+1, count);
     end
 end

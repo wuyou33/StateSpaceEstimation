@@ -67,11 +67,11 @@ function [ estimate, dataSet, stateNoise, observNoise ] = sppf( dataSet, stateNo
     num  = dataSet.particlesNum;
     
     stateDim        = model.stateDimension;
-    x       = dataSet.particles;
+    x               = dataSet.particles;
     sqrtCov         = dataSet.particlesCov;
     procNoiseSpkf   = dataSet.processNoise;
     obsNoiseSpkf    = dataSet.observationNoise;
-    weights         = dataSet.weights;    
+    weights         = dataSet.weights;
     
     if (model.controlInputDimension == 0)
         control1 = [];
@@ -86,31 +86,30 @@ function [ estimate, dataSet, stateNoise, observNoise ] = sppf( dataSet, stateNo
     xPred   = zeros(stateDim, num);
     
     ones_numP = ones(num, 1);
-    ones_Xdim = ones(1, stateDim);    
+    ones_Xdim = ones(1, stateDim);
     
-    proposal = zeros(1, num);    
-    normfact = (2*pi) ^ (stateDim/2);    
+    proposal = zeros(1, num);
+    normfact = (2*pi) ^ (stateDim/2);
     obs = observation(:, ones_numP);
     
-    %% TIME UPDATE    
+    %% TIME UPDATE
     randBuf = randn(stateDim, num);
     
     switch model.spkfType
         case 'srukf'
-            for k = 1 : num,
+            for k = 1 : num
                 [xNew(:, k), sqrtCovPred(:, :, k), procNoiseSpkf, obsNoiseSpkf, ~] = srukf(x(:, k), sqrtCov(:, :, k), procNoiseSpkf, obsNoiseSpkf, ...
                     observation, model, control1, control2);
-%                 srukf(state, sqrtCovState, stateNoise, observNoise, observation, model, ctrl1, ctrl2)
                 xPred(:, k) = xNew(:, k) + sqrtCovPred(:, :, k) * randBuf(:, k);
             end
         case 'srcdkf'
-            for k = 1 : num,
+            for k = 1 : num
                 [xNew(:, k), sqrtCovPred(:, :, k), procNoiseSpkf, obsNoiseSpkf, ~] = srcdkf(x(:, k), sqrtCov(:, :, k), procNoiseSpkf, obsNoiseSpkf, ...
                     observation, model, control1, control2);
                 xPred(:, k) = xNew(:, k) + sqrtCovPred(:, :, k) * randBuf(:, k);
             end
         case 'sckf'
-            for k = 1 : num,
+            for k = 1 : num
                 [xNew(:, k), sqrtCovPred(:, :, k), procNoiseSpkf, obsNoiseSpkf, ~] = sckf(x(:, k), sqrtCov(:, :, k), procNoiseSpkf, obsNoiseSpkf, ...
                     observation, model, control1, control2);
                 xPred(:, k) = xNew(:, k) + sqrtCovPred(:, :, k) * randBuf(:, k);
@@ -118,21 +117,6 @@ function [ estimate, dataSet, stateNoise, observNoise ] = sppf( dataSet, stateNo
         otherwise
             error(' [ sppf ] Unknown SPKF type.');
     end
-%     switch model.spkfType
-%         case 'srukf'
-%             predict = @(x, s, xNoise, zNoise) srukf(x, s, xNoise, zNoise, observation, model, control1, control2);
-%         case 'sckf'
-%             predict = @(x, s, xNoise, zNoise) sckf(x, s, xNoise, zNoise, observation, model, control1, control2);
-%         case 'srcdkf'
-%             predict = @(x, s, xNoise, zNoise) srcdkf(x, s, xNoise, zNoise, observation, model, control1, control2);
-%         otherwise
-%             error('[ sppf ] Unknown inner filter type.');
-%     end
-%     
-%     for i = 1:num
-%         [xNew(:, i), sqrtCovPred(:, :, i), procNoiseSpkf, obsNoiseSpkf] = predict(x(:, i), sqrtCov(:, :, i), procNoiseSpkf, obsNoiseSpkf);
-%         xPred(:, i) = xNew(:, i) + sqrtCovPred(:, :, i)*randBuf(:, i);
-%     end
     
     %% EVALUATE IMPORTANCE WEIGHTS
     % calculate transition prior for each particle (in log domain)
@@ -141,7 +125,7 @@ function [ estimate, dataSet, stateNoise, observNoise ] = sppf( dataSet, stateNo
     % calculate observation likelihood for each particle (in log domain)
     likelihood = model.likelihoodStateFun(model, obs, xPred, control2, observNoise) + 1e-99;
     
-    difX = xPred - xNew;    
+    difX = xPred - xNew;
     for k = 1 : num
         cholFact = sqrtCovPred(:, :, k);
         foo = cholFact \ difX(:, k);
@@ -158,12 +142,22 @@ function [ estimate, dataSet, stateNoise, observNoise ] = sppf( dataSet, stateNo
         error(' [ sppf ] Unknown estimate type.');
     end
     
-    %% RESAMPLE    
+    %% RESAMPLE
     effSetSize = 1/sum(weights.^2);
     
-    if (effSetSize < round(num * model.resampleThreshold))
-        outIndex  = residualResample(1:num, weights);
-        x = xPred(:, outIndex);
+    if effSetSize < round(num * model.resampleThreshold)
+        switch (resampleMethod)
+            case 'residual'
+                outIndex  = residualResample(1:num, weights);
+                x = xPred(:, outIndex);
+            case 'multivariate-smooth'
+                x = multivariateSmoothResampling(xPred', weights');
+                outIndex = 1:num;
+            case 'residual2'
+                [x, outIndex] = residualResample2(xPred, weights, rand(size(weights)));
+            otherwise
+                error('[ pf ] unknown model.resampleMethod type.');
+        end
         
         for k = 1 : num
             sqrtCov(:, :, k) = sqrtCovPred(:, :, outIndex(k));

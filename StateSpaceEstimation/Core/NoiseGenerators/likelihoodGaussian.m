@@ -24,7 +24,7 @@ function [ likelihood ] = likelihoodGaussian(gaussDataSet, x, logFlag)
     switch gaussDataSet.covarianceType
         case {'full', 'diag'}
             sqrtCov = chol(gaussDataSet.covariance, 'lower');
-        case {'sqrt', 'sqrt-diag', 'svd'}
+        case {'sqrt', 'sqrt-diag'}
             sqrtCov = gaussDataSet.covariance;
         otherwise
             error('[ likelihoodGaussian::gaussDataSet ] Unknown covariance type ');

@@ -110,10 +110,9 @@ function newState = ffun(model, state, noise, stateControl)
     
     newState = zeros(rn, cn);
     for i = 1:cn
-        %     [~, tmp] = ode45(odeFun, tSpan, state, odeset('MaxStep', model.sampleTime));
-        %     newState = tmp(end, :)';
+        % [~, tmp] = ode45(odeFun, tSpan, state(:, i), odeset('MaxStep', model.sampleTime));
         [~, tmp]       = odeEuler(odeFun, tSpan, state(:, i), model.sampleTime);
-        newState(:, i) = tmp(:, end);
+        newState(:, i) = tmp(end, :);
     end
     
     if ~isempty(noise)
@@ -169,9 +168,9 @@ function out = linearize(model, state, ~, ~, ~, ~, term, ~)
             % A = df / dstate
             a = model.acceleration;
             w = model.angularVelocity;
-            q = model.quaternion;
+            s = model.insState;
             tSpan = [model.time - model.sampleTime; model.time];
-            func = @(y) SinsDynamicEquation(tSpan, y, a, w, q);
+            func = @(y) SinsDynamicEquation(tSpan, y, a, w, s);
             [ out, ~ ] = jacobianest(func, state);
         case 'B'
             % B = df / du1, where u1 - control1

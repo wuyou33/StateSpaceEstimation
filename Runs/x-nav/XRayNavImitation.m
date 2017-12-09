@@ -1,6 +1,6 @@
 close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
-addpath(genpath('./'));
+addpath(genpath('../../'));
 
 % RandStream.setGlobalStream(RandStream('mt19937ar', 'Seed', 1));
 
@@ -12,16 +12,15 @@ date.year           = 2017;
 timeStart           = '00:00:00.000';
 timeEnd             = '05:00:00.000';
 timeDataXRay        = TimeExt(timeStart, timeEnd, 100, date, 1e7); % change refreshSunMoonInfluenceTime to real number
-iterationNumber     = 600;
+iterationNumber     = 1;
 secondInOneMinute   = 60;
 esitimatedParams    = 2;
-logLastErrors       = 1;
-drawIterations      = 0;
+drawIterations      = 1;
 mass                = 200; % [kg]
 errorBudget         = 20; % [%]
 
 %{'ukf', 'srukf', 'cdkf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'ghqf', 'sghqf', 'ekf', 'pf', 'sppf', 'gspf', 'gmsppf'};
-filterTypes = {'sghqf'};
+filterTypes = {'srukf'};
 
 set(0, 'defaultfigurecolor', [1 1 1]);
 
@@ -74,15 +73,15 @@ for l = 1:length(filterTypes)
     initArgsXRay.startTime = timeDataXRay.StartSecond;
     initArgsXRay.gravityModel = m_fitSolarSystemGravityModel(timeDataXRay.SampleTime, timeDataXRay.SimulationNumber);
     
-    initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
-    % initialXRayCov = [(0.5)^2*eye(3), zeros(3, 3); zeros(3, 3), (0.5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
+	initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
+%     initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (0.5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
     
-    if stringmatch(estimatorType, {'ekf'})
-        initArgsXRay.stateNoiseCovariance = [(9.5e-1*eye(3)).^2 zeros(3); zeros(3) (5e-2*eye(3)).^2];
-    elseif stringmatch(estimatorType, {'gmsppf', 'gspf', 'pf'})
-        initArgsXRay.stateNoiseCovariance = [(1e-2*eye(3)).^2 zeros(3); zeros(3) (5e-4*eye(3)).^2];
+    if stringmatch(estimatorType, {'pf', 'gspf'})
+        initArgsXRay.stateNoiseCovariance = [(1e-2*eye(3)).^2 zeros(3); zeros(3) (5e-5*eye(3)).^2];
+    elseif stringmatch(estimatorType, {'gmsppf'})
+        initArgsXRay.stateNoiseCovariance = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (1e-4*eye(3)).^2];
     elseif stringmatch(estimatorType, {'sppf'})
-        initArgsXRay.stateNoiseCovariance = [(1e-5*eye(3)).^2 zeros(3); zeros(3) (5e-5*eye(3)).^2];
+        initArgsXRay.stateNoiseCovariance = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (8.5e-5*eye(3)).^2];
     else
         initArgsXRay.stateNoiseCovariance = [(1e-2*eye(3)).^2 zeros(3); zeros(3) (8.5e-4*eye(3)).^2];
     end
@@ -96,9 +95,9 @@ for l = 1:length(filterTypes)
     
     iterations = zeros(iterationNumber, 2, timeDataXRay.SimulationNumber);
     x_iterations = zeros(iterationNumber, 6, timeDataXRay.SimulationNumber);
-    
+    tic;
     fprintf('estimator: %s\n', estimatorType{1});
-    parfor j = 1:iterationNumber
+    for j = 1:iterationNumber
         try
             tstate = trueState;
             initialXRayState = initialXRay + chol(initialXRayCov, 'lower') * randn(6, 1);
@@ -117,8 +116,10 @@ for l = 1:length(filterTypes)
             fprintf('iteration of %d: completed\n', j );
         catch exc
             display(exc.message);
+            rethrow(exc)
         end
     end
+    toc;
     
     if drawIterations
         figure();
@@ -145,7 +146,7 @@ for l = 1:length(filterTypes)
         end
     end
     
-    if logLastErrors && drawIterations
+    if drawIterations
         figure();
         subplot(2, 1, 1);
         e1 = (trueState(1:3, :) - x_est(1:3, :))*1e3;

@@ -5,7 +5,7 @@ function [ points, edges ] = gmmSample( gmmSet, count )
     %
     %   INPUT:
     %       gmmSet                  Gaussian mixture model data structure with the following fields;
-    %           .covarianceType     covariance matrix type 'full' , 'diag' , 'sqrt' , 'sqrt-diag', 'svd';
+    %           .covarianceType     covariance matrix type 'full' , 'diag' , 'sqrt' , 'sqrt-diag';
     %           .dimension          data dimension;
     %           .mixtureCount       number of Gaussian component densities;
     %           .weights            mixing priors (component weights);
@@ -31,7 +31,7 @@ function [ points, edges ] = gmmSample( gmmSet, count )
                 idx = (find(bin == i));
                 points(:, idx) = chol(gmmSet.covariance(:, :, i), 'lower') * randn(gmmSet.dimension, n(i));
             end
-        case {'sqrt', 'sqrt-diag', 'svd'}
+        case {'sqrt', 'sqrt-diag'}
             for i = 1:gmmSet.mixtureCount
                 idx = (find(bin == i));
                 points(:, idx) = gmmSet.covariance(:, :, i) * randn(gmmSet.dimension, n(i));

@@ -1,6 +1,6 @@
 close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
-addpath(genpath('./'));
+addpath(genpath('../../'));
 
 m_fitSolarSystemGravityModel = memoize(@fitSolarSystemGravityModel);
 
@@ -10,7 +10,7 @@ date.year           = 2017;
 timeStart           = '00:00:00.000';
 timeEnd             = '01:30:00.000';
 timeDataXRay        = TimeExt(timeStart, timeEnd, 100, date, 1e7); % change refreshSunMoonInfluenceTime to real number
-iterationNumber     = 80;
+iterationNumber     = 700;
 secondInOneMinute   = 60;
 esitimatedParams    = 2;
 logLastErrors       = 1;
@@ -19,7 +19,7 @@ errorBudget         = 20; % [%]
 timeBucketArray     = [5e2 1e3 5e3 1e4 5e4 1e5];
 timeBucketLegend    = {'AT_e_f_f = 5e2', 'AT_e_f_f = 1e3', 'AT_e_f_f = 5e3', 'AT_e_f_f = 1e4', 'AT_e_f_f = 5e4', 'AT_e_f_f = 1e5'};
 %{'ukf', 'srukf', 'cdkf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'ghqf', 'sghqf', 'ekf', 'pf', 'sppf', 'gspf', 'gmsppf'};
-estimatorType = {'sghqf'};
+estimatorType = {'srukf'};
 
 set(0, 'defaultfigurecolor', [1 1 1]);
 

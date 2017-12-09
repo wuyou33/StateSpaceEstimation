@@ -39,7 +39,7 @@ function [ estimate, dataSet, stateNoise, observNoise ] = pf( dataSet, stateNois
     %         .particles        particle buffer (statedim-by-N matrix);
     %         .weights          particle weights (1-by-N r-vector).
     %
-    %   Required gssModel fields:
+    %   Required model fields:
     %         .estimateType        	estimate type : 'mean', 'mode', etc;
     %         .resampleThreshold    if the ratio of the 'effective particle set size' to the total number of particles
     %                               drop below this threshold  i.e.  (nEfective / particlesNum) < resampleThreshold
@@ -61,7 +61,13 @@ function [ estimate, dataSet, stateNoise, observNoise ] = pf( dataSet, stateNois
     if (model.control2InputDimension == 0)
         control2 = zeros(0, cnt);
     end
-    
+
+    if (isField(model, 'resampleMethod'))
+        resampleMethod = model.resampleMethod;
+    else
+        resampleMethod = 'residual';
+    end
+
     xrand = stateNoise.sample(stateNoise, cnt);
     particlesPred = model.stateTransitionFun(model, particles, xrand, control1);
     
@@ -76,8 +82,17 @@ function [ estimate, dataSet, stateNoise, observNoise ] = pf( dataSet, stateNois
     effectiveSetSize = 1 / sum(weights.^2);
     
     if (effectiveSetSize < resampleThreshold)
-        outIndex  = residualResample(1:cnt, weights);
-        particles = particlesPred(:, outIndex);
+        switch (resampleMethod)
+            case 'residual'
+                particles = particlesPred(:, residualResample(1:cnt, weights));
+            case 'multivariate-smooth'
+                particles = multivariateSmoothResampling(particles', weights')';
+            case 'residual2'
+                particles = residualResample2(particles, weights, rand(size(weights)));
+            otherwise
+                error('[ pf ] unknown model.resampleMethod type.');
+        end
+        
         weights   = cvecrep(1 / cnt, cnt);
     else
         particles  = particlesPred;

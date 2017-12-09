@@ -1,6 +1,6 @@
 close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
-addpath(genpath('./'));
+addpath(genpath('../../'));
 
 m_fitSolarSystemGravityModel = memoize(@fitSolarSystemGravityModel);
 

@@ -40,7 +40,7 @@ function [ newState, newCovState, stateNoise, observNoise, internal ] = cqkf( st
     %           .stateCov                  predicted state covariance matrix at time k;
     %           .predictedObservMean       predicted observation ( E[z(k)|Z(k-1)] );
     %           .inov                      inovation signal;
-    %           .observCov                 predicted of Cholesky or SVD factor of observation covariance;
+    %           .observCov                 predicted of Cholesky factor of observation covariance;
     %           .filterGain                filter gain.
     %
     %% error checking

@@ -1,16 +1,6 @@
 close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
-addpath(genpath('OrbitalMotion')); % include folder with orbital motion functions
-addpath(genpath('InertialMeasurementUnit')); % include folder with inertial measurement functions
-addpath(genpath('InertialNavigationSystem')); % include folder with inertial navigation system functions
-addpath(genpath('SNS')); % include folder with inertial navigation system functions
-addpath(genpath('Integrated')); % include folder with integrated navigation system functions
-addpath(genpath('Statistics')); % include folder with Statistics functions
-addpath(genpath('StateSpaceEstimation')); % include folder with State Space Estimation algorithms
-addpath(genpath('Utils'));
-addpath(genpath('TOAMeasurementUnit'));
-addpath(genpath('Ephemeris'));
-addpath(genpath('XNAV'));
+addpath(genpath('../../'));
 
 numberAnalyzedStat = 5; % attitude vector & velocity vector
 % ghqf not working due to dimension, too number of points :(
@@ -166,13 +156,13 @@ initCov = [diag(insTrajInitErrorKm).^2 zeros(3, 19); ... distance error [km]^2
 
 % % nice setup for gaussian sum particle filter and gaussian noise.
 insSnsProcCov = [(1e-3*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
-                 zeros(3, 3) (1e-6*eye(3)).^2 zeros(3, 16); ... velocity error [km/sec]^2
-                 zeros(4, 6) (2.5e-6*eye(4)).^2 zeros(4, 12); ... quaternion error [-]
-                 zeros(3, 10) diag(accBiasSigma).^2 zeros(3, 9); ... acceler bias [km/sec^2]^2
-                 zeros(3, 13) diag(gyroBiasSigma).^2 zeros(3, 6); ... gyro bias [rad/sec]^2
-                 zeros(3, 16) (1e-10*eye(3)).^2 zeros(3, 3); ... acceler scale factor [-]
-                 zeros(3, 19) (1e-10*eye(3)).^2 ... gyro scale factor [-]
-                ];
+    zeros(3, 3) (1e-6*eye(3)).^2 zeros(3, 16); ... velocity error [km/sec]^2
+    zeros(4, 6) (2.5e-6*eye(4)).^2 zeros(4, 12); ... quaternion error [-]
+    zeros(3, 10) diag(accBiasSigma).^2 zeros(3, 9); ... acceler bias [km/sec^2]^2
+    zeros(3, 13) diag(gyroBiasSigma).^2 zeros(3, 6); ... gyro bias [rad/sec]^2
+    zeros(3, 16) (1e-10*eye(3)).^2 zeros(3, 3); ... acceler scale factor [-]
+    zeros(3, 19) (1e-10*eye(3)).^2 ... gyro scale factor [-]
+    ];
 
 % nice setup for gaussian sum sigma point particle filter and gaussian noise.
 % insSnsProcCov = [(1e-4*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
@@ -208,7 +198,7 @@ fprintf('estimator: %s\n', estimatorType{1});
 %     parfor j = 1:iterationNumber
 for j = 1:iterationNumber
     initialXRayCov = [(30)^2*eye(3), zeros(3, 3); zeros(3, 3), (5e-5)^2*eye(3)];
-    initialXRayState = initialXRay + svdDecomposition(initialXRayCov)*randn(6, 1);
+    initialXRayState = initialXRay + chol(initialXRayCov, 'lower')*randn(6, 1);
     
     initState = [[0; 0; 0]; [0; 0; 0]; [1; 0; 0; 0]; [0; 0; 0]; [0; 0; 0]; 5e-5*ones(3, 1); 5e-5*ones(3, 1)];
     
@@ -226,7 +216,7 @@ for j = 1:iterationNumber
     
     iterations(j, :, :) = [errTraj; errVel; angErr];
     
-    if iterationNumber == 1 && length(estimatorType) == 1        
+    if iterationNumber == 1 && length(estimatorType) == 1
         figure();
         subplot(2, 1, 1);
         e1 = (starshipTrueState.Trajectory - estimatedState.Trajectory)*1e3;

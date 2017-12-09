@@ -112,6 +112,7 @@ function [ newState, stateSvdCovNew, stateNoise, observNoise, internal ] = sckf(
     if nargout > 4
         internal.meanPredictedState    = predictStateMean;
         internal.predictedStateCov     = sqrtPredictedCov*sqrtPredictedCov';
+        internal.s_cov_state           = stateSvdCovNew;
         internal.predictedObservMean   = predictObsMean;
         internal.inov                  = inov;
         internal.predictedObservCov    = sqrtObsCov*sqrtObsCov';

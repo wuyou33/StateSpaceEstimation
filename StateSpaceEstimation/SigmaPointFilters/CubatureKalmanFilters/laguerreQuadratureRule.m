@@ -3,7 +3,7 @@ function [ points, weigths ] = laguerreQuadratureRule( order, alpha )
     %
     %   [ points, weigths ] = laguerreQuadratureRule( order, alpha )
     %
-    %   Determines the abscisas (points) and weights (weights) for the Gauss-Laguerre quadrature of order n > 1, on the interval [0, +infinity].
+    %   Determines the abscisas (points) and weights (weights) for the Chebyshev-Laguerre quadrature of order n > 1, on the interval [0, +infinity].
     %   This is due to the fact that the companion matrix (of the n'th degree Laguerre polynomial) is now constructed as a symmetrical
     %   matrix, guaranteeing that all the eigenvalues (roots) will be real.
     %

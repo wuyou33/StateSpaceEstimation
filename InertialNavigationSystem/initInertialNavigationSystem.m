@@ -42,18 +42,18 @@ function ins = init(initArgs)
     if (initArgs.visualize)
         figure();
         subplot(3, 1, 1);
-        plot2(initArgs.timeData.RelTime, inertialMeasurementUnit.AngularVelocity, 'angular velocity', {'x axis', 'y axis', 'z axis'}, 'angular velocity, rad/sec');
+        plot2(initArgs.timeData.RelTime, inertialMeasurementUnit.AngularVelocity, 'Angular velocity', {'x axis', 'y axis', 'z axis'}, 'w, rad/sec');
         subplot(3, 1, 2);
-        plot2(initArgs.timeData.RelTime, initArgs.angularVelocityInBodyFrame.Velocity, 'true angular velocity', {'x axis', 'y axis', 'z axis'}, 'angular velocity, rad/sec');
+        plot2(initArgs.timeData.RelTime, initArgs.angularVelocityInBodyFrame.Velocity, 'True angular velocity', {'x axis', 'y axis', 'z axis'}, 'w, rad/sec');
         subplot(3, 1, 3);
-        plot2(initArgs.timeData.RelTime, inertialMeasurementUnit.GyroBias, 'gyro bias', {'x axis', 'y axis', 'z axis'}, 'bias, rad/sec');
+        plot2(initArgs.timeData.RelTime, inertialMeasurementUnit.GyroBias, 'Gyro bias', {'x axis', 'y axis', 'z axis'}, 'b_w, rad/sec');
         
         figure();
         subplot(3, 1, 1);
-        plot2(initArgs.timeData.RelTime, 1e3*inertialMeasurementUnit.Acceleration, 'acceleration', {'x axis', 'y axis', 'z axis'}, 'acceleration, m/sec^2');
+        plot2(initArgs.timeData.RelTime, 1e3*inertialMeasurementUnit.Acceleration, 'Acceleration', {'x axis', 'y axis', 'z axis'}, 'a, m/sec^2');
         subplot(3, 1, 2);
-        plot2(initArgs.timeData.RelTime, 1e3*initArgs.accelerationInBodyFrame.Acceleration, 'true acceleration', {'x axis', 'y axis', 'z axis'}, 'acceleration, m/sec^2');
+        plot2(initArgs.timeData.RelTime, 1e3*initArgs.accelerationInBodyFrame.Acceleration, 'True acceleration', {'x axis', 'y axis', 'z axis'}, 'a, m/sec^2');
         subplot(3, 1, 3);
-        plot2(initArgs.timeData.RelTime, 1e3*inertialMeasurementUnit.AccelerometerBias, 'acceleration bias', {'x axis', 'y axis', 'z axis'}, 'bias, m/sec^2');
+        plot2(initArgs.timeData.RelTime, 1e3*inertialMeasurementUnit.AccelerometerBias, 'Acceleration bias', {'x axis', 'y axis', 'z axis'}, 'b_A, m/sec^2');
     end
 end

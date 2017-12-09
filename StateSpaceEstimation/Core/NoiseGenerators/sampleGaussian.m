@@ -5,7 +5,7 @@ function [ noise ] = sampleGaussian( gaussDataSet, count )
     %
     %   INPUT
     %          gaussDataSet          Gaussian data structure with the following fields
-    %             .covarianceType        covariance matrix type 'full' , 'diag' , 'sqrt' , 'sqrt-diag', 'svd';
+    %             .covarianceType        covariance matrix type 'full' , 'diag' , 'sqrt' , 'sqrt-diag';
     %             .dimension             stochastic process dimension;
     %             .mean                  mean vector (dimension-by-1);
     %             .covariance            covariance matrix with type covarianceType  (dimension-by-dimension);
@@ -19,7 +19,7 @@ function [ noise ] = sampleGaussian( gaussDataSet, count )
     switch gaussDataSet.covarianceType
         case {'full', 'diag'}
             sqrtCov = chol(gaussDataSet.covariance, 'lower');
-        case {'sqrt', 'sqrt-diag', 'svd'}
+        case {'sqrt', 'sqrt-diag'}
             sqrtCov = gaussDataSet.covariance;
         otherwise
             error('[ sampleGaussian::gaussDataSet ] Unknown covariance type ');

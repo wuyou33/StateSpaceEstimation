@@ -23,14 +23,14 @@ function noiseDataStructure = convertGassianNoise(noiseDataStructure, targetCova
         error('[ convertGassianNoise ] Second input argument must be a string.');
     end
     
-    if ~stringmatch(targetCovarianceType, {'full', 'diag', 'sqrt', 'sqrt-diag', 'svd'})
+    if ~stringmatch(targetCovarianceType, {'full', 'diag', 'sqrt', 'sqrt-diag'})
         error(['[ convertGassianNoise ] Unknown target covarianceType ''' targetCovarianceType '''']);
     end
     %%
     switch targetCovarianceType
         case 'full'
             switch noiseDataStructure.covarianceType
-                case {'sqrt', 'sqrt-diag', 'svd'}
+                case {'sqrt', 'sqrt-diag'}
                     if stringmatch(noiseDataStructure.noiseSourceType, 'gmm')
                         for k = 1:noiseDataStructure.mixtureNumber
                             noiseDataStructure.covariance(:, :, k) = noiseDataStructure.covariance(:, :, k) * noiseDataStructure.covariance(:, :, k)';
@@ -78,19 +78,7 @@ function noiseDataStructure = convertGassianNoise(noiseDataStructure, targetCova
             noiseDataStructure.covarianceType = targetCovarianceType;
             
         case 'svd'
-            switch noiseDataStructure.covarianceType
-                case {'full', 'diag'}
-                    if stringmatch(noiseDataStructure.noiseSourceType, 'gmm')
-                        for k = 1:noiseDataStructure.mixtureNumber
-                            noiseDataStructure.covariance(:, :, k) = svdDecomposition(noiseDataStructure.covariance(:, :, k))';
-                        end
-                    else
-                        if ~isscalar(noiseDataStructure.covariance)
-                            noiseDataStructure.covariance = svdDecomposition(noiseDataStructure.covariance)';
-                        end
-                    end
-            end
-            noiseDataStructure.covarianceType = targetCovarianceType;
+            error('svd covariance type does not supported at initialization');
             
         case 'sqrt-diag'
             switch noiseDataStructure.covarianceType

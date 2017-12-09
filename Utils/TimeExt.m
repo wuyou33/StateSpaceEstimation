@@ -32,6 +32,7 @@ classdef TimeExt < handle
         EndSecond;
         RefreshSunMoonInfluenceTime;
         TimeInHour;
+        TimeInMinutes;
     end
     
     methods (Access = public)
@@ -109,6 +110,10 @@ classdef TimeExt < handle
         
         function val = get.TimeInHour(this)
             val = this.Time / 60 / 60;
+        end
+        
+        function val = get.TimeInMinutes(this)
+            val = this.Time / 60;
         end
         
         function val = get.RelTime(this)

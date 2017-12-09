@@ -1,52 +1,48 @@
-classdef IntegratedInsSns < BaseIntegratedIns
-    % IntegratedInsSns. integrated inertial navigation system (INS) and satellity navigation system (SNS).
-    % Provides method to solve navigation problem via INS and SNS (GPS)
+classdef IntegratedIns < BaseIntegratedIns
+    % IntegratedIns. Integrated inertial navigation system (INS) and abstract navigation system which provide information about position and velocity.
+    % Provides method to solve navigation problem via INS and any other nav system which provide information about position and velocity.
     
     properties(Access = private)
-        sns;
-        snsTimeData;
+        fns; % abstract navigation system which can provide information about position and velocity.
+        fnsTimeData;
     end
     
     methods (Access = public)
-        function obj = IntegratedInsSns(ins, sns, timeData, initArgs, snsTimeData, reconciliationTime)
+        function obj = IntegratedIns(ins, fns, timeData, initArgs, fnsTimeData, reconciliationTime)
             obj.ins                 = ins;
-            obj.sns                 = sns;
+            obj.fns                 = fns;
             obj.timeData            = timeData;
             obj.initArgs            = initArgs;
-            obj.snsTimeData         = snsTimeData;
+            obj.fnsTimeData         = fnsTimeData;
             obj.reconciliationTime  = reconciliationTime;
         end
     end
     
     methods (Access = protected)
         function [ state ] = evaluateSecondaryState(this, ~, ~, timeEnd)
-            endSample = this.snsTimeData.evalSampleFromTime(timeEnd);
-            state = this.sns.getState(endSample);
+            endSample = this.fnsTimeData.evalSampleFromTime(timeEnd);
+            state = this.fns.getState(endSample);
         end
         
         function decompCov = updateFilterParams(this, cov, estimatorType)
             decompCov = [];
+            alpha = 0.75;   % scale factor (UKF parameter) 1e-3
+            beta  = 0.85;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
+            kappa = 22;     % 0 is optimal for state dimension = 2 (UKF parameter)
+            
             switch estimatorType{1}
                 case 'ukf'
-                    alpha = 0.75;   % scale factor (UKF parameter) 1e-3
-                    beta  = 0.85;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
-                    kappa = 39;     % 0 is optimal for state dimension = 2 (UKF parameter)
-                    
                     this.inferenceModel.spkfParams = [alpha beta kappa];
                 case 'srukf'
-                    alpha = 0.75;   % scale factor (UKF parameter) 1e-3
-                    beta  = 0.85;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
-                    kappa = 39;     % 0 is optimal for state dimension = 2 (UKF parameter)
-                    
                     this.inferenceModel.spkfParams = [alpha beta kappa];
                     decompCov = chol(cov, 'lower');
                 case 'cdkf'
                     this.inferenceModel.spkfParams = sqrt(7); % scale factor (CDKF parameter h) default sqrt(3)
                 case 'srcdkf'
-                    this.inferenceModel.spkfParams = sqrt(25); % scale factor (CDKF parameter h) default sqrt(3)
+                    this.inferenceModel.spkfParams = sqrt(7); % scale factor (CDKF parameter h) default sqrt(3)
                     decompCov = chol(cov, 'lower');
                 case {'sckf', 'fdckf'}
-                    decompCov = svdDecomposition(cov);
+                    decompCov = chol(cov', 'lower');
                 case 'pf'
                     this.inferenceModel.resampleThreshold   = 1;
                     this.inferenceModel.estimateType        = 'mean';
@@ -54,22 +50,13 @@ classdef IntegratedInsSns < BaseIntegratedIns
                     this.inferenceModel.estimateType = 'mean';
                 case 'sppf'
                     this.inferenceModel.spkfType    = 'srukf';
-                    decompCov                       = chol(cov, 'lower');
-                    
-                    alpha = 0.75;   % scale factor (UKF parameter) 1e-3
-                    beta  = 0.85;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
-                    kappa = 39;     % 0 is optimal for state dimension = 2 (UKF parameter)
-                    
+                    decompCov                       = chol(cov, 'lower');                    
                     this.inferenceModel.spkfParams = [alpha beta kappa];
                     this.inferenceModel.resampleThreshold   = 1;
                     this.inferenceModel.estimateType        = 'mean';
                 case 'gmsppf'
                     this.inferenceModel.spkfType    = 'srukf';
                     decompCov                       = chol(cov, 'lower');
-                    
-                    alpha = 0.75;   % scale factor (UKF parameter) 1e-3
-                    beta  = 0.85;   % 2 is a optimal setting for Gaussian priors (UKF parameter)
-                    kappa = 39;     % 0 is optimal for state dimension = 2 (UKF parameter)
                     
                     this.inferenceModel.spkfParams = [alpha beta kappa];
                     this.inferenceModel.resampleThreshold   = 1;
@@ -86,7 +73,7 @@ classdef IntegratedInsSns < BaseIntegratedIns
         end
         
         function [ description ] = tag(~)
-            description = 'State estimation for loosely coupled Ins & Sns integrated system';
+            description = 'State estimation for loosely coupled Ins & ans integrated system';
         end
     end
     

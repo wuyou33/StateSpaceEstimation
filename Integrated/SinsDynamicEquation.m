@@ -36,8 +36,8 @@ function [ dState ] = SinsDynamicEquation( ~, state, acceleration, angularVeloci
     %
     %
     quaternion = insState(7:10);
-    vel = insState(3:6);
-    pos = insState(1:3);
+    % vel = insState(3:6);
+    % pos = insState(1:3);
     
     dState(1:3, 1) = state(4:6);
     
@@ -48,7 +48,8 @@ function [ dState ] = SinsDynamicEquation( ~, state, acceleration, angularVeloci
     plat2Comp = quaternion2RotationMatrix(state(7:10));
     
     dState(4:6, 1) = (eye(3) - plat2Comp)*(body2Plat*acceleration) + body2Plat*(state(17:19).*acceleration + state(11:13));
-    dState(7:10, 1) = quaternion2BMatrix(state(7:10)) * ([ -vel(2)/pos(2); vel(1)/pos(1); 0 ]  - state(20:22).*angularVelocity - state(14:16) );
+    % dState(7:10, 1) = quaternion2BMatrix(state(7:10)) * ([ -vel(2)/pos(2); vel(1)/pos(1); 0 ]  - state(20:22).*angularVelocity - state(14:16) );
+    dState(7:10, 1) = quaternion2BMatrix(state(7:10)) * (- (ones(3, 1) + state(20:22)).*angularVelocity - state(14:16) );
     
     dState(11:13, 1) = [0; 0; 0];
     dState(14:16, 1) = [0; 0; 0];
