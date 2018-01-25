@@ -98,6 +98,8 @@ for l = 1:length(filterTypes)
     tic;
     fprintf('estimator: %s\n', estimatorType{1});
     for j = 1:iterationNumber
+        rng(sum(100*clock), 'v5normal');
+        rng(sum(100*clock), 'v5uniform');
         try
             tstate = trueState;
             initialXRayState = initialXRay + chol(initialXRayCov, 'lower') * randn(6, 1);
