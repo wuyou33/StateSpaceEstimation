@@ -1,4 +1,4 @@
-function [ idx ] = resampleMixtureComponents( xNoiseMixcompsCnt, stateMixcompsCnt, weights )
+function [ idx ] = resampleMixtureComponents( xNoiseMixcompsCnt, stateMixcompsCnt, weights, resample_method )
     % resampleMixtureComponents. Residual resampling for Gaussian Mixture Models.
     %
     %   [ idx ] = resampleMixtureComponents( mixcompsCnt, weights )
@@ -8,15 +8,18 @@ function [ idx ] = resampleMixtureComponents( xNoiseMixcompsCnt, stateMixcompsCn
     %   INPUT
     %       xNoiseMixcompsCnt   number of state noise gaussian mixture components;
     %       stateMixcompsCnt    number of state gaussian mixture components;
-    %       weights             component weigths.
+    %       weights             component weigths;
+    %       resample_method     reample method.
     %
     %   OUTPUT
     %       idx     resampled indices.
     %
     %%
     mixcompsCnt = xNoiseMixcompsCnt * stateMixcompsCnt;
-    resampleIndex = residualResample(1:mixcompsCnt, weights);
-    [~, rIdx] = sort(rand(1, mixcompsCnt));
+    resampleIndex = resample(resample_method, weights, mixcompsCnt);
+    
+    [~, rIdx] = sort(rand(1, mixcompsCnt));    
     rIdx = rIdx(1 : stateMixcompsCnt);
+    
     idx  = resampleIndex(rIdx);
 end

@@ -1,6 +1,6 @@
 close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
-addpath(genpath('../../'));
+addpath(genpath('./'));
 
 numberAnalyzedStat = 5; % attitude vector & velocity vector
 % ghqf not working due to dimension, too number of points :(

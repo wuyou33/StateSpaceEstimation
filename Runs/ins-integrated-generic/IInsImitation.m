@@ -1,6 +1,6 @@
 close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
-addpath(genpath('../../'));
+addpath(genpath('./'));
 
 set(0, 'defaultfigurecolor', [1 1 1]);
 % ghqf not working due to dimension, too number of points :(

@@ -48,14 +48,6 @@ function [ estimate, dataSet, stateNoise, observNoise ] = sppf( dataSet, stateNo
     %%
     narginchk(7, 7);
     
-    if ~stringmatch(stateNoise.covarianceType, {'sqrt', 'sqrt-diag'})
-        error('[ sppf ] SPPF algorithm only support state noise with ''sqrt'' and ''sqrt-diag'' covariance types.');
-    end
-    
-    if ~stringmatch(observNoise.covarianceType, {'sqrt', 'sqrt-diag'})
-        error('[ sppf ] SPPF algorithm only support observation noise with ''sqrt'' and ''sqrt-diag'' covariance types.');
-    end
-    
     if ~stringmatch(dataSet.processNoise.covarianceType, {'sqrt', 'sqrt-diag'})
         error('[ sppf ] SPPF algorithm only support state noise (spkf component) with ''sqrt'' and ''sqrt-diag'' covariance types.');
     end
@@ -92,7 +84,7 @@ function [ estimate, dataSet, stateNoise, observNoise ] = sppf( dataSet, stateNo
     normfact = (2*pi) ^ (stateDim/2);
     obs = observation(:, ones_numP);
     
-    %% TIME UPDATE
+    %% Time update (prediction step)
     randBuf = randn(stateDim, num);
     
     switch model.spkfType
@@ -118,7 +110,7 @@ function [ estimate, dataSet, stateNoise, observNoise ] = sppf( dataSet, stateNo
             error(' [ sppf ] Unknown SPKF type.');
     end
     
-    %% EVALUATE IMPORTANCE WEIGHTS
+    %% Evaluate importance weights
     % calculate transition prior for each particle (in log domain)
     prior = model.stateTransitionPriorFun( model, xPred, x, control1, stateNoise) + 1e-99;
     
@@ -135,41 +127,30 @@ function [ estimate, dataSet, stateNoise, observNoise ] = sppf( dataSet, stateNo
     
     weights = weights / sum(weights);
     
-    %% CALCULATE ESTIMATE
+    %% Calculate estimate
     if strcmp(model.estimateType, 'mean')
         estimate = sum(weights(ones_Xdim, :) .* xPred, 2);
     else
         error(' [ sppf ] Unknown estimate type.');
     end
     
-    %% RESAMPLE
-    effSetSize = 1/sum(weights.^2);
+    %% Resample
+    effSetSize = 1 / sum(weights.^2);
     
     if effSetSize < round(num * model.resampleThreshold)
-        switch (resampleMethod)
-            case 'residual'
-                outIndex  = residualResample(1:num, weights);
-                x = xPred(:, outIndex);
-            case 'multivariate-smooth'
-                x = multivariateSmoothResampling(xPred', weights');
-                outIndex = 1:num;
-            case 'residual2'
-                [x, outIndex] = residualResample2(xPred, weights, rand(size(weights)));
-            otherwise
-                error('[ pf ] unknown model.resampleMethod type.');
-        end
+        outIndex = resample(model.resampleMethod, weights, num);
+        x = xPred(:, outIndex);
         
         for k = 1 : num
             sqrtCov(:, :, k) = sqrtCovPred(:, :, outIndex(k));
         end
         
-        weights = ones(1, num)/num;
+        weights = cvecrep(1 / num, num);
     else
         x  = xPred;
         sqrtCov = sqrtCovPred;
     end
-    
-    
+        
     dataSet.particles           = x;
     dataSet.particlesCov        = sqrtCov;
     dataSet.weights             = weights;

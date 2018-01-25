@@ -1,6 +1,6 @@
 close all; clc; clearvars; clear memoize; % clear memoize required for memoization
 
-addpath(genpath('../../'));
+addpath(genpath('./'));
 
 matrix = randn(2);
 qr(matrix, 0)

@@ -196,14 +196,17 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gmsppf( dataSet, state
         error('[ gmsppf::model::estimateType ] Unknown estimate type.');
     end
     
-    %% resample
-    % xSampleBuf = xSampleBuf(:, residualResample(1:num, sampleW));
-    % xSampleBuf = multivariateSmoothResampling(xSampleBuf', sampleW')';
-    % xSampleBuf = residualResample2(xSampleBuf, sampleW, rand(size(sampleW)));
-    % sampleW = rvecrep(1 / num, num);
+    %% Resample
+    outIndex = resample(model.resampleMethod, sampleW, num);
+    xSampleBuf = xSampleBuf(:, outIndex); % + eps*randn(Xdim,numP);
+    sampleW = repmat(1 / num, 1, num);
     
-    %% recover GMM representation of posterior distribution using EM
+    %% Recover GMM representation of posterior distribution using EM
     dataSet.particles = xSampleBuf;
-    dataSet.weights = sampleW;
-    dataSet.stateGMM = gmm_fit(xSampleBuf, stateGMM, [1e-2 1e6], covarianceType, 1, 0);
+    dataSet.weights = sampleW;               
+    dataSet.stateGMM = gmm_fit(xSampleBuf, stateGMM, [0.001 10], covarianceType, 1, 0);
+    
+    if stateNoise.adaptMethod
+        error('  [ gmsppf ] Process noise adaptation not supported yet for GMM noise sources.');
+    end
 end

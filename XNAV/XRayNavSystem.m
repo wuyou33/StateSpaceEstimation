@@ -131,7 +131,7 @@ classdef XRayNavSystem < handle
                 particleSet.particlesNum   = numParticles;
                 init_particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gmm_fit(initialParticles, 5, [1e-2 1e5], 'sqrt', 1, 0);
+                particleSet.stateGMM = gmm_fit(init_particles, 5, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'gmsppf')
                 numParticles = 50000;%3e3;
                 particleSet.particlesNum = numParticles;

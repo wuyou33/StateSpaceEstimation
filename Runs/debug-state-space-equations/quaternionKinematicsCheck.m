@@ -1,6 +1,5 @@
-addpath(genpath('../../'));
-
 clc; close all; clearvars;
+addpath(genpath('./'));
 
 quaternion = [1;0;0;0];
 N = 300;

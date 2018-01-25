@@ -154,7 +154,7 @@ function [ estimate, dataSet, stateNoise, observNoise ] = gspf( dataSet, stateNo
     end
     
     %% Resample mixture components
-    idx  = resampleMixtureComponents(xNoiseMixcompsCnt, xMixcompsCnt, xWeigthsNew);
+    idx  = resampleMixtureComponents(xNoiseMixcompsCnt, xMixcompsCnt, xWeigthsNew, model.resampleMethod);
     
     dataSet.stateGMM.covariance = stateCovNew(:, :, idx);
     dataSet.stateGMM.mean       = stateMuNew(:, idx);

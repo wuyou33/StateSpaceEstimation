@@ -1,4 +1,4 @@
-function [ prior, likelihood, evidence, posterior ] = gmmProbability( gmmDS, X, W )
+function [ prior_mixing_probabilities, likelihood, evidence, posterior ] = gmmProbability(gmm_model, particles, weights )
     % gmmProbability. Calculates any of the related (through Bayes rule) probabilities of a Gaussian Mixture Model (gmmSet) and a given dataset (dataSet).
     %       Probabilities are:
     %                   P(X|C) . P(C)                   likelihood . prior
@@ -29,82 +29,64 @@ function [ prior, likelihood, evidence, posterior ] = gmmProbability( gmmDS, X, 
     %       posterior      matrix where the j,i-th entry is the posteriorprobability (after seeing the data) that a component
     %                        density j has generated a specific data vector X(i), i.e. P(C(j)|X(i)) (class posterior probabilities).
     %
-    Nout = nargout;
+    output_arg_count = nargout;
     
-    [dim,nov] = size(X);              % number and dimension of input vectors
+    % number and dimension of input vectors
+    [dimension, input_vect_count] = size(particles);
     
-    if (dim~=gmmDS.dimension)
-        error(' [ gmmprobability ] Data dimension and GMM model dimension is not the same.');
+    if (dimension ~= gmm_model.dimension)
+        error(' [ gmmProbability ] Data dimension and GMM model dimension is not the same.');
     end
     
-    M = gmmDS.mixtureCount;                      % dumber of component densities
-    mu    = gmmDS.mean;                 % component means
-    covar = gmmDS.covariance;                % component covariance matrices
+    mixtureCount = gmm_model.mixtureCount;
+    mu    = gmm_model.mean;
+    covar = gmm_model.covariance;
+    prior_mixing_probabilities = gmm_model.weights(:);
     
-    prior = gmmDS.weights(:);        % prior mixing probabilities
+    ones_input_vectors  = ones(input_vect_count, 1);
+    ones_mixtures       = ones(mixtureCount, 1);
     
-    ones_nov = ones(nov,1);
-    ones_M   = ones(M,1);
     
-    %--- Calculate likelihood
-    if Nout > 1
+    % Calculate likelihood
+    if output_arg_count > 1
+        likelihood = zeros(mixtureCount,input_vect_count);
+        normfact = (2*pi)^(gmm_model.dimension / 2);
         
-        likelihood = zeros(M,nov);        % preallocate component likelihood matrix
-        normfact = (2*pi)^(gmmDS.dimension/2);  % component density normalizing factor
-        
-        switch gmmDS.covarianceType             % calculate per component likelihood
+        for k = 1:mixtureCount
+            switch gmm_model.covarianceType
+                case {'full','diag'}
+                    cov_x = chol(covar(:, :, k))';
+                case {'sqrt','sqrt-diag'}
+                    cov_x = covar(:, :, k);
+                otherwise
+                    error([' [ gmmprobability ] Unknown covariance type ', gmm_model.covarianceType]);
+            end
             
-            case {'full','diag'}
-                
-                for k=1:M,
-                    cmu = mu(:,k);
-                    XX = X - cmu(:,ones_nov);
-                    S = chol(covar(:,:,k))';
-                    foo = S \ XX;
-                    likelihood(k,:) = exp(-0.5*sum(foo.*foo, 1))/abs((normfact*prod(diag(S))));
-                end
-                
-            case {'sqrt','sqrt-diag'}
-                
-                for k=1:M,
-                    cmu = mu(:,k);
-                    XX = X - cmu(:,ones_nov);
-                    S = covar(:,:,k);
-                    foo = S \ XX;
-                    likelihood(k,:) = exp(-0.5*sum(foo.*foo, 1))/abs((normfact*prod(diag(S))));
-                end
-                
-            otherwise
-                
-                error([' [ gmmprobability ] Unknown covariance type ', mix.covarianceType]);
-                
+            cmu = mu(:, k);
+            x_centered = particles - cmu(:, ones_input_vectors);
+            foo = cov_x \ x_centered;
+            likelihood(k, :) = exp(-0.5*sum(foo.*foo, 1))/abs((normfact*prod(diag(cov_x))));
         end
-        
     end
-    
     likelihood = likelihood + 1e-99;
     
     
-    %--- Calculate evidence
-    if Nout > 2
-        
+    % Calculate evidence
+    if output_arg_count > 2
         if (nargin == 3)
-            evidence = prior' * (likelihood ./ W(ones_M,:));  % weighted
+            evidence = prior_mixing_probabilities' * (likelihood ./ weights(ones_mixtures, :));
         else
-            evidence = prior'*likelihood;                     % non-weighted
+            evidence = prior_mixing_probabilities'*likelihood;
         end
         
         evidence = evidence + 1e-99;
-        
     end
     
     
-    %--- Calculate posterior
-    if Nout > 3
-        
-        posterior = likelihood ./ ((1./prior)*evidence) + 1e-99;
-        % normalize
-        posterior = posterior ./ rvecrep(sum(posterior,1),M);
-        
+    % Calculate posterior
+    if output_arg_count > 3
+        posterior = likelihood ./ ((1./prior_mixing_probabilities)*evidence) + 1e-99;
+        % normalize posterior
+        posterior = posterior ./ rvecrep( sum(posterior, 1), mixtureCount );
     end
 end

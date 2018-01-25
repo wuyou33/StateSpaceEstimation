@@ -77,7 +77,7 @@ end
 function newState = stateTransitionFun(inferenceDataModel, state, stateNoise, control)
     %  State transition function of meta system for state estimation
     
-    newState = inferenceDataModel.model.stateTransitionFun( inferenceDataModel.model, state, stateNoise, control);
+    newState = inferenceDataModel.model.stateTransitionFun(inferenceDataModel.model, state, stateNoise, control);
 end
 %%
 function observation = stateObservationFun(inferenceDataModel, state, observationNoise, control)
@@ -89,7 +89,7 @@ end
 function tranPrior = stateTransitionPriorFun(inferenceDataModel, predictedState, state, control, processNoiseDataSet)
     %  Calculates the transition prior probability P(x_k|x_(k-1))
     
-    tranPrior = inferenceDataModel.model.stateTransitionPriorFun( inferenceDataModel.model, predictedState, state, control, processNoiseDataSet);
+    tranPrior = inferenceDataModel.model.stateTransitionPriorFun(inferenceDataModel.model, predictedState, state, control, processNoiseDataSet);
 end
 %%
 function llh = likelihoodStateFun(inferenceDataModel, observation, state, control, observationNoiseDS)
@@ -97,7 +97,7 @@ function llh = likelihoodStateFun(inferenceDataModel, observation, state, contro
     % a realization of the predicted observation for a given state,
     % i.e. p(z|x) = p(observation|state)
     
-    llh = inferenceDataModel.model.observationLikelihoodFun( inferenceDataModel.model, observation, state, control, observationNoiseDS);
+    llh = inferenceDataModel.model.observationLikelihoodFun(inferenceDataModel.model, observation, state, control, observationNoiseDS);
 end
 %%
 function innov = innovationModelFunc(inferenceDataModel, observation, predictedObservation)
@@ -108,7 +108,7 @@ function innov = innovationModelFunc(inferenceDataModel, observation, predictedO
     %   complex for complex measurement processes where for example multiple (possibly false)
     %   observations can be observed for a given hidden ground truth.
     
-    innov = inferenceDataModel.model.innovationModelFunc( inferenceDataModel.model, observation, predictedObservation);
+    innov = inferenceDataModel.model.innovationModelFunc(inferenceDataModel.model, observation, predictedObservation);
 end
 %%
 function varargout = linearize(inferenceDataModel, state, stateNoise, observNoise, control1, control2, varargin)

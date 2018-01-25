@@ -94,7 +94,7 @@ function noiseDataSet = generateNoiseDataSet( args )
             noiseDataSet.covariance      = noise.alpha * (noise.beta^2);
             noiseDataSet.sample          = @sampleGamma;
             noiseDataSet.likelihood      = @likelihoodGamma;
-            noiseDataSet.covarianceType  = args.covarianceType;
+            noiseDataSet.type            = 'noise data set';
             
         case 'gaussian'
             if isfield(args, 'covarianceType')
@@ -307,7 +307,7 @@ function noiseDataSet = generateNoiseDataSet( args )
             switch (noise.covarianceType)
                 case {'full', 'diag', 'sqrt', 'sqrt-diag',}
                     if ((noise.mixtureCount == 1) && isequal(size(args.covariance), [noise.dimension noise.dimension]) ||...
-                            ((noise.M  > 1) && isequal(size(args.covariance), [noise.dimension noise.dimension noise.mixtureCount])))
+                            ((noise.mixtureCount  > 1) && isequal(size(args.covariance), [noise.dimension noise.dimension noise.mixtureCount])))
                         noise.covariance = args.covariance;
                     else
                         error('[ generateNoiseDataSet::gmm::full ] Noise source covariance matrix has incorrect dimensions.');

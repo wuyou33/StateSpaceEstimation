@@ -76,8 +76,7 @@ function [centres, options, post, errlog] = kmeans3(centres, data, options)
     id = eye(ncentres);
     
     % Main loop of algorithm
-    for n = 1:niters
-        
+    for n = 1:niters        
         % Save old centres to check for termination
         old_centres = centres;
         
@@ -113,12 +112,5 @@ function [centres, options, post, errlog] = kmeans3(centres, data, options)
             end
         end
         old_e = e;
-    end
-    
-    % If we get here, then we haven't terminated in the given number of
-    % iterations.
-    options(8) = e;
-    if (options(1) >= 0)
-        disp(maxitmess);
     end
 end

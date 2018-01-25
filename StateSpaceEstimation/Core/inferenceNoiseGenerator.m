@@ -56,13 +56,14 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
             observationNoise  = deepClone(inferenceDataStructure.model.observationNoise);
             
             % sigma point filters family
-            if stringmatch(estimatorType, {'kf', 'ekf', 'ukf', 'cdkf', 'srukf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'ghqf', 'sghqf', 'sppf'})
+            if stringmatch(estimatorType, {'kf', 'ekf', 'ukf', 'cdkf', 'srukf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'ghqf', 'sghqf'})
                 % If default noise source is not Guassian, define a Gaussian noise source with the same dimension, mean and covariance
                 if ~stringmatch(processNoise.noiseSourceType, {'gaussian'})
                     processNoiseArg.type       = 'gaussian';
                     processNoiseArg.dimension  = processNoise.dimension;
                     processNoiseArg.mean       = processNoise.mean;
                     processNoiseArg.covariance = processNoise.covariance;
+                    processNoiseArg.covarianceType = 'full';
                     
                     processNoise = generateNoiseDataSet(processNoiseArg);
                 end
@@ -194,8 +195,15 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                 end
                 
             end
+            
+            % 'Sigma point particle filter'
+            if (stringmatch(estimatorType, 'sppf'))
+                % nothing to change here
+            end
+            
             processNoise.tag     = 'state';
             observationNoise.tag = 'observation';
+            
         case 'parameter'
             error('[ inferenceNoiseGenerator::args::type] parameter estimation not implelemented');
             

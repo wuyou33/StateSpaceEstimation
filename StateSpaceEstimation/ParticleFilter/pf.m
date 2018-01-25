@@ -61,13 +61,13 @@ function [ estimate, dataSet, stateNoise, observNoise ] = pf( dataSet, stateNois
     if (model.control2InputDimension == 0)
         control2 = zeros(0, cnt);
     end
-
-    if (isField(model, 'resampleMethod'))
+    
+    if (isfield(model, 'resampleMethod'))
         resampleMethod = model.resampleMethod;
     else
         resampleMethod = 'residual';
     end
-
+    
     xrand = stateNoise.sample(stateNoise, cnt);
     particlesPred = model.stateTransitionFun(model, particles, xrand, control1);
     
@@ -82,17 +82,8 @@ function [ estimate, dataSet, stateNoise, observNoise ] = pf( dataSet, stateNois
     effectiveSetSize = 1 / sum(weights.^2);
     
     if (effectiveSetSize < resampleThreshold)
-        switch (resampleMethod)
-            case 'residual'
-                particles = particlesPred(:, residualResample(1:cnt, weights));
-            case 'multivariate-smooth'
-                particles = multivariateSmoothResampling(particles', weights')';
-            case 'residual2'
-                particles = residualResample2(particles, weights, rand(size(weights)));
-            otherwise
-                error('[ pf ] unknown model.resampleMethod type.');
-        end
-        
+        outIndex = resample(resampleMethod, weights, cnt);
+        particles = particlesPred(:, outIndex);
         weights   = cvecrep(1 / cnt, cnt);
     else
         particles  = particlesPred;
