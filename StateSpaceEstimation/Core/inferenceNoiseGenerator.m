@@ -63,6 +63,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                     processNoiseArg.dimension  = processNoise.dimension;
                     processNoiseArg.mean       = processNoise.mean;
                     processNoiseArg.covariance = processNoise.covariance;
+                    processNoiseArg.covarianceType = 'full';
                     
                     processNoise = generateNoiseDataSet(processNoiseArg);
                 end
@@ -76,7 +77,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                     observationNoise = generateNoiseDataSet(observNoiseArg);
                 end
                 
-                if stringmatch(estimatorType, {'srukf', 'srcdkf', 'sckf', 'fdckf'})
+                if stringmatch(estimatorType, {'srukf', 'srcdkf', 'sckf', 'sppf'})
                     processNoise = convertGassianNoise(processNoise, 'sqrt');
                     observationNoise = convertGassianNoise(observationNoise, 'sqrt');
                 end
@@ -100,7 +101,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                     end
                     
                     switch covarianceType
-                        case {'sqrt', 'sqrt-diag', 'svd'}
+                        case {'sqrt', 'sqrt-diag'}
                             processNoiseArg.covariance(:, :, 1) = processNoise.covariance;
                         case {'full', 'diag'}
                             processNoiseArg.covariance(:, :, 1) = chol(processNoise.covariance, 'lower');
@@ -139,7 +140,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                     end
                     
                     switch covarianceType
-                        case {'sqrt', 'sqrt-diag', 'svd'}
+                        case {'sqrt', 'sqrt-diag'}
                             processNoiseArg.covariance(:, :, 1) = processNoise.covariance;
                         case {'full', 'diag'}
                             processNoiseArg.covariance(:, :, 1) = chol(processNoise.covariance, 'lower');
@@ -174,7 +175,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                     end
                     
                     switch covarianceType
-                        case {'sqrt', 'sqrt-diag', 'svd'}
+                        case {'sqrt', 'sqrt-diag'}
                             observNoiseArg.covariance(:, :, 1) = observationNoise.covariance;
                         case {'full', 'diag'}
                             observNoiseArg.covariance(:, :, 1) = chol(observationNoise.covariance, 'lower');
@@ -194,8 +195,15 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
                 end
                 
             end
+            
+            % 'Sigma point particle filter'
+            if (stringmatch(estimatorType, 'sppf'))
+                % nothing to change here
+            end
+            
             processNoise.tag     = 'state';
             observationNoise.tag = 'observation';
+            
         case 'parameter'
             error('[ inferenceNoiseGenerator::args::type] parameter estimation not implelemented');
             
@@ -222,4 +230,7 @@ function [ processNoise, observationNoise, outputInferenceDataStructure ] = infe
         observationNoise.adaptParams = observationNoiseAdaptParams;
         outputInferenceDataStructure.observationNoiseAdaptMethod = observationNoiseAdaptMethod;
     end
+    
+    outputInferenceDataStructure.model.processNoise = processNoise;
+    inferenceDataStructure.model.observationNoise   = observationNoise;
 end

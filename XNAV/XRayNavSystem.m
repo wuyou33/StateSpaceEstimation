@@ -60,7 +60,9 @@ classdef XRayNavSystem < handle
                 tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
                 
                 len = endBlock - startBlock + 1*(i == 1);
-                if i == 1; stateMatrix(:, 1) = initialState; end
+                if i == 1
+                    stateMatrix(:, 1) = initialState;
+                end
                 
                 for j = startSample:len
                     sample = j + startBlock - 1;
@@ -120,26 +122,27 @@ classdef XRayNavSystem < handle
             narginchk(5, 5);
             
             if strcmp(estimatorType{1}, 'pf')
-                numParticles = 1e4;
+                numParticles = 2e3;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 particleSet.weights             = ones(1, numParticles) / numParticles;
             elseif strcmp(estimatorType{1}, 'gspf')
-                numParticles = 5e2;
+                numParticles = 2e3;
                 particleSet.particlesNum   = numParticles;
-                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                init_particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 35, [eps 1e5], 'sqrt', 1e-20);
+                particleSet.stateGMM = gmm_fit(init_particles, 5, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'gmsppf')
-                numParticles = 5e2;
+                numParticles = 50000;%3e3;
                 particleSet.particlesNum = numParticles;
-                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                init_particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 25, [eps 1e5], 'sqrt', 1e-20);
+                particleSet.stateGMM = gmm_fit(init_particles, 5, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'sppf')
-                numParticles = 1e3;
-                particleSet.particlesNum        = numParticles;
-                particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                numParticles = 100;
+                particleSet.particlesNum  = numParticles;                
+                particleSet.particles     =  chol(cov, 'lower') * randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                
                 particleSet.weights             = ones(1, numParticles) / numParticles;
                 particleSet.particlesCov        = repmat(decompCov, [1 1 numParticles]);
                 particleSet.processNoise        = this.procNoise;
@@ -168,18 +171,18 @@ classdef XRayNavSystem < handle
                 case 'srcdkf'
                     this.inferenceModel.spkfParams = sqrt(7); % scale factor (CDKF parameter h) default sqrt(3)
                     decompCov = chol(cov, 'lower');
-                case {'sckf', 'fdckf'}
-                    decompCov = svdDecomposition(cov);
+                case {'sckf'}
+                    decompCov = chol(cov, 'lower');
                 case 'pf'
                     this.inferenceModel.resampleThreshold   = 1;
                     this.inferenceModel.estimateType        = 'mean';
                 case 'gspf'
                     this.inferenceModel.estimateType = 'mean';
                 case 'sppf'
-                    this.inferenceModel.spkfType    = 'srukf';
+                    this.inferenceModel.spkfType    = 'srcdkf';
                     decompCov                       = chol(cov, 'lower');
                     
-                    this.inferenceModel.spkfParams = [alpha beta kappa];
+                    this.inferenceModel.spkfParams = sqrt(7);%[alpha beta kappa];
                     this.inferenceModel.resampleThreshold   = 1;
                     this.inferenceModel.estimateType        = 'mean';
                 case 'gmsppf'
@@ -190,11 +193,11 @@ classdef XRayNavSystem < handle
                     this.inferenceModel.resampleThreshold   = 1;
                     this.inferenceModel.estimateType        = 'mean';
                 case 'cqkf'
-                    this.inferenceModel.cqkfParams = 9; % order of laguerre polynomial
+                    this.inferenceModel.cqkfParams = 5; % order of laguerre polynomial
                 case 'ghqf'
                     this.inferenceModel.ghkfParams = 4; % order of gauss-hermite polynomial
                 case 'sghqf'
-                    this.inferenceModel.sghkfParams = [3 3]; % order of gauss-hermite polynomial & manner
+                    this.inferenceModel.sghkfParams = [5 2]; % order of gauss-hermite polynomial & manner
                 otherwise
                     % do nothing by default
             end
@@ -218,9 +221,9 @@ classdef XRayNavSystem < handle
                 case 'ckf'
                     [state, cov, this.procNoise, this.observNoise, param] = ckf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'sckf'
-                    [state, sCov, this.procNoise, this.observNoise, param] = sckf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, cov, this.procNoise, this.observNoise, param] = sckf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'fdckf'
-                    [state, sCov, this.procNoise, this.observNoise, param] = fdckf(state, sCov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                    [state, cov, this.procNoise, this.observNoise, param] = fdckf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'pf'
                     [state, particleSetEst, this.procNoise, this.observNoise] = pf(particleSet, this.procNoise, this.observNoise, observ, [], [], this.inferenceModel);
                 case 'gspf'
@@ -235,6 +238,8 @@ classdef XRayNavSystem < handle
                     [state, cov, this.procNoise, this.observNoise, param] = ghqf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 case 'sghqf'
                     [state, cov, this.procNoise, this.observNoise, param] = sghqf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
+                case 'ekf'
+                    [state, cov, this.procNoise, this.observNoise, param] = ekf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, [], []);
                 otherwise
                     error(strcat('not supported filter type: ', estimator{1}));
             end
@@ -253,8 +258,10 @@ classdef XRayNavSystem < handle
                 this.inferenceModel.model.xRaySources, ...
                 earthEphemerisStep, ...
                 sunEphemerisStep, ...
-                this.inferenceModel.model.invPeriods ...
-                );
+                this.inferenceModel.model.invPeriods, ...
+                this.inferenceModel.model.mass, ...
+                this.inferenceModel.model.gravityModel, ...
+                this.inferenceModel.model.startTime);
             this.inferenceModel.model = updModel;
         end
         

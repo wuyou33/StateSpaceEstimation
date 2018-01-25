@@ -1,4 +1,4 @@
-function likelihood = likelihoodGaussian(gaussDataSet, noise, logFlag)
+function [ likelihood ] = likelihoodGaussian(gaussDataSet, x, logFlag)
     % likelihoodGaussian. Calculates the likelihood of sample 'noise', given the Gaussian noise model gaussDataSet.
     %
     %   Calculates the likelihood of a 'real world' observation for a given realization or instance of the state variable which has Gaussian noise.
@@ -13,20 +13,32 @@ function likelihood = likelihoodGaussian(gaussDataSet, noise, logFlag)
     %
     %   OUPUT
     %       likelihood    calculated likelihood.
-    %
+    %%
     narginchk(2, 3);
     
+    %%
     if nargin == 2
         logFlag = 0;
     end
     
-    normFact = (2*pi)^(gaussDataSet.dimension / 2);
-    sqrtCov = chol(gaussDataSet.covariance, 'lower');
-    xc = sqrtCov \ (noise - cvecrep(gaussDataSet.mean, size(noise, 2)));
+    switch gaussDataSet.covarianceType
+        case {'full', 'diag'}
+            sqrtCov = chol(gaussDataSet.covariance, 'lower');
+        case {'sqrt', 'sqrt-diag'}
+            sqrtCov = gaussDataSet.covariance;
+        otherwise
+            error('[ likelihoodGaussian::gaussDataSet ] Unknown covariance type ');
+    end
+    
+    arrayLength = size(x, 2);
+    
+    normfact = (2*pi)^(gaussDataSet.dimension/2);
+    xc = x - cvecrep(gaussDataSet.mean, arrayLength);
+    foo = sqrtCov \ xc;
     
     if logFlag
-        likelihood = -0.5*sum(xc.*xc, 1) - log(normFact*abs(prod(diag(sqrtCov))));
+        likelihood = -0.5*sum(foo.*foo, 1) - log( normfact*abs(prod(diag(sqrtCov))) );
     else
-        likelihood = exp(-0.5*sum(xc.*xc, 1))./(normFact*abs(prod(diag(sqrtCov))));
+        likelihood = exp(-0.5*sum(foo.*foo, 1)) ./ ( normfact*abs(prod(diag(sqrtCov))) );
     end
 end

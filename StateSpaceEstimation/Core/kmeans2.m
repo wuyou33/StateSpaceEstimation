@@ -40,6 +40,8 @@ function [ centres, options, post ] = kmeans2( centres, data, options )
     %
     %   options.squaredDistanceCluster  is total squared distance from cluster centres
     %
+    %   options.visualize               draw results.
+    %
     narginchk(3, 3);
     
     logError            = options.logError;

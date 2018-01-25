@@ -21,7 +21,7 @@ function [ x, y ] = odeEuler(odefun, xspan, seed, step)
     narginchk(4, 4);
     
     ti = xspan(1);
-    tf = xspan(2);
+    tf = xspan(end);
     
     if ~ (tf > ti); error('upper limit must be greater than lower limit'); end
     
@@ -35,10 +35,11 @@ function [ x, y ] = odeEuler(odefun, xspan, seed, step)
         x(n) = tf;
     end
     
-    y = cvecrep(seed, n);
+    tmp = cvecrep(seed, n);
     
     for i = 1:n-1
-        y(:, i+1) = y(:, i) + odefun(x(i), y(:, i)) *( x(i+1)-x(i) );
+        tmp(:, i+1) = tmp(:, i) + odefun(x(i), tmp(:, i)) *( x(i+1)-x(i) );
     end
     
+    y = tmp';
 end

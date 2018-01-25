@@ -39,7 +39,7 @@ function [ estimate, dataSet, stateNoise, observNoise ] = pf( dataSet, stateNois
     %         .particles        particle buffer (statedim-by-N matrix);
     %         .weights          particle weights (1-by-N r-vector).
     %
-    %   Required gssModel fields:
+    %   Required model fields:
     %         .estimateType        	estimate type : 'mean', 'mode', etc;
     %         .resampleThreshold    if the ratio of the 'effective particle set size' to the total number of particles
     %                               drop below this threshold  i.e.  (nEfective / particlesNum) < resampleThreshold
@@ -49,51 +49,54 @@ function [ estimate, dataSet, stateNoise, observNoise ] = pf( dataSet, stateNois
     if nargin ~= 7
         error('[ pf ] Incorrect number of input arguments.');
     end
-    
-    stateDim    = model.stateDimension;
-    num         = dataSet.particlesNum;
-    particles   = dataSet.particles;
-    weights     = dataSet.weights;
-    threshold   = round(model.resampleThreshold * num);
-    normWeights = cvecrep(1/num, num);
+    %%
+    cnt          = dataSet.particlesNum;
+    particles    = dataSet.particles;
+    weights      = dataSet.weights;
     
     if (model.controlInputDimension == 0)
-        control1 = [];
+        control1 = zeros(0, cnt);
     end
     
     if (model.control2InputDimension == 0)
-        control2 = [];
+        control2 = zeros(0, cnt);
     end
     
-    xNoise = stateNoise.sample(stateNoise, num);
-    %% propagate particles
-    particlesPred = model.stateTransitionFun(model, particles, xNoise, control1);
+    if (isfield(model, 'resampleMethod'))
+        resampleMethod = model.resampleMethod;
+    else
+        resampleMethod = 'residual';
+    end
     
-    %% evaluate importance weights
-    likelihood = model.likelihoodStateFun(model, cvecrep(observation, num), particlesPred, control2, observNoise) + 1e-99;
+    xrand = stateNoise.sample(stateNoise, cnt);
+    particlesPred = model.stateTransitionFun(model, particles, xrand, control1);
+    
+    %% Evaluate importance weights
+    likelihood = model.likelihoodStateFun(model, cvecrep(observation, cnt), particlesPred, control2, observNoise) + 1e-99;
+    
     weights = weights .* likelihood;
     weights = weights / sum(weights);
     
-    %% resample
-    % calculate effective particle set size
+    %% Resample
+    resampleThreshold  = round(model.resampleThreshold * cnt);
     effectiveSetSize = 1 / sum(weights.^2);
     
-    % resample if effectiveSetSize is below threshold
-    if (effectiveSetSize < threshold)
-        outIndex  = residualResample(1:num, weights);
+    if (effectiveSetSize < resampleThreshold)
+        outIndex = resample(resampleMethod, weights, cnt);
         particles = particlesPred(:, outIndex);
-        weights   = normWeights;
+        weights   = cvecrep(1 / cnt, cnt);
     else
         particles  = particlesPred;
     end
     
-    %% caculate estimate
-    if strcmp(model.estimateType, 'mean')
-        estimate = sum(rvecrep(weights, stateDim).*particles, 2);
-    elseif strcmp(model.estimateType, 'median')
-        estimate = median(rvecrep(weights, stateDim).*particles, 2);
-    else
-        error('[ pf ] Unknown estimate type.');
+    %% Calculate estimate
+    switch model.estimateType
+        case 'mean'
+            estimate = sum(rvecrep(weights, model.stateDimension) .* particles, 2);
+        case 'median'
+            estimate = median(rvecrep(weights, model.stateDimension) .* particles, 2);
+        otherwise
+            error('[ pf ] Unknown estimate type.');
     end
     
     dataSet.particles = particles;

@@ -46,21 +46,24 @@ function [ estimate, dataSet, stateNoise, observNoise ] = sppf( dataSet, stateNo
     %                              drop below this threshold  i.e.  (nEfective / particlesNum) < resampleThreshold
     %                              the particles will be resampled.  (nEfective is always less than or equal to particlesNum).
     %%
-    if nargin ~= 7
-        error('[ sppf ] Not enough input arguments.');
+    narginchk(7, 7);
+    
+    if ~stringmatch(dataSet.processNoise.covarianceType, {'sqrt', 'sqrt-diag'})
+        error('[ sppf ] SPPF algorithm only support state noise (spkf component) with ''sqrt'' and ''sqrt-diag'' covariance types.');
     end
     
+    if ~stringmatch(dataSet.observationNoise.covarianceType, {'sqrt', 'sqrt-diag'})
+        error('[ sppf ] SPPF algorithm only support observation (spkf component) noise with ''sqrt'' and ''sqrt-diag'' covariance types.');
+    end
     %%
-    stateDim        = model.stateDimension;
-    num             = dataSet.particlesNum;
-    particles       = dataSet.particles;
-    sqrtCov         = dataSet.particlesCov;
-    procNoiseKF     = dataSet.processNoise;
-    obsNoiseKF      = dataSet.observationNoise;
-    weights         = dataSet.weights;
-    threshold       = round(num*model.resampleThreshold);
+    num  = dataSet.particlesNum;
     
-    normWeights = cvecrep(1 / num, num);
+    stateDim        = model.stateDimension;
+    x               = dataSet.particles;
+    sqrtCov         = dataSet.particlesCov;
+    procNoiseSpkf   = dataSet.processNoise;
+    obsNoiseSpkf    = dataSet.observationNoise;
+    weights         = dataSet.weights;
     
     if (model.controlInputDimension == 0)
         control1 = [];
@@ -70,72 +73,87 @@ function [ estimate, dataSet, stateNoise, observNoise ] = sppf( dataSet, stateNo
         control2 = [];
     end
     
-    sqrtCovPred = zeros(stateDim, stateDim, num);
-    stateNew    = zeros(stateDim, num);
-    statePred   = zeros(stateDim, num);
-    proposal    = zeros(1, num);
-    normFact    = (2*pi)^(stateDim / 2);
+    sqrtCovPred  = zeros(stateDim, stateDim, num);
+    xNew    = zeros(stateDim, num);
+    xPred   = zeros(stateDim, num);
     
-    %% time update (prediction)
+    ones_numP = ones(num, 1);
+    ones_Xdim = ones(1, stateDim);
+    
+    proposal = zeros(1, num);
+    normfact = (2*pi) ^ (stateDim/2);
+    obs = observation(:, ones_numP);
+    
+    %% Time update (prediction step)
+    randBuf = randn(stateDim, num);
+    
     switch model.spkfType
         case 'srukf'
-            predict = @(x, s, xNoise, zNoise) srukf(x, s, xNoise, zNoise, observation, model, control1, control2);
-        case 'sckf'
-            predict = @(x, s, xNoise, zNoise) sckf(x, s, xNoise, zNoise, observation, model, control1, control2);
+            for k = 1 : num
+                [xNew(:, k), sqrtCovPred(:, :, k), procNoiseSpkf, obsNoiseSpkf, ~] = srukf(x(:, k), sqrtCov(:, :, k), procNoiseSpkf, obsNoiseSpkf, ...
+                    observation, model, control1, control2);
+                xPred(:, k) = xNew(:, k) + sqrtCovPred(:, :, k) * randBuf(:, k);
+            end
         case 'srcdkf'
-            predict = @(x, s, xNoise, zNoise) srcdkf(x, s, xNoise, zNoise, observation, model, control1, control2);
+            for k = 1 : num
+                [xNew(:, k), sqrtCovPred(:, :, k), procNoiseSpkf, obsNoiseSpkf, ~] = srcdkf(x(:, k), sqrtCov(:, :, k), procNoiseSpkf, obsNoiseSpkf, ...
+                    observation, model, control1, control2);
+                xPred(:, k) = xNew(:, k) + sqrtCovPred(:, :, k) * randBuf(:, k);
+            end
+        case 'sckf'
+            for k = 1 : num
+                [xNew(:, k), sqrtCovPred(:, :, k), procNoiseSpkf, obsNoiseSpkf, ~] = sckf(x(:, k), sqrtCov(:, :, k), procNoiseSpkf, obsNoiseSpkf, ...
+                    observation, model, control1, control2);
+                xPred(:, k) = xNew(:, k) + sqrtCovPred(:, :, k) * randBuf(:, k);
+            end
         otherwise
-            error('[ sppf ] Unknown inner filter type.');
+            error(' [ sppf ] Unknown SPKF type.');
     end
     
-    for i = 1:num
-        [stateNew(:, i), sqrtCovPred(:, :, i), procNoiseKF, obsNoiseKF] = predict(particles(:, i), sqrtCov(:, :, i), procNoiseKF, obsNoiseKF);
-        statePred(:, i) = stateNew(:, i) + sqrtCovPred(:, :, i)*randn(stateDim, 1);
-    end
+    %% Evaluate importance weights
+    % calculate transition prior for each particle (in log domain)
+    prior = model.stateTransitionPriorFun( model, xPred, x, control1, stateNoise) + 1e-99;
     
-    %% evalutate importance weights
-    prior = model.stateTransitionPriorFun(model, statePred, particles, control1, stateNoise) + 1e-99;
+    % calculate observation likelihood for each particle (in log domain)
+    likelihood = model.likelihoodStateFun(model, obs, xPred, control2, observNoise) + 1e-99;
     
-    likelihood = model.likelihoodStateFun(model, cvecrep(observation, num), statePred, control2, observNoise) + 1e-99;
-    
-    difState = statePred - stateNew;
-    
-    for i=1:num
-        covFact = sqrtCovPred(:, :, i);
-        expData = covFact \ difState(:, i);
-        proposal(i) = exp(-0.5*(expData'*expData)) / abs( normFact * prod( diag(covFact) ) ) + 1e-99;
-        weights(i) = weights(i) * likelihood(i) * prior(i) / proposal(i);
+    difX = xPred - xNew;
+    for k = 1 : num
+        cholFact = sqrtCovPred(:, :, k);
+        foo = cholFact \ difX(:, k);
+        proposal(k) = exp(-0.5*(foo'*foo)) / abs(normfact*prod(diag(cholFact))) + 1e-99;
+        weights(k) = weights(k) * likelihood(k) * prior(k) / proposal(k);
     end
     
     weights = weights / sum(weights);
     
+    %% Calculate estimate
     if strcmp(model.estimateType, 'mean')
-        estimate = sum( weights(ones(1, stateDim), :) .* statePred, 2);
+        estimate = sum(weights(ones_Xdim, :) .* xPred, 2);
     else
-        error('[ sppf ] Unknown estimate type.');
+        error(' [ sppf ] Unknown estimate type.');
     end
     
-    %% resample
-    effectiveSize = 1 / sum(weights.^2);
+    %% Resample
+    effSetSize = 1 / sum(weights.^2);
     
-    if effectiveSize < threshold
-        outIndex  = residualResample(1:num,weights);
-        particles = statePred(:, outIndex);
+    if effSetSize < round(num * model.resampleThreshold)
+        outIndex = resample(model.resampleMethod, weights, num);
+        x = xPred(:, outIndex);
         
-        for i = 1:num
-            sqrtCov(:, :, i) = sqrtCovPred(:, :, outIndex(i));
+        for k = 1 : num
+            sqrtCov(:, :, k) = sqrtCovPred(:, :, outIndex(k));
         end
         
-        weights = normWeights;
+        weights = cvecrep(1 / num, num);
     else
-        particles   = statePred;
-        sqrtCov     = sqrtCovPred;
+        x  = xPred;
+        sqrtCov = sqrtCovPred;
     end
-    
-    dataSet.particles           = particles;
+        
+    dataSet.particles           = x;
     dataSet.particlesCov        = sqrtCov;
     dataSet.weights             = weights;
-    dataSet.processNoise        = procNoiseKF;
-    dataSet.observationNoise    = obsNoiseKF;
-    
+    dataSet.processNoise        = procNoiseSpkf;
+    dataSet.observationNoise    = obsNoiseSpkf;
 end

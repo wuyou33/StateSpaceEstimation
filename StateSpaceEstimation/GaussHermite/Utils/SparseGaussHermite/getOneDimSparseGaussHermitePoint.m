@@ -17,7 +17,7 @@ function [ gridPoints, gridWeights ] = getOneDimSparseGaussHermitePoint(index, p
                 case 3
                     n = 2^index-1;
                 otherwise
-                    error(' [getOneDPoint]:manner not supported');
+                    error(' [getOneDPoint]:manner not supported ');
             end
             
             [ gridPoints, gridWeights ] = GaussHermite(n);

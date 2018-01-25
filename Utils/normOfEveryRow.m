@@ -15,6 +15,6 @@ function [ normVect ] = normOfEveryRow( matrix, direction )
     if nargin == 1
         direction = 1;
     end
-    
+    norm
     normVect = sqrt(sum(abs(matrix).^2, direction));
 end

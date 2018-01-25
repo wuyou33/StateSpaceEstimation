@@ -26,7 +26,9 @@ function [ sources ] = loadXRaySources(count)
         3.3e-3,... gBackgr
         184.6,... galacticLon
         -5.78,... galacticLat
-        2.0 ... distance
+        2.0, ... distance
+        1.4596, ... rightAscension
+        0.3841 ... declination
         );
     
     %     p2 = XRaySource('B1821-24', ... name
@@ -62,7 +64,9 @@ function [ sources ] = loadXRaySources(count)
     %         1.18e-4,... gBackgr
     %         139.5,... galacticLon
     %         -17.53,... galacticLat
-    %         5.8 ... distance
+    %         5.8, ... distance
+    %         0.0402, ... rightAscension
+    %         0.7424 ... declination
     %     );
     
     p5 = XRaySource('B0540-69', ... name
@@ -74,7 +78,9 @@ function [ sources ] = loadXRaySources(count)
         2.55e-3,... gBackgr
         279.7,... galacticLon
         -31.5,... galacticLat
-        0.8 ... distance
+        0.8, ... distance
+        0.0990, ... rightAscension
+        1.2043 ... declination
         );
     
     p6 = XRaySource('J1814-338', ... name
@@ -86,7 +92,9 @@ function [ sources ] = loadXRaySources(count)
         1.27e-2,... gBackgr
         358.75,... galacticLon
         -7.59,... galacticLat
-        1.5 ... distance -- approximatelly
+        1.5, ... distance -- approximatelly
+        0.3181, ... rightAscension
+        0.5843 ... declination
         );
     
     p7 = XRaySource('J1808-369', ... name
@@ -98,7 +106,9 @@ function [ sources ] = loadXRaySources(count)
         1.268e-4,... gBackgr
         355.39,... galacticLon
         -8.15,... galacticLat
-        0.5 ... distance -- approximatelly
+        0.5, ... distance -- approximatelly
+        0.3166, ... rightAscension
+        0.6384 ... declination
         );
     
     %     allSources = [p1; p2; p3; p4; p5; p6; p7];

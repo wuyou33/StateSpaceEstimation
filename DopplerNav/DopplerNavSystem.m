@@ -102,13 +102,13 @@ classdef DopplerNavSystem < handle
                 particleSet.particlesNum   = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 35, [eps 1e5], 'sqrt', 1e-20);
+                particleSet.stateGMM = gmm_fit(initialParticles, 3, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'gmsppf')
                 numParticles = 1e3;
                 particleSet.particlesNum = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 25, [eps 1e5], 'sqrt', 1e-20);
+                particleSet.stateGMM = gmm_fit(initialParticles, 3, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'sppf')
                 numParticles = 3e2;
                 particleSet.particlesNum        = numParticles;
@@ -142,7 +142,7 @@ classdef DopplerNavSystem < handle
                     this.inferenceModel.spkfParams = sqrt(3); % scale factor (CDKF parameter h) default sqrt(3)
                     decompCov = chol(cov, 'lower');
                 case {'sckf', 'fdckf'}
-                    decompCov = svdDecomposition(cov);
+                    decompCov = chol(cov, 'lower');
                 case 'pf'
                     this.inferenceModel.resampleThreshold = 1;
                     this.inferenceModel.estimateType      = 'mean';

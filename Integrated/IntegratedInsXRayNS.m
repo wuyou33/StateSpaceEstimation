@@ -61,7 +61,7 @@ classdef IntegratedInsXRayNS < BaseIntegratedIns
                     this.inferenceModel.spkfParams = sqrt(25); % scale factor (CDKF parameter h) default sqrt(3)
                     decompCov = chol(cov, 'lower');
                 case {'sckf', 'fdckf'}
-                    decompCov = svdDecomposition(cov);
+                    decompCov = chol(cov, 'lower');
                 case 'pf'
                     this.inferenceModel.resampleThreshold   = 1;
                     this.inferenceModel.estimateType        = 'mean';

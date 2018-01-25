@@ -6,12 +6,13 @@ classdef XRayDetector < handle
         xRaySources;
         detectorArea;
         timeBucket;
-        backgroundPhotnRate;
+        backgroundPhotonRate;
         earthEphemeris;
         sunEphemeris;
         timeData;
         signal;
         spaceshipState;
+        errorBudget;
     end
     
     properties (Access = public, Dependent)
@@ -26,7 +27,7 @@ classdef XRayDetector < handle
             %   xRaySources   - array of x-ray sources;
             %   detectorArea  - detector area (cm^2);
             %   timeBucket    - size of the bins used to count photons, ie total observed time (sec);
-            %   backgroundPhotnRate  - is the background rate (including detector noise, the diffuse X-ray background,
+            %   backgroundPhotonRate  - is the background rate (including detector noise, the diffuse X-ray background,
             %               un-cancelled cosmic ray events and steady emission from the pulsar, bc) (photons/cm^2/sec);
             %   earthEphemeris - Earth ephemeris;
             %   sunEphemeris   - Sun ephemeris;
@@ -37,21 +38,28 @@ classdef XRayDetector < handle
             obj.xRaySources            = args.xRaySources;
             obj.detectorArea           = args.detectorArea;
             obj.timeBucket             = args.timeBucket;
-            obj.backgroundPhotnRate    = args.backgroundPhotnRate;
+            obj.backgroundPhotonRate   = args.backgroundPhotonRate;
             obj.earthEphemeris         = args.earthEphemeris;
             obj.sunEphemeris           = args.sunEphemeris;
             obj.timeData               = args.timeData;
             obj.spaceshipState         = args.spaceshipState;
+            obj.errorBudget            = args.errorBudget;
             obj.signal = [];
         end
         
         function observations = toa(this, visualize)
-            if isempty(this.signal); this.evaluateTOA(visualize); end
+            if isempty(this.signal)
+                this.evaluateTOA(visualize);
+            end
+            
             observations = this.signal;
         end
         
         function observation = getTOA(this, sample)
-            if isempty(this.signal); this.evaluateTOA(0); end
+            if isempty(this.signal)
+                this.evaluateTOA(0);
+            end
+            
             observation = this.signal(:, sample);
         end
     end
@@ -66,20 +74,21 @@ classdef XRayDetector < handle
         end
         
         function res = get.BackgroundPhotnRate(this)
-            res = this.backgroundPhotnRate;
+            res = this.backgroundPhotonRate;
         end
     end
     
     methods(Access = private)
         function evaluateTOA(this, visualize)
-            % calculate time of arrival (toa)
+            % calculate difference time of arrival (DTOA)
             narginchk(2, 2);
             
-            diffToa = calculateDiffToa(this.xRaySources, this.earthEphemeris, this.sunEphemeris, this.spaceshipState(1:3, :)); % calculateDiffToa2
-            phase = diffToa2phase(this.getInvPeriods(), diffToa);
-            this.signal = phase + this.generateNoise(size(phase, 2));
+            dtoa = calculateDiffToa(this.xRaySources, this.earthEphemeris, this.sunEphemeris, this.spaceshipState(1:3, :));
+            this.signal = dtoa + this.generateNoise(size(dtoa, 2));
             
-            if visualize; this.visualize(); end
+            if visualize
+                this.visualize();
+            end
         end
         
         function invPeriods = getInvPeriods(this)
@@ -88,21 +97,23 @@ classdef XRayDetector < handle
         
         function noise = generateNoise(this, capacity)
             if capacity <= 0; error('capacity should be positive integer'); end
-            if capacity-fix(capacity) ~= 0; error('capacity should be positive integer'); end
+            if capacity - fix(capacity) ~= 0; error('capacity should be positive integer'); end
             
-            covariance  = xRayToaCovariance(this.xRaySources, this.detectorArea, this.timeBucket, this.backgroundPhotnRate);
+            covariance  = xRayToaCovariance(this.xRaySources, this.detectorArea, this.timeBucket, this.backgroundPhotonRate, this.errorBudget);
             sourceCount = length(this.xRaySources);
-            noise = svdDecomposition(covariance)*randn(sourceCount, capacity);
+            noise = chol(covariance, 'lower')*randn(sourceCount, capacity);
         end
         
         function [] = visualize(this)
             legends = {length(this.xRaySources)};
             figure();
+            
             for i = 1:length(this.xRaySources)
                 plot(this.timeData.Time, this.signal(i, :), 'LineWidth', 1);
                 hold on;
                 legends{i} = this.xRaySources(i).name;
             end
+            
             grid on;
             xlabel('time, sec');
             ylabel('phase, rad');

@@ -115,7 +115,8 @@ function [stateNew, stateSqrtCovNew, stateNoise, observNoise, internal ] = srcdk
     predictedObs = model.stateObservationFun(model, sigmaPointSet2(1:stateDim, :), sigmaPointSet2(stateDim+1:stateDim+obsNoiseDim, :), ctrl2);
     meanPredictedObs = w2(1, 1) * predictedObs(:, 1) + w2(1, 2) * sum(predictedObs(:, 2:numSigmaPointSet2), 2);
     c = w2(2,1) * ( predictedObs(:, 2:stateDim + obsNoiseDim + 1) - predictedObs(:, stateDim + obsNoiseDim + 2 : numSigmaPointSet2) );
-    d = w2(2,2) * ( predictedObs(:, 2:stateDim + obsNoiseDim + 1) + predictedObs(:, stateDim + obsNoiseDim + 2 : numSigmaPointSet2) - cvecrep(2*predictedObs(:, 1), stateDim + obsNoiseDim));
+    d = w2(2,2) * ( predictedObs(:, 2:stateDim + obsNoiseDim + 1) + predictedObs(:, stateDim + obsNoiseDim + 2 : numSigmaPointSet2) - ...
+        cvecrep(2*predictedObs(:, 1), stateDim + obsNoiseDim));
     
     % qr([c d]', 0);
     [~, predictedObservCov] = qr([c d observNoise.covariance]', 0);
@@ -140,6 +141,7 @@ function [stateNew, stateSqrtCovNew, stateNoise, observNoise, internal ] = srcdk
     if nargout > 4
         internal.meanPredictedState    = meanPredictState;
         internal.predictedStateCov     = sqrtPredictStateCov*sqrtPredictStateCov';
+        internal.s_cov_state           = sqrtPredictStateCov;
         internal.predictedObservMean   = meanPredictedObs;
         internal.inov                  = inov;
         internal.predictedObservCov    = predictedObservCov*predictedObservCov';

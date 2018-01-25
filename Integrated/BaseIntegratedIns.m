@@ -135,8 +135,13 @@ classdef BaseIntegratedIns < handle
     methods (Access = private)
         function reconciliationIndexes = findReconciliationIndexes(this, num)
             if isnumeric(this.reconciliationTime) && this.reconciliationTime > 0
-                reconciliationSample = floor(this.reconciliationTime / this.timeData.SampleTime);
-                reconciliationIndexes = 1 : reconciliationSample : num;
+                reconciliationStep = floor(this.reconciliationTime / this.timeData.SampleTime);
+                
+                if (reconciliationStep < num)
+                    reconciliationIndexes = 1 : reconciliationStep : num;
+                else
+                    reconciliationIndexes = [];
+                end
             else
                 reconciliationIndexes = [];
             end
@@ -221,7 +226,7 @@ classdef BaseIntegratedIns < handle
                 subplot(3, 1, 2);
                 plot2(this.timeData.RelTime, 1e3*insErrorEst(4:6, :), 'estimation velocity error', {'x', 'y', 'z'}, 'velocity error, meter / sec');
                 subplot(3, 1, 3);
-                plot2(this.timeData.RelTime, insErrorEst(7:10, :), 'estimation quaternion error', {'q0', 'q1', 'q2', 'q3'}, 'quaternion error,');
+                plot2(this.timeData.RelTime, insErrorEst(7:10, :), 'estimation quaternion error', {'q_0', 'q_1', 'q_2', 'q_3'}, 'quaternion error');
                 
                 figure();
                 subplot(2, 2, 1);
@@ -254,7 +259,7 @@ classdef BaseIntegratedIns < handle
         
         function particleSet = buildParticles(this, estimatorType, state, cov, decompCov)
             if strcmp(estimatorType{1}, 'pf')
-                numParticles = 2e3;
+                numParticles = 7e3;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
@@ -265,16 +270,16 @@ classdef BaseIntegratedIns < handle
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));
                 % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 10, [eps 1e5], 'sqrt', 1e-20);
+                particleSet.stateGMM = gmm_fit(initialParticles, 3, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'gmsppf')
-                numParticles = 5e1;
+                numParticles = 1e4;
                 particleSet.particlesNum   = numParticles;
                 initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
                 initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));
                 % fit a N component GMM to initial state distribution
-                particleSet.stateGMM = gaussMixtureModelFit(initialParticles, 5, [eps 1e5], 'sqrt', 1e-20);
+                particleSet.stateGMM = gmm_fit(initialParticles, 7, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'sppf')
-                numParticles = 5e1;
+                numParticles = 3e1;
                 particleSet.particlesNum        = numParticles;
                 particleSet.particles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
                 particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
