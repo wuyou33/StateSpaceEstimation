@@ -24,10 +24,10 @@ classdef WienerProcess < handle
             obj.sigma      = sigma;
         end
         
-        function simalationResults = simulate(this, sampleTime, sampleNumber)
-            dw = sqrt(sampleTime) * cvecrep(this.sigma, sampleNumber) .* randn(this.dimension, sampleNumber);
+        function simalationResults = simulate(this, sample_time, sample_number)
+            dw = sqrt(sample_time) * column_vector_replicate(this.sigma, sample_number) .* randn(this.dimension, sample_number);
             
-            simalationResults = cumsum(dw, 2) + cvecrep(this.mu, sampleNumber);
+            simalationResults = cumsum(dw, 2) + column_vector_replicate(this.mu, sample_number);
         end
     end
     

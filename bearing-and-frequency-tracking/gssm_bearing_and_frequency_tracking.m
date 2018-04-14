@@ -64,12 +64,12 @@ function model = init(init_args)
     model.processNoiseDimension       = 3;
     model.observationNoiseDimension   = 2;
     
-    model.stateTransitionFun        = @ffun;
-    model.stateObservationFun       = @hfun;
-    model.stateTransitionPriorFun   = @prior;
-    model.observationLikelihoodFun  = @likelihood;
-    model.innovationModelFunc       = @innovation;
-    model.setparams                 = @setparams;
+    model.transition_fun    = @ffun;
+    model.observation_fun   = @hfun;
+    model.prior             = @prior;
+    model.likelihood        = @likelihood;
+    model.innovation        = @innovation;
+    model.set_params        = @set_params;
     
     % indicate that the first (and only component) of the observation vector is an angle measured in radians.
     % This is needed so that the SPKF based algorithms can correctly deal with the angular discontinuity at +- pi radians.
@@ -82,29 +82,29 @@ function model = init(init_args)
     processNoiseArg.covarianceType = 'full';
     processNoiseArg.covariance   = [((1e-3)^2)*eye(processNoiseArg.dimension - 1) zeros(processNoiseArg.dimension - 1, 1); ...
         zeros(1, processNoiseArg.dimension - 1) (1e-4)^2];
-    model.processNoise = generateNoiseDataSet(processNoiseArg);
+    model.processNoise = generate_noise_model(processNoiseArg);
     
     observationNoiseArg.type = 'gaussian';
     observationNoiseArg.dimension = model.observationNoiseDimension;
     observationNoiseArg.mean = zeros(observationNoiseArg.dimension, 1);
     observationNoiseArg.covarianceType ='full';
     observationNoiseArg.covariance  = [0.0175^2 0; 0 0.06^2];
-    model.observationNoise = generateNoiseDataSet(observationNoiseArg);
+    model.observationNoise = generate_noise_model(observationNoiseArg);
     
     model.params = zeros(model.paramDimension, 1);
     model.A = zeros(model.stateDimension, model.stateDimension);
     model.G = zeros(model.stateDimension, model.processNoiseDimension);
     
-    model = setparams(model, [1 4 1 1 4 1 1 8 4 8 4 1]');
+    model = set_params(model, [1 4 1 1 4 1 1 8 4 8 4 1]');
 end
 
-function model = setparams(model, params, index_vector)
+function model = set_params(model, params, index_vector)
     if (nargin==2)
         model.params = params(:);
     elseif (nargin == 3)
         model.params(index_vector) = params(:);
     else
-        error('[ setparams ] Incorrect number of input arguments.');
+        error('[ set_params ] Incorrect number of input arguments.');
     end
     
     model.A([1 6 7 13 18 19 25]) = params(1:7);
@@ -133,7 +133,7 @@ function observ = hfun(model, state, obs_noise, u2)
         observ = observ_;
     else
         observ = observ_ + obs_noise;
-        observ(1,:) = addangle(observ_(1,:), obs_noise(1,:));
+        observ(1,:) = fix_angular_discontinuety(observ_(1,:), obs_noise(1,:));
     end
 end
 
@@ -145,7 +145,7 @@ end
 function llh = likelihood(model, obs, state, u2, observ_noise_model)
     observ =  hfun(model, state, [], u2);
     obs_deviation = obs - observ;
-    obs_deviation(1, :) = subangle(obs(1,:), observ(1, :));
+    obs_deviation(1, :) = sub_angle(obs(1,:), observ(1, :));
     
     llh = observ_noise_model.likelihood(observ_noise_model, obs_deviation);
 end
@@ -154,5 +154,5 @@ function innov = innovation(model, obs, observ)
     innov = obs - observ;
     
     % deal with the discontinueties at +-pi radians
-    innov(1, :) = subangle(obs(1, :), observ(1, :));
+    innov(1, :) = sub_angle(obs(1, :), observ(1, :));
 end

@@ -11,5 +11,5 @@ function [ condition ] = initialCondition( initialCov )
     %
     condition = chol(initialCov, 'lower') * randn(22, 1); % sqrt(diag(initialCov))
     condition(7) = 1;
-    condition(7:10) = quaternionNormalize(condition(7:10));
+    condition(7:10) = quaternion_normalize(condition(7:10));
 end

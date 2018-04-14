@@ -75,7 +75,7 @@ function [ centres, options, post ] = kmeans2( centres, data, options )
         prevCentres = centres;
         
         % calculate posteriors based on existing centres
-        dist = euclideanDistance(data, centres);
+        dist = euclidean_distance(data, centres);
         
         % assign each point to nearest centres
         [minvals, index] = min(dist, [], 2);

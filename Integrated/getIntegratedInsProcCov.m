@@ -13,7 +13,7 @@ function [ iinsProcCov ] = getIntegratedInsProcCov( estimatorType, accBiasSigma,
     %
     narginchk(3, 3);
     
-    if stringmatch(estimatorType, {'ukf', 'cdkf', 'srcdkf', 'ckf', 'sckf', 'kf', 'srukf', 'cqkf', 'fdckf', 'sghqf'})
+    if string_match(estimatorType, {'ukf', 'cdkf', 'srcdkf', 'ckf', 'sckf', 'kf', 'srukf', 'cqkf', 'fdckf', 'sghqf'})
         iinsProcCov = [(1e-2*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
             zeros(3, 3) (7e-4*eye(3)).^2 zeros(3, 16); ... velocity error [km/sec]^2
             zeros(4, 6) (1e-5*eye(4)).^2 zeros(4, 12); ... quaternion error [-]
@@ -22,7 +22,7 @@ function [ iinsProcCov ] = getIntegratedInsProcCov( estimatorType, accBiasSigma,
             zeros(3, 16) (1e-10*eye(3)).^2 zeros(3, 3); ... acceler scale factor [-]
             zeros(3, 19) (1e-10*eye(3)).^2 ... gyro scale factor [-]
             ];
-    elseif stringmatch(estimatorType, {'ekf'})
+    elseif string_match(estimatorType, {'ekf'})
         iinsProcCov = [(1e0*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
             zeros(3, 3) (1e-3*eye(3)).^2 zeros(3, 16); ... velocity error [km/sec]^2
             zeros(4, 6) (1e-5*eye(4)).^2 zeros(4, 12); ... quaternion error [-]
@@ -31,7 +31,7 @@ function [ iinsProcCov ] = getIntegratedInsProcCov( estimatorType, accBiasSigma,
             zeros(3, 16) (1e-10*eye(3)).^2 zeros(3, 3); ... acceler scale factor [-]
             zeros(3, 19) (1e-10*eye(3)).^2 ... gyro scale factor [-]
             ];
-    elseif stringmatch(estimatorType, {'pf', 'sppf', 'gspf', 'gmsppf'})
+    elseif string_match(estimatorType, {'pf', 'sppf', 'gspf', 'gmsppf'})
         iinsProcCov = [(1.1e-1*eye(3)).^2 zeros(3, 19); ... distance error [km]^2
             zeros(3, 3) (1e-3*eye(3)).^2 zeros(3, 16); ... velocity error [km/sec]^2
             zeros(4, 6) (1e-6*eye(4)).^2 zeros(4, 12); ... quaternion error [-]

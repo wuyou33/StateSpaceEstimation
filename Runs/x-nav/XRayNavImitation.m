@@ -4,7 +4,7 @@ addpath(genpath('./'));
 
 % RandStream.setGlobalStream(RandStream('mt19937ar', 'Seed', 1));
 
-m_fitSolarSystemGravityModel = memoize(@fitSolarSystemGravityModel);
+m_fit_solar_system_gravity_model = memoize(@fit_solar_system_gravity_model);
 
 date.day            = 17;
 date.mon            = 11;
@@ -21,8 +21,7 @@ errorBudget         = 20; % [%]
 
 %{'ukf', 'srukf', 'cdkf', 'srcdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'ghqf', 'sghqf', 'ekf', 'pf', 'sppf', 'gspf', 'gmsppf'};
 filterTypes = {'srukf'};
-
-set(0, 'defaultfigurecolor', [1 1 1]);
+ 
 
 b_det   = 0.1; % Detector Background Rate. [photon*cm^2*sec^-1]
 b_diff  = 0.1; % Diffuse X-ray Background. [photon*cm^2*sec^-1]
@@ -32,11 +31,11 @@ backgroundPhotonRate = b_det + b_diff + b_cosm;
 timeBucket           = 1e5; % [sec]
 detectorArea         = 1; % [m^2]
 
-earthEphemeris = loadEphemeris('earth', timeDataXRay.SimulationNumber, secondInOneMinute/timeDataXRay.SampleTime);
-sunEphemeris   = loadEphemeris('sun', timeDataXRay.SimulationNumber, secondInOneMinute/timeDataXRay.SampleTime);
-xRaySources    = loadXRaySources(xRaySourceCount);
+earthEphemeris = load_ephemeris('earth', timeDataXRay, secondInOneMinute/timeDataXRay.SampleTime);
+sunEphemeris   = load_ephemeris('sun', timeDataXRay, secondInOneMinute/timeDataXRay.SampleTime);
+xRaySources    = load_x_ray_sources(xRaySourceCount);
 
-initialXRay = loadInitialOrbit();
+initialXRay = load_initial_orbit();
 initialXRay = initialXRay(1:6);
 
 % simulate real trajectory of spaceship
@@ -64,23 +63,23 @@ for l = 1:length(filterTypes)
     initArgsXRay.xRaySources = xRaySources;
     initArgsXRay.earthEphemeris = [earthEphemeris.x(1); earthEphemeris.y(1); earthEphemeris.z(1)];
     initArgsXRay.sunEphemeris = [sunEphemeris.x(1); sunEphemeris.y(1); sunEphemeris.z(1)];
-    initArgsXRay.invPeriods = getInvPeriods(xRaySources);
+    initArgsXRay.invPeriods = get_inv_periods(xRaySources);
     initArgsXRay.initialParams = [NaN NaN NaN];
     initArgsXRay.observationNoiseMean = zeros(xRaySourceCount, 1);
     initArgsXRay.observationNoiseCovariance = xRayToaCovariance(xRaySources, detectorArea, timeBucket, backgroundPhotonRate, errorBudget);
     initArgsXRay.stateNoiseMean = [zeros(3, 1); zeros(3, 1)];
     initArgsXRay.mass = mass;
     initArgsXRay.startTime = timeDataXRay.StartSecond;
-    initArgsXRay.gravityModel = m_fitSolarSystemGravityModel(timeDataXRay.SampleTime, timeDataXRay.SimulationNumber);
+    initArgsXRay.gravityModel = m_fit_solar_system_gravity_model(timeDataXRay.SampleTime, timeDataXRay.SimulationNumber);
     
 	initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
 %     initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (0.5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
     
-    if stringmatch(estimatorType, {'pf', 'gspf'})
+    if string_match(estimatorType, {'pf', 'gspf'})
         initArgsXRay.stateNoiseCovariance = [(1e-2*eye(3)).^2 zeros(3); zeros(3) (5e-5*eye(3)).^2];
-    elseif stringmatch(estimatorType, {'gmsppf'})
+    elseif string_match(estimatorType, {'gmsppf'})
         initArgsXRay.stateNoiseCovariance = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (1e-4*eye(3)).^2];
-    elseif stringmatch(estimatorType, {'sppf'})
+    elseif string_match(estimatorType, {'sppf'})
         initArgsXRay.stateNoiseCovariance = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (8.5e-5*eye(3)).^2];
     else
         initArgsXRay.stateNoiseCovariance = [(1e-2*eye(3)).^2 zeros(3); zeros(3) (8.5e-4*eye(3)).^2];
@@ -106,11 +105,11 @@ for l = 1:length(filterTypes)
             xRayDetector  = XRayDetector(xRayDetectorArgs);
             xRayDetector.toa(iterationNumber == 1); % test, show X-Ray source signals
             
-            xRayNavSystem = XRayNavSystem(earthEphemeris, sunEphemeris, xRaySources, timeDataXRay, initArgsXRay, xRayDetector);
-            stateEstimation = xRayNavSystem.resolve(initialXRayState, alpha*initialXRayCov, estimatorType, iterationNumber == 1);
+            x_ray_nav_system = X_RayNavigationSystem(earthEphemeris, sunEphemeris, xRaySources, timeDataXRay, initArgsXRay, xRayDetector);
+            stateEstimation = x_ray_nav_system.resolve(initialXRayState, alpha*initialXRayCov, estimatorType, iterationNumber == 1);
             
-            errTraj = vectNormError(tstate(1:3, :), stateEstimation(1:3, :), 1e3);
-            errVel  = vectNormError(tstate(4:6, :), stateEstimation(4:6, :), 1e3);
+            errTraj = vect_norm_error(tstate(1:3, :), stateEstimation(1:3, :), 1e3);
+            errVel  = vect_norm_error(tstate(4:6, :), stateEstimation(4:6, :), 1e3);
             
             iterations(j, :, :) = [errTraj; errVel];
             x_iterations(j, :, :) = stateEstimation;

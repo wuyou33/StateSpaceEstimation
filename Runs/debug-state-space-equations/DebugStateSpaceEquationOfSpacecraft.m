@@ -20,7 +20,7 @@ accelerationInBodyFrame     = AccelerationInBodyFrame(timeData, [0; 0; 0], accel
 angularVelocityInBodyFrame  = AngularVelocityInBodyFrame(timeData, [0; 0; 0], angularVelocitySigma);
 visualize                   = 1;
 
-initialOrbit = loadInitialOrbit();
+initialOrbit = load_initial_orbit();
 
 % debug free fly solver
 simulator          = TrajectoryPhaseSpaceSatelliteSimulatorFree(timeData, mass);

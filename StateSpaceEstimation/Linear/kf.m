@@ -70,7 +70,7 @@ function [stateNew, stateCovNew, stateNoise, observNoise, internals] = kf(state,
     F = model.linearize(model, state, stateNoise.mean, [], control1, [], 'F');
     G = model.linearize(model, state, stateNoise.mean, [], control1, [], 'G');
     
-    statePredict    = model.stateTransitionFun(model, state, stateNoise.mean, control1);
+    statePredict    = model.transition_fun(model, state, stateNoise.mean, control1);
     covStatePredict = F * covState * F' + G * stateNoise.covariance * G';
     
     %% measurement update (correction)
@@ -80,12 +80,12 @@ function [stateNew, stateCovNew, stateNoise, observNoise, internals] = kf(state,
     covObsPredict = C * covStatePredict * C' + H * observNoise.covariance * H';
     filterGain    = covStatePredict * C' / covObsPredict;
     
-    observPredict  = model.stateObservationFun(model, statePredict, observNoise.mean, control2);
+    observPredict  = model.observation_fun(model, statePredict, observNoise.mean, control2);
     
     if isempty(model.innovation)
         inov = observation - observPredict;
     else
-        inov = model.innovationModelFunc(model, observation, observPredict);
+        inov = model.innovation(model, observation, observPredict);
     end
     
     stateNew    = statePredict + filterGain * inov;

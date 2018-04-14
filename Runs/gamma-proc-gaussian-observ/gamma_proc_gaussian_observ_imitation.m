@@ -4,15 +4,12 @@ addpath(genpath('./'));
 fprintf('\nThe demonstration of state space esitmation problem of scalar nonlinear system with Gamma process and Gaussian observation noise.\n');
 
 % {'ukf', 'pf', 'gspf', 'sppf', 'gmsppf'}
-filter_types = {'gspf', 'gmsppf'};
+filter_types = {'ukf'};
 
 number_of_runs = 40;
 datapoints_count  = 50;
 draw_iterations = number_of_runs <= 50;
 err_arr = zeros(number_of_runs, datapoints_count - 1);
-
-mean_RMSE = zeros(1, length(filter_types));
-var_RMSE  = zeros(1, length(filter_types));
 
 for filter_index = 1 : length(filter_types)
     filter_type = filter_types{filter_index};
@@ -26,8 +23,8 @@ for filter_index = 1 : length(filter_types)
     arg.model   = model;
     arg.algorithm = filter_type;
     
-    inference_model = inferenceDataGenerator(arg);
-    [proc_noise_infer, obs_noise_infer, inference_model] = inferenceNoiseGenerator(inference_model, filter_type);
+    inference_model = inference_model_generator(arg);
+    [proc_noise_infer, obs_noise_infer, inference_model] = inference_noise_generator(inference_model, filter_type);
     
     tic;
     for i = 1 : number_of_runs
@@ -40,10 +37,10 @@ for filter_index = 1 : length(filter_types)
         x_noise = model.processNoise.sample(model.processNoise, datapoints_count);
         z_noise = model.observationNoise.sample(model.observationNoise, datapoints_count);
         
-        z(1) = model.stateObservationFun(model, x(1), z_noise(1), 1);
+        z(1) = model.observation_fun(model, x(1), z_noise(1), 1);
         for j = 2:datapoints_count
-            x(j) = model.stateTransitionFun(model, x(:,j-1), x_noise(j-1), j-1);
-            z(j) = model.stateObservationFun(model, x(:,j), z_noise(j), j);
+            x(j) = model.transition_fun(model, x(:,j-1), x_noise(j-1), j-1);
+            z(j) = model.observation_fun(model, x(:,j), z_noise(j), j);
         end
         
         u1 = 0 : datapoints_count-1;
@@ -68,8 +65,8 @@ for filter_index = 1 : length(filter_types)
             case 'pf'
                 particlesCount = 5e4; % 200
                 particle_set.particlesNum = particlesCount;
-                particle_set.particles = randn(inference_model.stateDimension, particlesCount) + cvecrep(x_est(:, 1), particlesCount);
-                particle_set.weights = cvecrep(1 / particlesCount, particlesCount);
+                particle_set.particles = randn(inference_model.stateDimension, particlesCount) + column_vector_replicate(x_est(:, 1), particlesCount);
+                particle_set.weights = column_vector_replicate(1 / particlesCount, particlesCount);
                 inference_model.resampleThreshold = 0.1;
                 inference_model.estimateType = 'mean';
                 inference_model.resampleMethod = 'residual-kitagawa';
@@ -80,7 +77,7 @@ for filter_index = 1 : length(filter_types)
             case 'gspf'
                 particlesCount = 10000; % 200
                 particle_set.particlesNum = particlesCount;
-                initial_particles = randn(inference_model.stateDimension, particlesCount) + cvecrep(x_est(:, 1), particlesCount);
+                initial_particles = randn(inference_model.stateDimension, particlesCount) + column_vector_replicate(x_est(:, 1), particlesCount);
                 
                 % fit a n component GMM to initial state distribution
                 particle_set.stateGMM = gmm_fit(initial_particles, 4, [0.001 10], 'sqrt');
@@ -93,14 +90,14 @@ for filter_index = 1 : length(filter_types)
                 gspf_arg.covarianceType = 'sqrt';
                 gspf_arg.dimension = model.processNoiseDimension;
                 gspf_arg.mixtureCount = 4;
-                gspf_arg.mean = cvecrep(model.processNoise.mean, gspf_arg.mixtureCount);
+                gspf_arg.mean = column_vector_replicate(model.processNoise.mean, gspf_arg.mixtureCount);
                 gspf_arg.covariance = zeros(gspf_arg.dimension, gspf_arg.dimension, gspf_arg.mixtureCount);
                 gspf_arg.covariance(:, :, 1) = 2 * model.processNoise.covariance(:, :, 1);
                 gspf_arg.covariance(:, :, 2) = 0.5 * model.processNoise.covariance(:, :, 1);
                 gspf_arg.covariance(:, :, 3) = 1.5 * model.processNoise.covariance(:, :, 1);
                 gspf_arg.covariance(:, :, 4) = 1.25 * model.processNoise.covariance(:, :, 1);
                 gspf_arg.weights = [0.45 0.45 0.05 0.05];
-                gspf_process_noise = generateNoiseDataSet(gspf_arg);
+                gspf_process_noise = generate_noise_model(gspf_arg);
                 
                 for k = 2 : datapoints_count
                     [x_est(:, k), particle_set] = gspf(particle_set, gspf_process_noise, obs_noise_infer, z(k), u1(k-1), u2(k), inference_model);
@@ -108,17 +105,17 @@ for filter_index = 1 : length(filter_types)
             case 'sppf'
                 particlesCount = 400; % 200
                 particle_set.particlesNum = particlesCount;
-                particle_set.particles    = cvecrep(x_est(:, 1), particlesCount);
+                particle_set.particles    = column_vector_replicate(x_est(:, 1), particlesCount);
                 particle_set.particlesCov = repmat(eye(inference_model.stateDimension), [1 1 particlesCount]);
                 
                 proc_noise_gauss.covariance = sqrt(2*3/4);
                 observ_noise_gauss.covariance = sqrt(1e-1);
                 
-                [proc_noise_gauss, observ_noise_gauss, ~] = inferenceNoiseGenerator(inference_model, 'srukf');
+                [proc_noise_gauss, observ_noise_gauss, ~] = inference_noise_generator(inference_model, 'srukf');
                 
                 particle_set.processNoise = proc_noise_gauss;
                 particle_set.observationNoise = observ_noise_gauss;
-                particle_set.weights = cvecrep(1 / particlesCount, particlesCount);
+                particle_set.weights = column_vector_replicate(1 / particlesCount, particlesCount);
                 
                 inference_model.spkfType = 'srukf';
                 inference_model.spkfParams = [1 2 0]; % [1 0 2];
@@ -133,7 +130,7 @@ for filter_index = 1 : length(filter_types)
                 particlesCount = 10000; % 200
                 particle_set.particlesNum = particlesCount;
                 
-                initial_particles = randn(inference_model.stateDimension, particlesCount) + cvecrep(x_est(:, 1), particlesCount);
+                initial_particles = randn(inference_model.stateDimension, particlesCount) + column_vector_replicate(x_est(:, 1), particlesCount);
                 
                 tempCov = zeros(1, 1, 2);
                 tempCov(:, :, 1) = sqrt(2);
@@ -150,14 +147,14 @@ for filter_index = 1 : length(filter_types)
                 gmsppf_arg.covarianceType = 'sqrt';
                 gmsppf_arg.dimension = model.processNoiseDimension;
                 gmsppf_arg.mixtureCount = 4;
-                gmsppf_arg.mean = cvecrep(model.processNoise.mean, gmsppf_arg.mixtureCount);
+                gmsppf_arg.mean = column_vector_replicate(model.processNoise.mean, gmsppf_arg.mixtureCount);
                 gmsppf_arg.covariance = zeros(gmsppf_arg.dimension, gmsppf_arg.dimension, gmsppf_arg.mixtureCount);
                 gmsppf_arg.covariance(:, :, 1) = 2 * model.processNoise.covariance(:, :, 1);
                 gmsppf_arg.covariance(:, :, 2) = 0.5 * model.processNoise.covariance(:, :, 1);
                 gmsppf_arg.covariance(:, :, 3) = 1.5 * model.processNoise.covariance(:, :, 1);
                 gmsppf_arg.covariance(:, :, 4) = 1.25 * model.processNoise.covariance(:, :, 1);
                 gmsppf_arg.weights = [0.45 0.45 0.05 0.05];
-                gmsppf_process_noise = generateNoiseDataSet(gmsppf_arg);
+                gmsppf_process_noise = generate_noise_model(gmsppf_arg);
                 
                 for k = 2 : datapoints_count
                     [x_est(:, k), particle_set] = gmsppf(particle_set, gmsppf_process_noise, obs_noise_infer, z(k), u1(k-1), u2(k), inference_model);
@@ -173,7 +170,7 @@ for filter_index = 1 : length(filter_types)
             hold on;
             grid on;
             p2 = plot(z, 'g+', 'LineWidth', 1);
-            p3 = plot(x_est(1,:), 'r', 'LineWidth', 1); hold off;
+            p3 = plot(x_est(1,:), 'r', 'LineWidth', 1); hold on;
             legend([p1 p2 p3], 'clean', 'noisy', [filter_type ' estimate']);
             xlabel('time');
             title([filter_type ': Nonlinear Time Variant State Estimation (non Gaussian noise)']);
@@ -193,7 +190,7 @@ for filter_index = 1 : length(filter_types)
     p1 = plot(mean_x_err, 'b', 'LineWidth', 1); hold on;
     p2 = plot(mean_x_err - std_x_err,'r', 'LineWidth', 1); hold on;
     p3 = plot(mean_x_err + std_x_err,'r', 'LineWidth', 1); hold off;
-    legend([p1 p2 p3],'mean rmse','- 1 sigma', '+ 1 sigma');
+    legend([p1 p2 p3], 'mean rmse','- 1 sigma', '+ 1 sigma');
     grid on;
     xlabel('time');
     title([filter_type ': Nonlinear Time Variant State Estimation (non Gaussian noise)']);

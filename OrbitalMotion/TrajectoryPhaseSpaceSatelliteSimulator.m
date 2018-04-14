@@ -54,7 +54,7 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
                 startBlock = (i-1)*blockSize + 1*(i == 1);
                 endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
                 
-                tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
+                tEpoch = current_epoch(this.timeData.JD, tMoonSun);
                 
                 len = endBlock - startBlock + 1;
                 if i == 1
@@ -73,7 +73,7 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
             signal = SatellitePhaseSpace(stateMatrix, this.timeData.SimulationNumber);
             
             if nargin == 2 && visualize
-                SatelliteOrbitVisualization(signal);
+                satellite_orbit_visualization(signal);
             end
         end
     end
@@ -90,10 +90,10 @@ classdef TrajectoryPhaseSpaceSatelliteSimulator < handle
             timeSpan = [tEnd-dt, tEnd];
             
             odeFun = @(t, y) EquationOfMotion(t, y, a, w, tEpoch, dt, t0, gravityModel, m);
-            [~, tmp] = odeEuler(odeFun, timeSpan, initial, dt);
+            [~, tmp] = ode_euler(odeFun, timeSpan, initial, dt);
             
             state = tmp(end, :)';
-            state(7:10) = quaternionNormalize(state(7:10));
+            state(7:10) = quaternion_normalize(state(7:10));
         end
     end
     

@@ -12,7 +12,7 @@ date.day  = 17;
 date.mon  = 11;
 date.year = 2017;
 
-initialOrbit = loadInitialOrbit();
+initialOrbit = load_initial_orbit();
 m_fitSolarSystemGravityModel = memoize(@fitSolarSystemGravityModel);
 
 tStart = '00:00:00.000';
@@ -63,7 +63,7 @@ ansSigmaVelocityList   = [(1.42e-3)^2; (1e-3)^2]; % [(km / sec)^2]
 aTeffLegend    = {'AT = 5e3', 'AT = 1e5'};
 
 insInitialState = initialOrbit + [insTrajInitErrorKm.*randn(3, 1); insVelInitErrorKmSec.*randn(3, 1); [1; 0; 0; 0] + insQuaternionInitError.*randn(4, 1)];
-insInitialState(7:10) = quaternionNormalize(insInitialState(7:10));
+insInitialState(7:10) = quaternion_normalize(insInitialState(7:10));
 
 errors = zeros(esitimatedParams, timeDataSubSystem.SimulationNumber);
 
@@ -145,8 +145,8 @@ for at = 1:length(aTeffLegend)
                     iinsState = iins.evaluate(insSnsInitState, alpha*initCov, insInitialState, estimatorType, iterationNumber == 1, iterationNumber == 1);
                     
                     quatErr = trueState.Rotation - iinsState.Rotation;
-                    errTraj = vectNormError(trueState.Trajectory, iinsState.Trajectory, 1e3);
-                    errVel  = vectNormError(trueState.Velocity, iinsState.Velocity, 1e3);
+                    errTraj = vect_norm_error(trueState.Trajectory, iinsState.Trajectory, 1e3);
+                    errVel  = vect_norm_error(trueState.Velocity, iinsState.Velocity, 1e3);
                     
                     iterations(j, :, :) = [errTraj; errVel; quatErr];
                 end

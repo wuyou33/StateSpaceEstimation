@@ -84,17 +84,17 @@ trueStateMatrix = zeros(iterationNumber, 10, timeData.SimulationNumber);
 
 figure();
 for i = 1:iterationNumber
-    initialOrbit = loadInitialOrbit();
+    initialOrbit = load_initial_orbit();
     initialOrbit(1:3) = initialOrbit(1:3) + 1e-1*randn(3, 1);
     initialOrbit(4:6) = initialOrbit(4:6) + 1e-3*randn(3, 1);
     initialOrbit(7:10) = initialOrbit(7:10) + 1e-5*randn(4, 1);
-    initialOrbit(7:10) = quaternionNormalize(initialOrbit(7:10));
+    initialOrbit(7:10) = quaternion_normalize(initialOrbit(7:10));
     
     simulator = TrajectoryPhaseSpaceSatelliteSimulator(initialOrbit, accelerationInBodyFrame, angularVelocityInBodyFrame, timeData, mass);
     trueState = simulator.simulate();
     
     insInitialState = initialOrbit + [insTrajInitErrorKm.*randn(3, 1); insVelInitErrorKmSec.*randn(3, 1); [1; 0; 0; 0] + insQuaternionInitError.*randn(4, 1)];
-    insInitialState(7:10) = quaternionNormalize(insInitialState(7:10));
+    insInitialState(7:10) = quaternion_normalize(insInitialState(7:10));
     
     ins = initInertialNavigationSystem('init', insInitArgs);
     
@@ -103,8 +103,8 @@ for i = 1:iterationNumber
     iterations(i, :, :) = estimations;
     trueStateMatrix(i, :, :) = trueState.FullState;
     
-    errTraj = vectNormError(trueState.Trajectory, estimations(1:3, :), 1e3);
-    errVel  = vectNormError(trueState.Velocity, estimations(4:6, :), 1e3);
+    errTraj = vect_norm_error(trueState.Trajectory, estimations(1:3, :), 1e3);
+    errVel  = vect_norm_error(trueState.Velocity, estimations(4:6, :), 1e3);
     errQuat = trueState.Rotation - estimations(7:10, :);
     iterationsErr(i, :, :) = [errTraj; errVel; errQuat];
     
@@ -132,8 +132,8 @@ if iterationNumber > 1
         errors(:, i) = ( sum( ( squeeze(iterationsErr(:, :, i))' ).^2, 2) / iterationNumber ).^0.5;
     end
     
-    rErrors = squeezeToRow(errors(1, :));
-    vErrors = squeezeToRow(errors(2, :));
+    rErrors = squeeze_to_row(errors(1, :));
+    vErrors = squeeze_to_row(errors(2, :));
     
     figure();
     subplot(2, 1, 1);
@@ -152,19 +152,19 @@ if iterationNumber > 1
     plot2(timeData.TimeInHour, squeeze(errors(6, :)), 'RMS quaternion error', {'INS'}, 'q_3');
 end
 
-pdfEvolutionPlot2(iterations(:, 1, :), trueStateMatrix(:, 1, :), {'r_X'}, {', m'}, timeData);
-pdfEvolutionPlot2(iterations(:, 2, :), trueStateMatrix(:, 2, :), {'r_Y'}, {', m'}, timeData);
-pdfEvolutionPlot2(iterations(:, 3, :), trueStateMatrix(:, 3, :), {'r_Z'}, {', m'}, timeData);
+pdf_evolution_plot_2(iterations(:, 1, :), trueStateMatrix(:, 1, :), {'r_X'}, {', m'}, timeData);
+pdf_evolution_plot_2(iterations(:, 2, :), trueStateMatrix(:, 2, :), {'r_Y'}, {', m'}, timeData);
+pdf_evolution_plot_2(iterations(:, 3, :), trueStateMatrix(:, 3, :), {'r_Z'}, {', m'}, timeData);
 
-pdfEvolutionPlot2(iterations(:, 4, :), trueStateMatrix(:, 4, :), {'v_X'}, {', m / s'}, timeData);
-pdfEvolutionPlot2(iterations(:, 5, :), trueStateMatrix(:, 5, :), {'v_Y'}, {', m / s'}, timeData);
-pdfEvolutionPlot2(iterations(:, 6, :), trueStateMatrix(:, 6, :), {'v_Z'}, {', m / s'}, timeData);
+pdf_evolution_plot_2(iterations(:, 4, :), trueStateMatrix(:, 4, :), {'v_X'}, {', m / s'}, timeData);
+pdf_evolution_plot_2(iterations(:, 5, :), trueStateMatrix(:, 5, :), {'v_Y'}, {', m / s'}, timeData);
+pdf_evolution_plot_2(iterations(:, 6, :), trueStateMatrix(:, 6, :), {'v_Z'}, {', m / s'}, timeData);
 
-pdfEvolutionPlot2(iterations(:, 7, :), trueStateMatrix(:, 7, :), {'q_0'}, {''}, timeData);
-pdfEvolutionPlot2(iterations(:, 8, :), trueStateMatrix(:, 8, :), {'q_1'}, {''}, timeData);
-pdfEvolutionPlot2(iterations(:, 9, :), trueStateMatrix(:, 9, :), {'q_2'}, {''}, timeData);
-pdfEvolutionPlot2(iterations(:, 10, :), trueStateMatrix(:, 10, :), {'q_3'}, {''}, timeData);
+pdf_evolution_plot_2(iterations(:, 7, :), trueStateMatrix(:, 7, :), {'q_0'}, {''}, timeData);
+pdf_evolution_plot_2(iterations(:, 8, :), trueStateMatrix(:, 8, :), {'q_1'}, {''}, timeData);
+pdf_evolution_plot_2(iterations(:, 9, :), trueStateMatrix(:, 9, :), {'q_2'}, {''}, timeData);
+pdf_evolution_plot_2(iterations(:, 10, :), trueStateMatrix(:, 10, :), {'q_3'}, {''}, timeData);
 
-pdfPlot2(iterations(:, 1:3, :), trueStateMatrix(:, 1:3, :), {'r_X', 'r_Y', 'r_Z'});
-pdfPlot2(iterations(:, 4:6, :), trueStateMatrix(:, 4:6, :), {'v_X', 'v_Y', 'v_Z'});
-pdfPlot2(iterations(:, 7:10, :), trueStateMatrix(:, 7:10, :), {'q_0', 'q_1', 'q_2', 'q_2'});
+pdf_plot_2(iterations(:, 1:3, :), trueStateMatrix(:, 1:3, :), {'r_X', 'r_Y', 'r_Z'});
+pdf_plot_2(iterations(:, 4:6, :), trueStateMatrix(:, 4:6, :), {'v_X', 'v_Y', 'v_Z'});
+pdf_plot_2(iterations(:, 7:10, :), trueStateMatrix(:, 7:10, :), {'q_0', 'q_1', 'q_2', 'q_2'});

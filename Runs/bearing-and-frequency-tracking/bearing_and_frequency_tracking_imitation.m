@@ -11,7 +11,7 @@ model = gssm_bearing_and_frequency_tracking('init');
 arg.model = model;
 arg.type = 'state';
 arg.tag = 'State estimation for bearings and frequency tracking problem';
-inference_model = inferenceDataGenerator(arg);
+inference_model = inference_model_generator(arg);
 
 % max. time k=1..T
 T = 100;
@@ -30,7 +30,7 @@ sub(4, 1) = 0;
 sub(5, 1) = 350;
 
 for k = 2:(T/2-1);
-    sub(:,k) = model.stateTransitionFun(model, sub(:, k-1), state_noise(:, k-1), []);
+    sub(:,k) = model.transition_fun(model, sub(:, k-1), state_noise(:, k-1), []);
 end
 
 % At mid-course, the sub changes its course (90 grad turn)
@@ -40,7 +40,7 @@ sub(2, T/2-1) = sub_speedY;
 sub(4, T/2-1) = sub_speedX;
 
 for k = T/2:T;
-    sub(:,k) = model.stateTransitionFun(model, sub(:, k-1), state_noise(:, k-1), []);
+    sub(:,k) = model.transition_fun(model, sub(:, k-1), state_noise(:, k-1), []);
 end
 
 % Generate the target trajectory
@@ -60,10 +60,10 @@ x_true(:, 1)=[range_0.*cos(bearing_0) + sub(1,1);
     speed_0.*sin(course_0);
     frequency_0];
 
-z(:, 1) = model.stateObservationFun( model, x_true(:,1), observ_noise(:,1), sub(:,1));
+z(:, 1) = model.observation_fun( model, x_true(:,1), observ_noise(:,1), sub(:,1));
 for k = 2:T
-    x_true(:, k) = model.stateTransitionFun(model, x_true(:, k-1), state_noise(:,k-1), []);
-    z(:, k) = model.stateObservationFun(model, x_true(:, k), observ_noise(:,k), sub(:,k));
+    x_true(:, k) = model.transition_fun(model, x_true(:, k-1), state_noise(:,k-1), []);
+    z(:, k) = model.observation_fun(model, x_true(:, k), observ_noise(:,k), sub(:,k));
 end
 
 true_range   = sqrt((x_true(1, :) - sub(1, :)).^2 + (x_true(3, :) - sub(3, :)).^2);
@@ -169,7 +169,7 @@ initialParticles = [range_stat.*cos(bearing_stat) + sub(1,1);
     speed_stat.*sin(course_stat);
     frequency_stat];
 
-[proc_noise_infer, obs_noise_infer, inference_model] = inferenceNoiseGenerator(inference_model, filter_type);
+[proc_noise_infer, obs_noise_infer, inference_model] = inference_noise_generator(inference_model, filter_type);
 
 tic;
 switch filter_type
@@ -216,7 +216,7 @@ switch filter_type
         inference_model.resampleThreshold = 1;
         
         % generate Gaussian system noise sources for internal SPKFs
-        [proc_noise_gauss, observ_noise_gauss, ~] = inferenceNoiseGenerator(inference_model, inference_model.spkfType);
+        [proc_noise_gauss, observ_noise_gauss, ~] = inference_noise_generator(inference_model, inference_model.spkfType);
         
         % build ParticleFilter data structure
         particle_set.particlesNum = numParticles;
@@ -224,7 +224,7 @@ switch filter_type
         particle_set.particlesCov = repmat(chol(P0)', [1 1 numParticles]);
         particle_set.processNoise = proc_noise_gauss;
         particle_set.observationNoise = observ_noise_gauss;
-        particle_set.weights = cvecrep(1 / numParticles,numParticles);
+        particle_set.weights = column_vector_replicate(1 / numParticles,numParticles);
         
         for k = 2 : T
             [x_est(:, k), particle_set] = sppf(particle_set, proc_noise_infer, obs_noise_infer, z(:, k), [], sub(:, k), inference_model);

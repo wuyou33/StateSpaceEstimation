@@ -14,7 +14,7 @@ timeDataXRayDoppler  = TimeExt(timeStart, timeEnd, sampleTime, date, sunMoonInfl
 iterationNumber    = 1;
 secondInOneMinute  = 60;
 
-initialOrbit = loadInitialOrbit();
+initialOrbit = load_initial_orbit();
 initialXRayDopplerNavState = initialOrbit(1:6);
 
 initialAcceleration     = zeros(3, 1);          % [km/sec^2]
@@ -28,14 +28,14 @@ backgroundPhotnRate     = 5.9e4;
 timeBucket              = 1e5; % 1e5 sec
 detectorArea            = 1; % m^2
 
-xRaySources             = loadXRaySources(xRaySourceCount);
+xRaySources             = load_x_ray_sources(xRaySourceCount);
 
 %{'ukf', 'cdkf', 'ckf', 'sckf', 'srukf','srcdkf', 'pf', 'sppf', 'fdckf', 'fdckfAugmented', 'cqkf', 'gspf', 'gmsppf', 'ghqf', 'sghqf'};
 filterTypeXRay    = {'ckf'};
 filterTypeDoppler = {'pf'};
 
-earthEphemeris = loadEphemeris('earth', timeDataXRayDoppler.SimulationNumber, secondInOneMinute/timeDataXRayDoppler.SampleTime);
-sunEphemeris   = loadEphemeris('sun', timeDataXRayDoppler.SimulationNumber, secondInOneMinute/timeDataXRayDoppler.SampleTime);
+earthEphemeris = load_ephemeris('earth', timeDataXRayDoppler, secondInOneMinute/timeDataXRayDoppler.SampleTime);
+sunEphemeris   = load_ephemeris('sun', timeDataXRayDoppler, secondInOneMinute/timeDataXRayDoppler.SampleTime);
 accelerationInBodyFrame     = AccelerationInBodyFrame(timeDataXRayDoppler, initialAcceleration, accelerationSigma);
 angularVelocityInBodyFrame  = AngularVelocityInBodyFrame(timeDataXRayDoppler, initialAngularVelocity, angularVelocitySigma);
 
@@ -77,7 +77,7 @@ xRayDetectorArgs.spaceshipState = spaceshipTrueState.State;
 initArgsXRay.xRaySources = xRaySources;
 initArgsXRay.earthEphemeris = [earthEphemeris.x(1); earthEphemeris.y(1); earthEphemeris.z(1)];
 initArgsXRay.sunEphemeris = [sunEphemeris.x(1); sunEphemeris.y(1); sunEphemeris.z(1)];
-initArgsXRay.invPeriods = getInvPeriods(xRaySources);
+initArgsXRay.invPeriods = get_inv_periods(xRaySources);
 initArgsXRay.initialParams = [NaN NaN NaN];
 initArgsXRay.observationNoiseMean = zeros(xRaySourceCount, 1);
 initArgsXRay.observationNoiseCovariance = xRayToaCovariance(xRaySources, detectorArea, timeBucket, backgroundPhotnRate);
@@ -104,13 +104,13 @@ for j = 1:iterationNumber
     dopplerNavSystem = DopplerNavSystem(dmu, timeDataXRayDoppler, initArgsDoppler, earthEphemeris, sunEphemeris);
     
     xRayDetector  = XRayDetector(xRayDetectorArgs);        
-    xRayNavSystem = XRayNavSystem(earthEphemeris, sunEphemeris, xRaySources, timeDataXRayDoppler, initArgsXRay, xRayDetector);    
+    x_ray_nav_system = X_RayNavigationSystem(earthEphemeris, sunEphemeris, xRaySources, timeDataXRayDoppler, initArgsXRay, xRayDetector);    
 
-    xRayDoppNS = XRayDopplerIntegrated(timeDataXRayDoppler, xRayNavSystem, dopplerNavSystem);    
+    xRayDoppNS = XRayDopplerIntegrated(timeDataXRayDoppler, x_ray_nav_system, dopplerNavSystem);    
     estimations = xRayDoppNS.resolve(filterTypeXRay(1), filterTypeDoppler(1), initXRayState, initXRayCov, initDopplerState, initDopplerCov, report);
     
-    errTraj = vectNormError(trueState(1:3, :), estimations(1:3, :), 1e3);
-    errVel  = vectNormError(trueState(4:6, :), estimations(4:6, :), 1e3);
+    errTraj = vect_norm_error(trueState(1:3, :), estimations(1:3, :), 1e3);
+    errVel  = vect_norm_error(trueState(4:6, :), estimations(4:6, :), 1e3);
     iterations(j, :, :) = [errTraj; errVel];
     
     if iterationNumber == 1

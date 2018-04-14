@@ -18,15 +18,12 @@ function model = init(initArgs)
     model.type                       = 'gssm';                      % object type
     model.tag                        = 'Doppler Navigation System'; % ID tag
     
-    model.setParams                  = @setparams;   % function handle to SETPARAMS
-    model.stateTransitionFun         = @ffun;        % function handle to state transition function
-    model.stateObservationFun        = @hfun;        % function handle to state observation function
-    
-    model.stateTransitionPriorFun    = @prior;       % function handle to the state transition function that calculates P(x(k)|x(k-1)), for particle filter
-    
-    model.observationLikelihoodFun   = @likelihood;  % function handle to the observation likelihood function that calculates p(y(k)|x(k)), for particle filter
-    
-    model.innovationModelFunc        = @innovation;  % Function-handle to the innovation model function that calculates the difference between the output
+    model.set_params        = @set_params; % function handle to set_params
+    model.transition_fun    = @ffun;        % function handle to state transition function
+    model.observation_fun   = @hfun;        % function handle to state observation function
+    model.prior             = @prior;       % function handle to the state transition function that calculates P(x(k)|x(k-1)), for particle filter
+    model.likelihood        = @likelihood;  % function handle to the observation likelihood function that calculates p(y(k)|x(k)), for particle filter
+    model.innovation        = @innovation;  % Function-handle to the innovation model function that calculates the difference between the output
     % of the observation function (hfun) and the actual 'real-world' measurement/observation of that signal,
     % for particle filter
     
@@ -38,7 +35,7 @@ function model = init(initArgs)
     model.processNoiseDimension      = 6;                              % process noise dimension
     model.observationNoiseDimension  = 1;                              % observation noise dimension
     model.params                     = initArgs.initialParams;         % setup parameter vector buffer
-    model                            = setparams(model, initArgs.initialParams, initArgs.earthEphemeris, initArgs.sunEphemeris);
+    model                            = set_params(model, initArgs.initialParams, initArgs.earthEphemeris, initArgs.sunEphemeris);
     
     % Setup process noise source
     processNoiseArg.type           = 'gaussian';
@@ -48,7 +45,7 @@ function model = init(initArgs)
     processNoiseArg.mean           = initArgs.stateNoiseMean;
     processNoiseArg.covariance     = initArgs.stateNoiseCovariance;
     
-    model.processNoise = generateNoiseDataSet(processNoiseArg);
+    model.processNoise = generate_noise_model(processNoiseArg);
     
     
     % Setup observation noise source
@@ -59,15 +56,15 @@ function model = init(initArgs)
     observationNoiseArg.mean           = initArgs.observationNoiseMean;
     observationNoiseArg.covariance     = initArgs.observationNoiseCovariance;
     
-    model.observationNoise = generateNoiseDataSet(observationNoiseArg);
+    model.observationNoise = generate_noise_model(observationNoiseArg);
 end
 %%
-function updatedModel = setparams(model, params, earthEphemeris, sunEphemeris)
+function updatedModel = set_params(model, params, earthEphemeris, sunEphemeris)
     % Function to unpack a column vector containing system parameters into specific forms
     % needed by FFUN, HFUN and possibly defined sub-functional objects. Both the vectorized (packed)
     % form of the parameters as well as the unpacked forms are stored within the model data structure.
     
-    updatedModel = deepClone(model);
+    updatedModel = deep_clone(model);
     updatedModel.params = params;
     
     updatedModel.timeTillCurrentEpoch = params(1);
@@ -81,18 +78,18 @@ function newState = ffun(model, state, noise, stateControl)
     % State transition function (system dynamics).
     
     tSpan = [model.time - model.sampleTime; model.time];
-    odeFun = @(t,y) equationOfMotionFreeFly(t, y, model.timeTillCurrentEpoch);
+    odeFun = @(t,y) equation_of_motion_free_fly(t, y, model.timeTillCurrentEpoch);
     [rn, cn] = size(state);
     
     newState = zeros(rn, cn);
     for i = 1:cn
-        [~, tmp]       = odeEuler(odeFun, tSpan, state(:, i), model.sampleTime);
+        [~, tmp]       = ode_euler(odeFun, tSpan, state(:, i), model.sampleTime);
         newState(:, i) = tmp(:, end);
     end
     
     if ~isempty(noise); newState  = newState + noise; end
     
-    if ~isempty(stateControl); newState = newState - cvecrep(stateControl, cn); end
+    if ~isempty(stateControl); newState = newState - column_vector_replicate(stateControl, cn); end
 end
 
 function observ = hfun(model, state, noise, observationControl)

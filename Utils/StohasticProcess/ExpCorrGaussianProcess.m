@@ -21,17 +21,17 @@ classdef ExpCorrGaussianProcess < handle
             obj.sigma       = sigma;
         end
         
-        function res = simulate(this, sampleNumber)
+        function res = simulate(this, sample_count)
             dim = length(this.mean);
-            g = cvecrep(this.mean, sampleNumber) + cvecrep(this.sigma, sampleNumber) .* randn(dim, sampleNumber);
+            g = column_vector_replicate(this.mean, sample_count) + column_vector_replicate(this.sigma, sample_count) .* randn(dim, sample_count);
             
-            res = zeros(dim, sampleNumber);
+            res = zeros(dim, sample_count);
             res(:, 1) = g(:, 1);
             
             f = exp(-ones(dim, 1) ./ this.corrTime);
             ff = (ones(dim, 1) - f.^2).^0.5;
             
-            for i = 2:sampleNumber
+            for i = 2:sample_count
                 res(:, i) = f.*res(:, i-1) + ff.*g(:, i);
             end
         end

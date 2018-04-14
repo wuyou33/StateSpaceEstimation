@@ -93,17 +93,17 @@ classdef InertialMeasurementUnit < handle
         function initializeAcceleration(this)
             n = this.timeData.SimulationNumber;
             
-            la_angAcc = cvecrep(cross(this.accelerometerParams.LevelArm, this.accelerometerParams.AngularAccelerationinBodyFrame), n);
+            la_angAcc = column_vector_replicate(cross(this.accelerometerParams.LevelArm, this.accelerometerParams.AngularAccelerationinBodyFrame), n);
             
             w_w_la = cross(this.angularVelocityInBodyFrame.Velocity, ...
                 cross(this.angularVelocityInBodyFrame.Velocity, ...
-                cvecrep(this.accelerometerParams.LevelArm, n)) ...
+                column_vector_replicate(this.accelerometerParams.LevelArm, n)) ...
                 );
             
             a  = this.accelerationInBodyFrame.Acceleration;
             sa = this.accelerometerParams.AccelerometerScale;
             ba = this.accelerometerParams.Bias;
-            na = cvecrep(this.accelerometerParams.NoiseVar, n) .* randn(3, n);
+            na = column_vector_replicate(this.accelerometerParams.NoiseVar, n) .* randn(3, n);
             
             this.acceleration = sa*(la_angAcc + w_w_la + a) + ba + na;
         end
@@ -115,7 +115,7 @@ classdef InertialMeasurementUnit < handle
             ga = this.gyroParams.GyroGSensitiveBias * a / this.g;
             sw = this.gyroParams.GyroScaleFactor;
             bw = this.gyroParams.GyroBias;
-            nw = cvecrep(this.gyroParams.GyroNoiseVar, n) .* randn(3, n);
+            nw = column_vector_replicate(this.gyroParams.GyroNoiseVar, n) .* randn(3, n);
             
             this.angularVelocity = ga + sw*w +  bw + nw;
         end

@@ -70,42 +70,42 @@ function [ newState, newCovState, stateNoise, observNoise, internal ] = fdckf( s
         ctrl2 = [];
     end
     
-    m_evalFifthDegreeCubatureRule = memoize(@evalFifthDegreeCubatureRule);
+    m_evalFifthDegreeCubatureRule = memoize(@eval_fifth_degree_cubature_rule);
     [points, w] = m_evalFifthDegreeCubatureRule(stateDim);
-    w_x = rvecrep(w, stateDim);
-    w_z = rvecrep(w, obsDim);
+    w_x = row_vector_replicate(w, stateDim);
+    w_z = row_vector_replicate(w, obsDim);
     
     %% calculate cubature points
     offsetPrediction = chol(covState, 'lower');
-    cubatureSet  = cvecrep(state, numCubPoints) + offsetPrediction*points;
+    cubatureSet  = column_vector_replicate(state, numCubPoints) + offsetPrediction*points;
     
     %% propagate cubature-points through process model
-    predictState = model.stateTransitionFun(model, cubatureSet, cvecrep(stateNoise.mean, numCubPoints), ctrl1);
+    predictState = model.transition_fun(model, cubatureSet, column_vector_replicate(stateNoise.mean, numCubPoints), ctrl1);
     predictStateMean = predictState*w';
     
-    centeredState = (predictState - cvecrep(predictStateMean, numCubPoints));
+    centeredState = (predictState - column_vector_replicate(predictStateMean, numCubPoints));
     predictedStateCov = w_x.*centeredState*centeredState' + stateNoise.covariance;
     
     %% calculate cubature points for measurement
-    cubatureSet2 = cvecrep(predictStateMean, numCubPoints) + chol(predictedStateCov, 'lower')*points;    
+    cubatureSet2 = column_vector_replicate(predictStateMean, numCubPoints) + chol(predictedStateCov, 'lower')*points;    
     
     %% propagate through observation model
     
-    predictObs = model.stateObservationFun(model, cubatureSet2, cvecrep(observNoise.mean, numCubPoints), ctrl2);
+    predictObs = model.observation_fun(model, cubatureSet2, column_vector_replicate(observNoise.mean, numCubPoints), ctrl2);
     predictObsMean = predictObs*w';
     
     %% measurement update (correction)
-    x = (cubatureSet2 - cvecrep(predictStateMean, numCubPoints));
-    z = (predictObs - cvecrep(predictObsMean, numCubPoints));
+    x = (cubatureSet2 - column_vector_replicate(predictStateMean, numCubPoints));
+    z = (predictObs - column_vector_replicate(predictObsMean, numCubPoints));
     
     innovationCov = w_z.*z*z'+ observNoise.covariance;
     crossCov = w_x.*x*z';
     filterGain = crossCov*pinv(innovationCov);
     
-    if isempty(model.innovationModelFunc)
+    if isempty(model.innovation)
         inov = observation - predictObsMean;
     else
-        inov = model.innovationModelFunc( model, observation, predictObsMean);
+        inov = model.innovation( model, observation, predictObsMean);
     end
     
     newState = predictStateMean + filterGain * inov;

@@ -51,7 +51,7 @@ classdef DopplerNavSystem < handle
                 startBlock = (i-1)*blockSize + 1; % 1*(i == 1)
                 endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
                 
-                tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
+                tEpoch = current_epoch(this.timeData.JD, tMoonSun);
                 
                 len = endBlock - startBlock + 1;
                 if i == 1; stateMatrix(:, 1) = initialState; end
@@ -79,7 +79,7 @@ classdef DopplerNavSystem < handle
             args.tag   = 'State estimation for Doppler navigation system (using radial velocity to the Sun)';
             args.model = gssmDoppler('init', this.initArgs);
             
-            [this.procNoise, this.observNoise, this.inferenceModel] = inferenceNoiseGenerator(inferenceDataGenerator(args), estimatorType);
+            [this.procNoise, this.observNoise, this.inferenceModel] = inference_noise_generator(inference_model_generator(args), estimatorType);
         end
         
         function [state, cov, decompCov, particleSet] = estimate(this, state, cov, decompCov, estimator, particleSet, sample, tEpoch)
@@ -95,24 +95,24 @@ classdef DopplerNavSystem < handle
             if strcmp(estimatorType{1}, 'pf')
                 numParticles = 2e3;
                 particleSet.particlesNum        = numParticles;
-                particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + column_vector_replicate(state, numParticles);
                 particleSet.weights             = ones(1, numParticles) / numParticles;
             elseif strcmp(estimatorType{1}, 'gspf')
                 numParticles = 1e3;
                 particleSet.particlesNum   = numParticles;
-                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + column_vector_replicate(state, numParticles);
                 % fit a N component GMM to initial state distribution
                 particleSet.stateGMM = gmm_fit(initialParticles, 3, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'gmsppf')
                 numParticles = 1e3;
                 particleSet.particlesNum = numParticles;
-                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + column_vector_replicate(state, numParticles);
                 % fit a N component GMM to initial state distribution
                 particleSet.stateGMM = gmm_fit(initialParticles, 3, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'sppf')
                 numParticles = 3e2;
                 particleSet.particlesNum        = numParticles;
-                particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
+                particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + column_vector_replicate(state, numParticles);
                 particleSet.weights             = ones(1, numParticles) / numParticles;
                 particleSet.particlesCov        = repmat(decompCov, [1 1 numParticles]);
                 particleSet.processNoise        = this.procNoise;
@@ -220,7 +220,7 @@ classdef DopplerNavSystem < handle
             params(2) = this.timeData.SampleTime;
             params(3) = this.timeData.Time(sample);
             
-            model = this.inferenceModel.model.setParams(this.inferenceModel.model, params, this.getEarthEphemeris(sample), this.getSunEphemeris(sample));
+            model = this.inferenceModel.model.set_params(this.inferenceModel.model, params, this.getEarthEphemeris(sample), this.getSunEphemeris(sample));
             this.inferenceModel.model = model;
         end
         

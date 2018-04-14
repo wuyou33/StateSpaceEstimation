@@ -20,7 +20,7 @@ classdef BaseIntegratedIns < handle
             args.tag   = this.tag();
             args.model = gssmInsLooselyCoupled('init', this.initArgs);
             
-            [this.procNoise, this.observNoise, this.inferenceModel] = inferenceNoiseGenerator(inferenceDataGenerator(args), estimatorType);
+            [this.procNoise, this.observNoise, this.inferenceModel] = inference_noise_generator(inference_model_generator(args), estimatorType);
             
             state  = initalState;
             cov    = initialCov;
@@ -180,12 +180,12 @@ classdef BaseIntegratedIns < handle
                     [state, particleSetEst, this.procNoise, this.observNoise] = pf(particleSet, this.procNoise, this.observNoise, observ, control, [], this.inferenceModel);
                 case 'gspf'
                     [state, particleSetEst, this.procNoise, this.observNoise] = gspf(particleSet, this.procNoise, this.observNoise, observ, control, [], this.inferenceModel);
-                    particleSetEst.stateGMM.mean(7:10, :) = quaternionNormalize(particleSetEst.stateGMM.mean(7:10, :));
+                    particleSetEst.stateGMM.mean(7:10, :) = quaternion_normalize(particleSetEst.stateGMM.mean(7:10, :));
                 case 'sppf'
                     [state, particleSetEst, this.procNoise, this.observNoise] = sppf(particleSet, this.procNoise, this.observNoise, observ, control, [], this.inferenceModel);
                 case 'gmsppf'
                     [state, particleSetEst, this.procNoise, this.observNoise] = gmsppf(particleSet, this.procNoise, this.observNoise, observ, control, [], this.inferenceModel);
-                    particleSetEst.stateGMM.mean(7:10, :) = quaternionNormalize(particleSetEst.stateGMM.mean(7:10, :));
+                    particleSetEst.stateGMM.mean(7:10, :) = quaternion_normalize(particleSetEst.stateGMM.mean(7:10, :));
                 case 'cqkf'
                     [state, cov, this.procNoise, this.observNoise, param] = cqkf(state, cov, this.procNoise, this.observNoise, observ, this.inferenceModel, control, []);
                 case 'ghqf'
@@ -197,9 +197,9 @@ classdef BaseIntegratedIns < handle
                 otherwise
                     error(strcat('not supported filter type: ', estimator{1}));
             end
-            state(7:10) = quaternionNormalize(state(7:10));
+            state(7:10) = quaternion_normalize(state(7:10));
             if ~isempty(particleSetEst) && isfield(particleSetEst, 'particles')
-                particleSetEst.particles(7:10, :) = quaternionNormalize(particleSetEst.particles(7:10, :));
+                particleSetEst.particles(7:10, :) = quaternion_normalize(particleSetEst.particles(7:10, :));
             end
         end
         
@@ -214,7 +214,7 @@ classdef BaseIntegratedIns < handle
             modelParams(29)     = this.timeData.SampleTime;                         % sampleTime
             modelParams(30)     = time;
             
-            updModel = this.inferenceModel.model.setParams(this.inferenceModel.model, modelParams);
+            updModel = this.inferenceModel.model.set_params(this.inferenceModel.model, modelParams);
             this.inferenceModel.model = updModel;
         end
         
@@ -261,28 +261,28 @@ classdef BaseIntegratedIns < handle
             if strcmp(estimatorType{1}, 'pf')
                 numParticles = 7e3;
                 particleSet.particlesNum        = numParticles;
-                particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
-                particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
+                particleSet.particles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + column_vector_replicate(state, numParticles);
+                particleSet.particles(7:10, :)  = quaternion_normalize(particleSet.particles(7:10, :));
                 particleSet.weights             = ones(1, numParticles) / numParticles;
             elseif strcmp(estimatorType{1}, 'gspf')
                 numParticles = 1e3;
                 particleSet.particlesNum   = numParticles;
-                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
-                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));
+                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + column_vector_replicate(state, numParticles);
+                initialParticles(7:10, :)  = quaternion_normalize(initialParticles(7:10, :));
                 % fit a N component GMM to initial state distribution
                 particleSet.stateGMM = gmm_fit(initialParticles, 3, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'gmsppf')
                 numParticles = 1e4;
                 particleSet.particlesNum   = numParticles;
-                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + cvecrep(state, numParticles);
-                initialParticles(7:10, :)  = quaternionNormalize(initialParticles(7:10, :));
+                initialParticles           = chol(cov, 'lower')*randn(this.inferenceModel.stateDimension, numParticles) + column_vector_replicate(state, numParticles);
+                initialParticles(7:10, :)  = quaternion_normalize(initialParticles(7:10, :));
                 % fit a N component GMM to initial state distribution
                 particleSet.stateGMM = gmm_fit(initialParticles, 7, [1e-2 1e5], 'sqrt', 1, 0);
             elseif strcmp(estimatorType{1}, 'sppf')
                 numParticles = 3e1;
                 particleSet.particlesNum        = numParticles;
-                particleSet.particles           = chol(cov, 'lower')*randn(22, numParticles) + cvecrep(state, numParticles);
-                particleSet.particles(7:10, :)  = quaternionNormalize(particleSet.particles(7:10, :));
+                particleSet.particles           = chol(cov, 'lower')*randn(22, numParticles) + column_vector_replicate(state, numParticles);
+                particleSet.particles(7:10, :)  = quaternion_normalize(particleSet.particles(7:10, :));
                 particleSet.weights             = ones(1, numParticles) / numParticles;
                 particleSet.particlesCov        = repmat(decompCov, [1 1 numParticles]);
                 particleSet.processNoise        = this.procNoise;

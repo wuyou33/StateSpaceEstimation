@@ -4,17 +4,17 @@ classdef XRayDopplerIntegrated < handle
     
     properties (Access = private)
         timeData;
-        xRayNavSystem;
+        x_RayNavigationSystem;
         dopplerNavSystem;
         dimension = 6;
     end
     
     methods (Access = public)
-        function obj = XRayDopplerIntegrated(timeData, xRayNavSystem, dopplerNavSystem)
+        function obj = XRayDopplerIntegrated(timeData, x_RayNavigationSystem, dopplerNavSystem)
             narginchk(3, 3);
             
             obj.timeData = timeData;
-            obj.xRayNavSystem = xRayNavSystem;
+            obj.x_RayNavigationSystem = x_RayNavigationSystem;
             obj.dopplerNavSystem = dopplerNavSystem;
         end
         
@@ -33,9 +33,9 @@ classdef XRayDopplerIntegrated < handle
             
             rState = xRayInitState;
             rCov = xRayInitCov;
-            this.xRayNavSystem.init(xRayEstimatorType);
-            rDecCov = this.xRayNavSystem.updateFilterParams(rCov, xRayEstimatorType);
-            rSet = this.xRayNavSystem.initParticleSet(xRayEstimatorType, rState, rCov, rDecCov);
+            this.x_RayNavigationSystem.init(xRayEstimatorType);
+            rDecCov = this.x_RayNavigationSystem.updateFilterParams(rCov, xRayEstimatorType);
+            rSet = this.x_RayNavigationSystem.initParticleSet(xRayEstimatorType, rState, rCov, rDecCov);
             
             tMoonSun = this.timeData.StartSecond;
             num = ceil(this.timeData.TotalSeconds / this.timeData.RefreshSunMoonInfluenceTime);
@@ -46,7 +46,7 @@ classdef XRayDopplerIntegrated < handle
                 startBlock = (i-1)*blockSize + 1*(i == 1);
                 endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
                 
-                tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
+                tEpoch = current_epoch(this.timeData.JD, tMoonSun);
                 
                 len = endBlock - startBlock + 1*(i == 1);
                 
@@ -58,9 +58,9 @@ classdef XRayDopplerIntegrated < handle
                     end
                     
                     [dState, dCov, dDecCov, dSet] = this.dopplerNavSystem.estimate(dState, dCov, dDecCov, dopplerEstimatorType, dSet, k, tEpoch);
-                    [rState, rCov, rDecCov, rSet, ~] = this.xRayNavSystem.estimate(rState, rCov, rDecCov, xRayEstimatorType, rSet, k, tEpoch);
+                    [rState, rCov, rDecCov, rSet, ~] = this.x_RayNavigationSystem.estimate(rState, rCov, rDecCov, xRayEstimatorType, rSet, k, tEpoch);
                     
-                    [state, ~, dState, dCov, rState, rCov] = federatedFilter(dState, dCov, rState, rCov);
+                    [state, ~, dState, dCov, rState, rCov] = federated_filter(dState, dCov, rState, rCov);
                     stateMatrix(:, i) = state;
                     
                     stateMatrix(:, k) = state;

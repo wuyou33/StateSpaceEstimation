@@ -6,7 +6,7 @@ N = 300;
 w = randn(N, 3);
 
 % quatFun = @(q, t, wb) -0.5 * [0 wb(1) wb(2) wb(3); -wb(1) 0 -wb(3) wb(2); -wb(2) wb(3) 0 -wb(1); -wb(3) -wb(2) wb(1) 0 ] * q;
-quatFun = @(q, t, wb) -0.5 * quaternionMultiply(q, quaternionNormalize([0; wb]));
+quatFun = @(q, t, wb) -0.5 * quaternion_multiply(q, quaternion_normalize([0; wb]));
 
 dt = 1e-1;
 quat2 = quaternion;

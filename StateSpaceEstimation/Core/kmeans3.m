@@ -81,7 +81,7 @@ function [centres, options, post, errlog] = kmeans3(centres, data, options)
         old_centres = centres;
         
         % Calculate posteriors based on existing centres
-        d2 = dist2(data, centres);
+        d2 = squared_distance(data, centres);
         % Assign each point to nearest centre
         [minvals, index] = min(d2', [], 1);
         post = id(index,:);

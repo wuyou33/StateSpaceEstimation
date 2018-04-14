@@ -12,7 +12,7 @@ date.day  = 17;
 date.mon  = 11;
 date.year = 2017;
 
-initialOrbit = loadInitialOrbit();
+initialOrbit = load_initial_orbit();
 m_fitSolarSystemGravityModel = memoize(@fitSolarSystemGravityModel);
 
 tStart = '00:00:00.000';
@@ -99,7 +99,7 @@ for l = 1:length(aTeffLegend)
     iinsInitArgs.initialParams(10:12)         = gyroBiasSigma;
     iinsInitArgs.initialParams(13:15)         = initialAcceleration;
     iinsInitArgs.initialParams(16:18)         = initialAngularVelocity;
-    iinsInitArgs.initialParams(19:28)         = loadInitialOrbit();
+    iinsInitArgs.initialParams(19:28)         = load_initial_orbit();
     iinsInitArgs.initialParams(29)            = timeData.SampleTime;
     iinsInitArgs.initialParams(30)            = timeData.StartSecond;
     iinsInitArgs.processNoiseMean             = zeros(22, 1);
@@ -110,7 +110,7 @@ for l = 1:length(aTeffLegend)
     
     parfor j = 1:iterationNumber
         insInitialState = initialOrbit + [insTrajInitErrorKm.*randn(3, 1); insVelInitErrorKmSec.*randn(3, 1); [1; 0; 0; 0] + insQuaternionInitError.*randn(4, 1)];
-        insInitialState(7:10) = quaternionNormalize(insInitialState(7:10));
+        insInitialState(7:10) = quaternion_normalize(insInitialState(7:10));
         
         accelerationInBodyFrame     = AccelerationInBodyFrame(timeDataSubSystem, initialAcceleration, accelerationSigma);
         angularVelocityInBodyFrame  = AngularVelocityInBodyFrame(timeDataSubSystem, initialAngularVelocity, angularVelocitySigma);
@@ -133,8 +133,8 @@ for l = 1:length(aTeffLegend)
         iinsState = iins.evaluate(insSnsInitState, alpha*initCov, insInitialState, estimatorType, iterationNumber == 1, iterationNumber == 1);
         
         quatErr = trueState.Rotation - iinsState.Rotation;
-        errTraj = vectNormError(trueState.Trajectory, iinsState.Trajectory, 1e3);
-        errVel  = vectNormError(trueState.Velocity, iinsState.Velocity, 1e3);
+        errTraj = vect_norm_error(trueState.Trajectory, iinsState.Trajectory, 1e3);
+        errVel  = vect_norm_error(trueState.Velocity, iinsState.Velocity, 1e3);
         
         iterations(j, :, :) = [errTraj; errVel; quatErr];
         x_iterations(j, :, :) = xTrueState.FullState - iinsState.FullState;

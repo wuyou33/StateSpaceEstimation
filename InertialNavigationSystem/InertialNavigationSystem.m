@@ -57,7 +57,7 @@ classdef InertialNavigationSystem < handle
                 tMoonSunDelta = floor(timeAtEndOfSample / this.timeData.RefreshSunMoonInfluenceTime) * this.timeData.RefreshSunMoonInfluenceTime;
                 tMoonSun = this.timeData.StartSecond + tMoonSunDelta;
                 
-                state = this.resolve(state, i, currentEpoch(this.timeData.JD, tMoonSun));
+                state = this.resolve(state, i, current_epoch(this.timeData.JD, tMoonSun));
                 stateMatrix(:, i - startSample) = state;
             end
         end
@@ -90,7 +90,7 @@ classdef InertialNavigationSystem < handle
                 startBlock = (i-1)*blockSize + 1*(i == 1);
                 endBlock   = min(i*blockSize, this.timeData.SimulationNumber);
                 
-                tEpoch = currentEpoch(this.timeData.JD, tMoonSun);
+                tEpoch = current_epoch(this.timeData.JD, tMoonSun);
                 
                 len = endBlock - startBlock + 1;
                 if i == 1
@@ -118,10 +118,10 @@ classdef InertialNavigationSystem < handle
             timeSpan = [tEnd-dt, tEnd];
             
             odeFun = @(t,y) EquationOfMotion(t, y, a, w, tEpoch, dt, t0, this.gravityModel, m);
-            [~, tmp] = odeEuler(odeFun, timeSpan, initial, dt);
+            [~, tmp] = ode_euler(odeFun, timeSpan, initial, dt);
             % [~, tmp] = ode45(odeFun, timeSpan, initial, odeset('MaxStep', dt));
             state = tmp(end, :)';
-            state(7:10) = quaternionNormalize(state(7:10));
+            state(7:10) = quaternion_normalize(state(7:10));
         end
     end
     

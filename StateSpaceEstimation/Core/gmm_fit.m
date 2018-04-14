@@ -99,9 +99,9 @@ function [gmm_set, log_evidence_buffer] = gmm_fit(samples, mixture_count, termin
     for n = 1 : iterations_count
         % Calculate posteriors based on old parameters
         if (nargin == 7)
-            [~, ~, evidence, posterior] = gmmProbability(gmm_set, samples, evidence_weights);
+            [~, ~, evidence, posterior] = gmm_probability(gmm_set, samples, evidence_weights);
         else
-            [~, ~, evidence, posterior] = gmmProbability(gmm_set, samples);
+            [~, ~, evidence, posterior] = gmm_probability(gmm_set, samples);
         end
         
         % Calculate error value if needed

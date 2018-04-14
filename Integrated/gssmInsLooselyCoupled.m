@@ -18,24 +18,17 @@ end
 %%
 function model = init(initArgs)
     
-    model.type                       = 'gssm';                         % object type
-    model.tag                        = 'Loosely Coupled NS';           % ID tag
-    
-    model.setParams                  = @setparams;                     % function handle to SETPARAMS
-    model.stateTransitionFun         = @ffun;                          % function handle to state transition function
-    model.stateObservationFun        = @hfun;                          % function handle to state observation function
-    
-    model.stateTransitionPriorFun    = @prior;                         % function handle to the state transition function that calculates P(x(k)|x(k-1)),
-    % is a requirement for particle filter
-    
-    model.observationLikelihoodFun   = @likelihood;                    % function handle to the observation likelihood function that calculates p(y(k)|x(k)),
-    % is a requirement for particle filter
-    
-    model.innovationModelFunc        = @innovation;                    % Function-handle to the innovation model function that calculates the difference between the output
+    model.type              = 'gssm'; % object type
+    model.tag               = 'Loosely Coupled NS'; % ID tag    
+    model.set_params        = @set_params; % function handle to set parameters.
+    model.transition_fun    = @ffun; % function handle to state transition function
+    model.observation_fun   = @hfun; % function handle to state observation function    
+    model.prior             = @prior; % function handle to the state transition function that calculates P(x(k)|x(k-1)), is a requirement for particle filter    
+    model.likelihood        = @likelihood; % function handle to the observation likelihood function that calculates p(y(k)|x(k)), is a requirement for particle filter    
+    model.innovation        = @innovation; % Function-handle to the innovation model function that calculates the difference between the output
     % of the observation function (hfun) and the actual 'real-world' measurement/observation of that signal,
-    % is a requirement for particle filter
-    
-    model.linearize                  = @linearize;                     % Function-handle to the linearization function that calculates Jacobians e.t.c.
+    % is a requirement for particle filter    
+    model.linearize         = @linearize; %  Function-handle to the linearization function that calculates Jacobians e.t.c.    
     
     model.stateDimension             = 22;
     model.observationDimension       = 6;
@@ -45,7 +38,7 @@ function model = init(initArgs)
     model.processNoiseDimension      = 22;                             % process noise dimension
     model.observationNoiseDimension  = 6;                              % observation noise dimension
     model.params                     = initArgs.initialParams;         %  setup parameter vector buffer
-    model                            = setparams(model, initArgs.initialParams);
+    model                            = set_params(model, initArgs.initialParams);
     
     % Setup process noise source
     
@@ -56,7 +49,7 @@ function model = init(initArgs)
     processNoiseArg.mean           = initArgs.processNoiseMean;
     processNoiseArg.covariance     = initArgs.processNoiseCovariance;
     
-    model.processNoise = generateNoiseDataSet(processNoiseArg);
+    model.processNoise = generate_noise_model(processNoiseArg);
     
     % Setup observation noise source
     
@@ -67,11 +60,10 @@ function model = init(initArgs)
     observationNoiseArg.mean           = initArgs.observationNoiseMean;
     observationNoiseArg.covariance     = initArgs.observationNoiseCovariance;
     
-    model.observationNoise = generateNoiseDataSet(observationNoiseArg);
+    model.observationNoise = generate_noise_model(observationNoiseArg);
 end
 %%
-function model = setparams(model, params, idxVector)
-    
+function model = set_params(model, params, idxVector)    
     % Function to unpack a column vector containing system parameters into specific forms
     % needed by FFUN, HFUN and possibly defined sub-functional objects. Both the vectorized (packed)
     % form of the parameters as well as the unpacked forms are stored within the model data structure.
@@ -85,7 +77,7 @@ function model = setparams(model, params, idxVector)
         case 3 % update subset of params
             model.params(idxVector) = params;
         otherwise
-            error('[ setparams ] Incorrect number of input arguments.');
+            error('[ set_params ] Incorrect number of input arguments.');
     end
     
     model.accelerationBiasMu(1:3, 1)        = model.params(1:3);
@@ -111,20 +103,20 @@ function newState = ffun(model, state, noise, stateControl)
     newState = zeros(rn, cn);
     for i = 1:cn
         % [~, tmp] = ode45(odeFun, tSpan, state(:, i), odeset('MaxStep', model.sampleTime));
-        [~, tmp]       = odeEuler(odeFun, tSpan, state(:, i), model.sampleTime);
+        [~, tmp]       = ode_euler(odeFun, tSpan, state(:, i), model.sampleTime);
         newState(:, i) = tmp(end, :);
     end
     
     if ~isempty(noise)
-        newState  = newState + cvecrep([ones(10, 1); sqrt(model.sampleTime)*ones(6, 1); ones(6, 1)], cn).*noise;
+        newState  = newState + column_vector_replicate([ones(10, 1); sqrt(model.sampleTime)*ones(6, 1); ones(6, 1)], cn).*noise;
         %         newState  = newState + noise;
     end
     
-    newState(7:10, :) = quaternionNormalize(newState(7:10, :));
+    newState(7:10, :) = quaternion_normalize(newState(7:10, :));
     
     if ~isempty(stateControl)
-        newState(1:6, :)  = newState(1:6, :) - cvecrep(stateControl(1:6), cn);
-        newState(7:10, :) = quaternionNormalize(  quaternionMultiply( newState(7:10, :), quaternionConj(cvecrep(stateControl(7:10), cn), 2) )  );
+        newState(1:6, :)  = newState(1:6, :) - column_vector_replicate(stateControl(1:6), cn);
+        newState(7:10, :) = quaternion_normalize(  quaternion_multiply( newState(7:10, :), quaternion_conj(column_vector_replicate(stateControl(7:10), cn), 2) )  );
     end
 end
 
@@ -137,7 +129,7 @@ function observ = hfun(~, state, noise, observationControl) % first argument is 
     end
     
     if ~isempty(observationControl)
-        observ = observ + cvecrep(observationControl, size(state, 2));
+        observ = observ + column_vector_replicate(observationControl, size(state, 2));
     end
 end
 

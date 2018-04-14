@@ -50,7 +50,7 @@ classdef TimeExt < handle
             obj.date                        = date;
             obj.refreshSunMoonInfluenceTime = refreshSunMoonInfluenceTime;
             
-            dateArr = getDateArr(startTime, TimeExt.timeFormat,  date);
+            dateArr = get_date_arr(startTime, TimeExt.timeFormat,  date);
             obj.startSecond = TimeExt.tFun( dateArr(4:6) );
             
             deltaDateTime = datevec(duration, TimeExt.timeFormat);
@@ -74,8 +74,12 @@ classdef TimeExt < handle
         
         function unixEpoch = timeStampToUnixEpoch(this, timeStampSec)
             startOfUnixEpcoh = datenum('01-Jan-1970');
-            currentTime = datenum(this.GetDateArr()) + TimeExt.secToDate(timeStampSec);
+            currentTime = datenum(this.get_date_arr()) + TimeExt.secToDate(timeStampSec);
             unixEpoch = int32( floor((currentTime - startOfUnixEpcoh) * 86400) );
+        end
+        
+        function val = get_current_epoch(this, time_stamp)
+            val = current_epoch(this.JD, time_stamp);
         end
     end
     
@@ -133,7 +137,7 @@ classdef TimeExt < handle
         end
         
         function val = get.JD(this)
-            dateArr = this.GetDateArr();
+            dateArr = this.get_date_arr();
             val = juliandate(dateArr);
         end
         
@@ -143,8 +147,8 @@ classdef TimeExt < handle
     end
     
     methods (Access = private)
-        function val = GetDateArr(this)
-            val = getDateArr(this.startTime, this.timeFormat,  this.date);
+        function val = get_date_arr(this)
+            val = get_date_arr(this.startTime, this.timeFormat,  this.date);
         end
     end
     

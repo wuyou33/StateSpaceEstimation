@@ -25,11 +25,11 @@ backgroundPhotonRate = b_det + b_diff + b_cosm;
 timeBucket           = 1e5; % 1e5 sec
 detectorArea         = 1; % m^2
 
-earthEphemeris = loadEphemeris('earth', timeDataXRay.SimulationNumber, secondInOneMinute/timeDataXRay.SampleTime);
-sunEphemeris   = loadEphemeris('sun', timeDataXRay.SimulationNumber, secondInOneMinute/timeDataXRay.SampleTime);
-xRaySources    = loadXRaySources(xRaySourceCount);
+earthEphemeris = load_ephemeris('earth', timeDataXRay, secondInOneMinute/timeDataXRay.SampleTime);
+sunEphemeris   = load_ephemeris('sun', timeDataXRay, secondInOneMinute/timeDataXRay.SampleTime);
+xRaySources    = load_x_ray_sources(xRaySourceCount);
 
-initialXRay = loadInitialOrbit();
+initialXRay = load_initial_orbit();
 initialXRay = initialXRay(1:6);
 
 % simulate real trajectory of spaceship
@@ -54,7 +54,7 @@ xRayDetectorArgs.errorBudget = errorBudget;
 initArgsXRay.xRaySources = xRaySources;
 initArgsXRay.earthEphemeris = [earthEphemeris.x(1); earthEphemeris.y(1); earthEphemeris.z(1)];
 initArgsXRay.sunEphemeris = [sunEphemeris.x(1); sunEphemeris.y(1); sunEphemeris.z(1)];
-initArgsXRay.invPeriods = getInvPeriods(xRaySources);
+initArgsXRay.invPeriods = get_inv_periods(xRaySources);
 initArgsXRay.initialParams = [NaN NaN NaN];
 initArgsXRay.observationNoiseMean = zeros(xRaySourceCount, 1);
 initArgsXRay.observationNoiseCovariance = xRayToaCovariance(xRaySources, detectorArea, timeBucket, backgroundPhotonRate, errorBudget);
@@ -69,13 +69,13 @@ iterations = zeros(iterationNumber, 2, timeDataXRay.SimulationNumber - 1);
 
 args.type  = 'state';
 args.tag   = 'State estimation for X-Ray navigation system';
-args.model = gssmXNav('init', initArgsXRay);
-[stateNoise, observNoise, inferenceModel] = inferenceNoiseGenerator(inferenceDataGenerator(args), 'ekf');
+args.model = gssm_x_nav('init', initArgsXRay);
+[stateNoise, observNoise, inferenceModel] = inference_noise_generator(inference_model_generator(args), 'ekf');
 initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
 
 bound = zeros(6, timeDataXRay.SimulationNumber - 1);
 
-tEpoch = currentEpoch(timeDataXRay.JD, timeDataXRay.StartSecond);
+tEpoch = current_epoch(timeDataXRay.JD, timeDataXRay.StartSecond);
 for j = 1:iterationNumber
     initialXRayState = initialXRay + initialConditionStabilityKoeff*chol(initialXRayCov, 'lower') * randn(6, 1);
     xRayDetector  = XRayDetector(xRayDetectorArgs);
@@ -90,7 +90,7 @@ for j = 1:iterationNumber
         earthEphemerisStep = [earthEphemeris.x(i); earthEphemeris.y(i); earthEphemeris.z(i)];
         sunEphemerisStep   = [sunEphemeris.x(i); sunEphemeris.y(i); sunEphemeris.z(i)];
         
-        updModel = inferenceModel.model.setParams(inferenceModel.model, ...
+        updModel = inferenceModel.model.set_params(inferenceModel.model, ...
             modelParams, ...
             inferenceModel.model.xRaySources, ...
             earthEphemerisStep, ...

@@ -43,5 +43,5 @@ function [ radialSpeed ] = dopplerShift( starshipState, earthEphemeris, sunEphem
     rcum = r + re + rs;
     vcum = v + ve + vs;
     
-    radialSpeed = dotProduct(rcum, vcum) ./ normOfEveryRow(rcum);
+    radialSpeed = dot_product(rcum, vcum) ./ norm_vect(rcum);
 end

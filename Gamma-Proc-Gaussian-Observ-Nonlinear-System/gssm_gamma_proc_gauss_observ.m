@@ -14,14 +14,14 @@ function model = init(init_args)
     model.type                       = 'gssm';
     model.tag                        = 'nonlinear system with Gamma process and Gaussian observation noise';
     
-    model.stateTransitionFun         = @ffun;        % function handle to state transition function
-    model.stateObservationFun        = @hfun;        % function handle to state observation function
-    model.stateTransitionPriorFun    = @prior;       % function handle to the state transition function that calculates P(x(k)|x(k-1)),
-    model.observationLikelihoodFun   = @likelihood;  % function handle to the observation likelihood function that calculates p(y(k)|x(k)),
-    model.innovationModelFunc        = @innovation;  % Function-handle to the innovation model function that calculates the difference between the output
+    model.transition_fun    = @ffun;        % function handle to state transition function
+    model.observation_fun   = @hfun;        % function handle to state observation function
+    model.prior             = @prior;       % function handle to the state transition function that calculates P(x(k)|x(k-1)),
+    model.likelihood        = @likelihood;  % function handle to the observation likelihood function that calculates p(y(k)|x(k)),
+    model.innovation        = @innovation;  % Function-handle to the innovation model function that calculates the difference between the output
     % of the observation function (hfun) and the actual 'real-world' measurement/observation of that signal
-    model.linearize                  = @linearize;                     % Function-handle to the linearization function that calculates Jacobians e.t.c.
-    model.setParams                  = @set_params;   % function handle to SETPARAMS
+    model.linearize         = @linearize;                     % Function-handle to the linearization function that calculates Jacobians e.t.c.
+    model.set_params        = @set_params;  % function handle to set parameters.
     
     model.stateDimension             = 1;
     model.observationDimension       = 1;
@@ -38,7 +38,7 @@ function model = init(init_args)
     processNoiseArg.alpha       = 3;
     processNoiseArg.beta        = 0.5;
     
-    model.processNoise = generateNoiseDataSet(processNoiseArg);
+    model.processNoise = generate_noise_model(processNoiseArg);
     
     
     % Setup observation noise source
@@ -49,7 +49,7 @@ function model = init(init_args)
     observationNoiseArg.mean           = 0;
     observationNoiseArg.covariance     = 1e-5;
     
-    model.observationNoise = generateNoiseDataSet(observationNoiseArg);
+    model.observationNoise = generate_noise_model(observationNoiseArg);
     
     model.params = zeros(model.paramDimension, 1);
     model = set_params(model, [4e-2 0.5]); % [omega phi]

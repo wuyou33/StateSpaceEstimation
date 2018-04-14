@@ -30,11 +30,11 @@ xRaySourceCount      = 4;
 backgroundPhotonRate = b_det + b_diff + b_cosm;
 detectorArea         = 1; % [m^2]
 
-earthEphemeris = loadEphemeris('earth', timeDataXRay.SimulationNumber, secondInOneMinute/timeDataXRay.SampleTime);
-sunEphemeris   = loadEphemeris('sun', timeDataXRay.SimulationNumber, secondInOneMinute/timeDataXRay.SampleTime);
-xRaySources    = loadXRaySources(xRaySourceCount);
+earthEphemeris = load_ephemeris('earth', timeDataXRay, secondInOneMinute/timeDataXRay.SampleTime);
+sunEphemeris   = load_ephemeris('sun', timeDataXRay, secondInOneMinute/timeDataXRay.SampleTime);
+xRaySources    = load_x_ray_sources(xRaySourceCount);
 
-initialXRay = loadInitialOrbit();
+initialXRay = load_initial_orbit();
 initialXRay = initialXRay(1:6);
 
 % simulate real trajectory of spaceship
@@ -64,7 +64,7 @@ for l = 1:length(timeBucketArray)
     initArgsXRay.xRaySources = xRaySources;
     initArgsXRay.earthEphemeris = [earthEphemeris.x(1); earthEphemeris.y(1); earthEphemeris.z(1)];
     initArgsXRay.sunEphemeris = [sunEphemeris.x(1); sunEphemeris.y(1); sunEphemeris.z(1)];
-    initArgsXRay.invPeriods = getInvPeriods(xRaySources);
+    initArgsXRay.invPeriods = get_inv_periods(xRaySources);
     initArgsXRay.initialParams = [NaN NaN NaN];
     initArgsXRay.observationNoiseMean = zeros(xRaySourceCount, 1);
     initArgsXRay.observationNoiseCovariance = xRayToaCovariance(xRaySources, detectorArea, timeBucket, backgroundPhotonRate, errorBudget);
@@ -76,11 +76,11 @@ for l = 1:length(timeBucketArray)
     initialXRayCov = [(5)^2*eye(3), zeros(3, 3); zeros(3, 3), (5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
     %     initialXRayCov = [(0.5)^2*eye(3), zeros(3, 3); zeros(3, 3), (0.5e-3)^2*eye(3)]; % [ [km^2], [(km / sec)^2] ]
     
-    if stringmatch(estimatorType, {'ekf'})
+    if string_match(estimatorType, {'ekf'})
         initArgsXRay.stateNoiseCovariance = [(9.5e-1*eye(3)).^2 zeros(3); zeros(3) (5e-2*eye(3)).^2];
-    elseif stringmatch(estimatorType, {'gmsppf'})
+    elseif string_match(estimatorType, {'gmsppf'})
         initArgsXRay.stateNoiseCovariance = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (1e-4*eye(3)).^2];
-    elseif stringmatch(estimatorType, {'sppf'})
+    elseif string_match(estimatorType, {'sppf'})
         initArgsXRay.stateNoiseCovariance = [(7.5e-4*eye(3)).^2 zeros(3); zeros(3) (1e-4*eye(3)).^2];
     else
         initArgsXRay.stateNoiseCovariance = [(1e-2*eye(3)).^2 zeros(3); zeros(3) (8.5e-4*eye(3)).^2];
@@ -102,11 +102,11 @@ for l = 1:length(timeBucketArray)
         xRayDetector  = XRayDetector(xRayDetectorArgs);
         xRayDetector.toa(iterationNumber == 1); % test, show X-Ray source signals
         
-        xRayNavSystem = XRayNavSystem(earthEphemeris, sunEphemeris, xRaySources, timeDataXRay, initArgsXRay, xRayDetector);
-        stateEstimation = xRayNavSystem.resolve(initialXRayState, alpha*initialXRayCov, estimatorType, iterationNumber == 1);
+        x_ray_nav_system = X_RayNavigationSystem(earthEphemeris, sunEphemeris, xRaySources, timeDataXRay, initArgsXRay, xRayDetector);
+        stateEstimation = x_ray_nav_system.resolve(initialXRayState, alpha*initialXRayCov, estimatorType, iterationNumber == 1);
         
-        errTraj = vectNormError(tstate(1:3, :), stateEstimation(1:3, :), 1e3);
-        errVel  = vectNormError(tstate(4:6, :), stateEstimation(4:6, :), 1e3);
+        errTraj = vect_norm_error(tstate(1:3, :), stateEstimation(1:3, :), 1e3);
+        errVel  = vect_norm_error(tstate(4:6, :), stateEstimation(4:6, :), 1e3);
         
         iterations(j, :, :) = [errTraj; errVel];
         x_iterations(j, :, :) = stateEstimation;

@@ -13,7 +13,7 @@ timeDataDoppler    = TimeExt(timeStart, timeEnd, sampleTime, date, sunMoonInflue
 iterationNumber    = 120;
 secondInOneMinute  = 120;
 logData = 1;
-initialOrbit = loadInitialOrbit();
+initialOrbit = load_initial_orbit();
 initialDopplerNavState  = initialOrbit(1:6);
 
 initialAcceleration     = zeros(3, 1);          % [km/sec^2]
@@ -26,8 +26,8 @@ dmuVariance             = (1*1e-5)^2; % [ (km / sec)^2 ] data from IET Radar Son
 % filterTypes = {'ukf', 'cdkf', 'ckf', 'sckf', 'fdckf', 'cqkf', 'sghqf', 'pf'};
 filterTypes = {'ckf'};
 
-earthEphemeris = loadEphemeris('earth', timeDataDoppler.SimulationNumber, secondInOneMinute/timeDataDoppler.SampleTime);
-sunEphemeris   = loadEphemeris('sun', timeDataDoppler.SimulationNumber, secondInOneMinute/timeDataDoppler.SampleTime);
+earthEphemeris = load_ephemeris('earth', timeDataDoppler, secondInOneMinute/timeDataDoppler.SampleTime);
+sunEphemeris   = load_ephemeris('sun', timeDataDoppler, secondInOneMinute/timeDataDoppler.SampleTime);
 accelerationInBodyFrame     = AccelerationInBodyFrame(timeDataDoppler, initialAcceleration, accelerationSigma);
 angularVelocityInBodyFrame  = AngularVelocityInBodyFrame(timeDataDoppler, initialAngularVelocity, angularVelocitySigma);
 
@@ -76,8 +76,8 @@ for l = 1:length(filterTypes)
         dopplerNavSystem = DopplerNavSystem(dmu, timeDataDoppler, initArgsDoppler, earthEphemeris, sunEphemeris);
         stateEstimation  = dopplerNavSystem.resolve(initialDopplerState, k*initialDopplerCov, estimatorType, iterationNumber == 1);
         
-        errTraj = vectNormError(trueState(1:3, :), stateEstimation(1:3, :), 1);
-        errVel  = vectNormError(trueState(4:6, :), stateEstimation(4:6, :), 1);
+        errTraj = vect_norm_error(trueState(1:3, :), stateEstimation(1:3, :), 1);
+        errVel  = vect_norm_error(trueState(4:6, :), stateEstimation(4:6, :), 1);
         iterations(j, :, :) = [errTraj; errVel];
         estimationMatrix(j, :, :) = [(trueState(1:3, :) - stateEstimation(1:3, :)); (trueState(1:3, :) - stateEstimation(1:3, :))];
                 

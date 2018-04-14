@@ -11,7 +11,7 @@ date.day  = 17;
 date.mon  = 11;
 date.year = 2015;
 
-initialOrbit = loadInitialOrbit();
+initialOrbit = load_initial_orbit();
 
 tStart = '00:00:00.000';
 tEnd = '00:00:00.500';
@@ -53,9 +53,9 @@ backgroundPhotnRate  = 5.9e4;
 timeBucket           = 1e5; % 1e5 sec
 detectorArea         = 1; % m^2
 
-earthEphemeris = loadEphemeris('earth', timeDataSubSystem.SimulationNumber, secondInOneMinute/timeDataSubSystem.SampleTime);
-sunEphemeris   = loadEphemeris('sun', timeDataSubSystem.SimulationNumber, secondInOneMinute/timeDataSubSystem.SampleTime);
-xRaySources    = loadXRaySources(xRaySourceCount);
+earthEphemeris = load_ephemeris('earth', timeDataSubSystem, secondInOneMinute/timeDataSubSystem.SampleTime);
+sunEphemeris   = load_ephemeris('sun', timeDataSubSystem, secondInOneMinute/timeDataSubSystem.SampleTime);
+xRaySources    = load_x_ray_sources(xRaySourceCount);
 
 simulator = TrajectoryPhaseSpaceSatelliteSimulator(initialOrbit, accelerationInBodyFrame, angularVelocityInBodyFrame, timeDataSubSystem);
 starshipTrueState = simulator.simulate();
@@ -76,7 +76,7 @@ stateXRayNoiseCov = [(1e-3*eye(3)).^2 zeros(3); zeros(3) (5e-6*eye(3)).^2];
 initArgsXRay.xRaySources = xRaySources;
 initArgsXRay.earthEphemeris = [earthEphemeris.x(1); earthEphemeris.y(1); earthEphemeris.z(1)];
 initArgsXRay.sunEphemeris = [sunEphemeris.x(1); sunEphemeris.y(1); sunEphemeris.z(1)];
-initArgsXRay.invPeriods = getInvPeriods(xRaySources);
+initArgsXRay.invPeriods = get_inv_periods(xRaySources);
 initArgsXRay.initialParams = [NaN NaN NaN];
 initArgsXRay.observationNoiseMean = zeros(xRaySourceCount, 1);
 initArgsXRay.observationNoiseCovariance = xRayToaCovariance(xRaySources, detectorArea, timeBucket, backgroundPhotnRate);
@@ -100,7 +100,7 @@ insInitArgs.angularAccelerBodyFrame      = angularAccelerBodyFrame;
 insInitArgs.gyroGSensitiveBias           = gyroGSensitiveBias;
 
 insInitialState = initialOrbit + [insTrajInitErrorKm.*randn(3, 1); insVelInitErrorKmSec.*randn(3, 1); [1; 0; 0; 0] + insQuaternionInitError.*randn(4, 1)];
-insInitialState(7:10) = quaternionNormalize(insInitialState(7:10));
+insInitialState(7:10) = quaternion_normalize(insInitialState(7:10));
 
 %========================================================================================================
 initCov = [diag(insTrajInitErrorKm).^2 zeros(3, 19); ... distance error [km]^2
@@ -202,17 +202,17 @@ for j = 1:iterationNumber
     
     initState = [[0; 0; 0]; [0; 0; 0]; [1; 0; 0; 0]; [0; 0; 0]; [0; 0; 0]; 5e-5*ones(3, 1); 5e-5*ones(3, 1)];
     
-    xRayNavSystem = XRayNavSystem(earthEphemeris, sunEphemeris, xRaySources, timeDataSubSystem, initArgsXRay, XRayDetector(xRayDetectorArgs));
+    x_ray_nav_system = X_RayNavigationSystem(earthEphemeris, sunEphemeris, xRaySources, timeDataSubSystem, initArgsXRay, XRayDetector(xRayDetectorArgs));
     ins = initInertialNavigationSystem('init', insInitArgs);
-    integratedNS = IntegratedInsXRayNS(ins, xRayNavSystem, timeData, insSnsInitArgs, timeDataSubSystem, initialXRayState, initialXRayCov, xRayEstimatorType, reconciliationTime);
+    integratedNS = IntegratedInsXRayNS(ins, x_ray_nav_system, timeData, insSnsInitArgs, timeDataSubSystem, initialXRayState, initialXRayCov, xRayEstimatorType, reconciliationTime);
     
     tic;
     estimatedState = integratedNS.evaluate(initState, initCov, insInitialState, estimatorType, 0, 1);
     toc;
     
-    angErr = angleErrorsFromQuaternion(estimatedState.Rotation, starshipTrueState.Rotation);
-    errTraj = vectNormError(starshipTrueState.Trajectory, estimatedState.Trajectory, 1e3);
-    errVel  = vectNormError(starshipTrueState.Velocity, estimatedState.Velocity, 1e3);
+    angErr = angle_errors_from_quaternion(estimatedState.Rotation, starshipTrueState.Rotation);
+    errTraj = vect_norm_error(starshipTrueState.Trajectory, estimatedState.Trajectory, 1e3);
+    errVel  = vect_norm_error(starshipTrueState.Velocity, estimatedState.Velocity, 1e3);
     
     iterations(j, :, :) = [errTraj; errVel; angErr];
     

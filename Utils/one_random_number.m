@@ -1,4 +1,4 @@
-function [ num ] = one_random_number( lower, upper, exclude )
+function [ num ] = one_random_number(lower, upper, exclude)
     % ONE_RANDOM_NUMBER. Generate random numbers between two numbers without any specific number
     %
     %   INPUT

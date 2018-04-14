@@ -21,17 +21,17 @@ function [ outIndex ] = resample( resample_method, weights, particles_count )
     
     switch (resample_method)
         case 'residual'
-            outIndex  = residualResample(1:particles_count, weights);
+            outIndex  = residual_resample(1:particles_count, weights);
         case 'multinomial'
-            outIndex = multinomialResample(weights);
+            outIndex = multinomial_resample(weights);
         case 'stratified'
-            outIndex = stratifiedResample(weights);
+            outIndex = stratified_resample(weights);
         case 'systematic'
-            outIndex = systematicResample(weights);
+            outIndex = systematic_resample(weights);
         case 'residual2'
-            outIndex = residualResample2(weights, rand(size(weights)));
+            outIndex = residual_resample_2(weights, rand(size(weights)));
         case 'residual-kitagawa'
-            outIndex = residualResample2(weights, rand(1));
+            outIndex = residual_resample_2(weights, rand(1));
         otherwise
             error('[ resample ] unknown inference_model.resampleMethod type.');
     end
